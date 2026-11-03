@@ -1,0 +1,138 @@
+{
+ "https://musicbrainz.org/ws/2/release/69b7b91a-43fc-483f-b8cf-22cdc8f69079?inc=recordings+artist-credits+labels+release-groups+media+isrcs+genres+tags&fmt=json": {
+  "file": "release-69b7b91a-43fc-483f-b8cf-22cdc8f69079.json",
+  "status": 200
+ },
+ "https://musicbrainz.org/ws/2/release?query=release%3A%22Hybrid%20Theory%22%20AND%20artist%3A%22Linkin%20Park%22&limit=15&fmt=json": {
+  "file": "musicbrainz-release-ff39205087.json",
+  "status": 200
+ },
+ "https://musicbrainz.org/ws/2/release/5fc6445c-05ce-34e7-ab31-63bf7d3a9f24?inc=recordings+artist-credits+labels+release-groups+media+isrcs+genres+tags&fmt=json": {
+  "file": "release-5fc6445c-05ce-34e7-ab31-63bf7d3a9f24.json",
+  "status": 200
+ },
+ "https://musicbrainz.org/ws/2/release/83c45b6c-69ee-4eb0-903b-bd944ed59d48?inc=recordings+artist-credits+labels+release-groups+media+isrcs+genres+tags&fmt=json": {
+  "file": "release-83c45b6c-69ee-4eb0-903b-bd944ed59d48.json",
+  "status": 200
+ },
+ "https://musicbrainz.org/ws/2/release/f2944830-4dc2-4757-97fc-58847155c048?inc=recordings+artist-credits+labels+release-groups+media+isrcs+genres+tags&fmt=json": {
+  "file": "release-f2944830-4dc2-4757-97fc-58847155c048.json",
+  "status": 200
+ },
+ "https://musicbrainz.org/ws/2/release/a92e8636-a48c-4ad1-8a5f-4f8a968a50ac?inc=recordings+artist-credits+labels+release-groups+media+isrcs+genres+tags&fmt=json": {
+  "file": "release-a92e8636-a48c-4ad1-8a5f-4f8a968a50ac.json",
+  "status": 200
+ },
+ "https://musicbrainz.org/ws/2/release/04b8953c-969a-423a-8847-ccf78b83d013?inc=recordings+artist-credits+labels+release-groups+media+isrcs+genres+tags&fmt=json": {
+  "file": "release-04b8953c-969a-423a-8847-ccf78b83d013.json",
+  "status": 200
+ },
+ "https://musicbrainz.org/ws/2/release/2a4174ab-f0b1-430e-b7e2-25c062b45573?inc=recordings+artist-credits+labels+release-groups+media+isrcs+genres+tags&fmt=json": {
+  "file": "release-2a4174ab-f0b1-430e-b7e2-25c062b45573.json",
+  "status": 200
+ },
+ "https://musicbrainz.org/ws/2/release/1e4278ed-be0c-4218-9622-0f20252c2d2b?inc=recordings+artist-credits+labels+release-groups+media+isrcs+genres+tags&fmt=json": {
+  "file": "release-1e4278ed-be0c-4218-9622-0f20252c2d2b.json",
+  "status": 200
+ },
+ "https://musicbrainz.org/ws/2/release/9c00cfe0-ea90-4ae3-9743-51e35cca35be?inc=recordings+artist-credits+labels+release-groups+media+isrcs+genres+tags&fmt=json": {
+  "file": "release-9c00cfe0-ea90-4ae3-9743-51e35cca35be.json",
+  "status": 200
+ },
+ "https://musicbrainz.org/ws/2/release/1c495250-80a0-482a-b34d-5f93f5459e19?inc=recordings+artist-credits+labels+release-groups+media+isrcs+genres+tags&fmt=json": {
+  "file": "release-1c495250-80a0-482a-b34d-5f93f5459e19.json",
+  "status": 200
+ },
+ "https://musicbrainz.org/ws/2/release?query=release%3A%22Hybrid%20Theory%20%5C(Deluxe%20Version%5C)%22%20AND%20artist%3A%22Linkin%20Park%22&limit=15&fmt=json": {
+  "file": "musicbrainz-release-a4fe0c8a98.json",
+  "status": 200
+ },
+ "https://musicbrainz.org/ws/2/release/68876be8-3943-46b4-9c39-14a6cd18dd83?inc=recordings+artist-credits+labels+release-groups+media+isrcs+genres+tags&fmt=json": {
+  "file": "release-68876be8-3943-46b4-9c39-14a6cd18dd83.json",
+  "status": 200
+ },
+ "https://musicbrainz.org/ws/2/release/cce15358-9fa0-38b5-b143-c51ff7024b24?inc=recordings+artist-credits+labels+release-groups+media+isrcs+genres+tags&fmt=json": {
+  "file": "release-cce15358-9fa0-38b5-b143-c51ff7024b24.json",
+  "status": 200
+ },
+ "https://musicbrainz.org/ws/2/release/0c717d39-8990-403a-8372-7e9b15c68665?inc=recordings+artist-credits+labels+release-groups+media+isrcs+genres+tags&fmt=json": {
+  "file": "release-0c717d39-8990-403a-8372-7e9b15c68665.json",
+  "status": 200
+ },
+ "https://musicbrainz.org/ws/2/release/e56c6886-254d-40e7-88c4-cb6d81e6128f?inc=recordings+artist-credits+labels+release-groups+media+isrcs+genres+tags&fmt=json": {
+  "file": "release-e56c6886-254d-40e7-88c4-cb6d81e6128f.json",
+  "status": 200
+ },
+ "https://musicbrainz.org/ws/2/release/234bb630-8061-454c-b35d-8f7131f4ff08?inc=recordings+artist-credits+labels+release-groups+media+isrcs+genres+tags&fmt=json": {
+  "file": "release-234bb630-8061-454c-b35d-8f7131f4ff08.json",
+  "status": 200
+ },
+ "https://musicbrainz.org/ws/2/recording?query=isrc%3AUSWD12432505&limit=10&fmt=json": {
+  "file": "musicbrainz-recording-81a6731b34.json",
+  "status": 200
+ },
+ "https://musicbrainz.org/ws/2/recording?query=isrc%3AUSWD12432506&limit=10&fmt=json": {
+  "file": "musicbrainz-recording-53aeca2b6f.json",
+  "status": 200
+ },
+ "https://musicbrainz.org/ws/2/recording?query=isrc%3AUSWD12432507&limit=10&fmt=json": {
+  "file": "musicbrainz-recording-d3429ee933.json",
+  "status": 200
+ },
+ "https://musicbrainz.org/ws/2/release?query=release%3A%22Lofi%5C%3A%20Gravity%20Falls%22%20AND%20artist%3A%22Brad%20Breeck%22&limit=15&fmt=json": {
+  "file": "musicbrainz-release-c202c490ea.json",
+  "status": 200
+ },
+ "https://musicbrainz.org/ws/2/release/fb82fb79-df5e-475d-bbad-0ff83331b152?inc=recordings+artist-credits+labels+release-groups+media+isrcs+genres+tags&fmt=json": {
+  "file": "release-fb82fb79-df5e-475d-bbad-0ff83331b152.json",
+  "status": 200
+ },
+ "https://musicbrainz.org/ws/2/release?query=barcode%3A5055199581583&limit=10&fmt=json": {
+  "file": "musicbrainz-release-5874bc1b66.json",
+  "status": 200
+ },
+ "https://musicbrainz.org/ws/2/release/2440cae1-e982-465c-a558-7753f90265b8?inc=recordings+artist-credits+labels+release-groups+media+isrcs+genres+tags&fmt=json": {
+  "file": "release-2440cae1-e982-465c-a558-7753f90265b8.json",
+  "status": 200
+ },
+ "https://musicbrainz.org/ws/2/release/3925098a-6e15-4470-bd6e-95102a1ecdaa?inc=recordings+artist-credits+labels+release-groups+media+isrcs+genres+tags&fmt=json": {
+  "file": "release-3925098a-6e15-4470-bd6e-95102a1ecdaa.json",
+  "status": 200
+ },
+ "https://musicbrainz.org/ws/2/recording?query=recording%3A%22Get%20Your%20Wish%22%20AND%20artist%3A%22Porter%20Robinson%22&limit=15&fmt=json": {
+  "file": "musicbrainz-recording-67bed107ad.json",
+  "status": 200
+ },
+ "https://musicbrainz.org/ws/2/release/3f0375ba-52bd-4ab1-be75-9fb4040ff9e5?inc=recordings+artist-credits+labels+release-groups+media+isrcs+genres+tags&fmt=json": {
+  "file": "release-3f0375ba-52bd-4ab1-be75-9fb4040ff9e5.json",
+  "status": 200
+ },
+ "https://musicbrainz.org/ws/2/recording?query=recording%3A%22Isolation%22%20AND%20(artist%3A%22Hayve%22%20OR%20artist%3A%22Protostar%22)&limit=15&fmt=json": {
+  "file": "musicbrainz-recording-afde515179.json",
+  "status": 200
+ },
+ "https://musicbrainz.org/ws/2/release/dfc9b163-478f-4b3b-8748-223f553e52c7?inc=recordings+artist-credits+labels+release-groups+media+isrcs+genres+tags&fmt=json": {
+  "file": "release-dfc9b163-478f-4b3b-8748-223f553e52c7.json",
+  "status": 200
+ },
+ "https://musicbrainz.org/ws/2/release?query=release%3A%22Hybrid%20Theory%22%20AND%20artist%3A%22Linkin%20Park%22&limit=25&fmt=json": {
+  "file": "musicbrainz-release-a206c0fcaa.json",
+  "status": 200
+ },
+ "https://musicbrainz.org/ws/2/release?query=release%3A%22Qzxv%20Wqpl%20Nonexistent%22%20AND%20artist%3A%22Zzyzx%20Nobody%22&limit=15&fmt=json": {
+  "file": "musicbrainz-release-b5a771c484.json",
+  "status": 200
+ },
+ "https://musicbrainz.org/ws/2/release?query=release%3A%22Qzxv%20Wqpl%20Nonexistent%22&limit=15&fmt=json": {
+  "file": "musicbrainz-release-a48004ea73.json",
+  "status": 200
+ },
+ "https://musicbrainz.org/ws/2/release?query=release%3A%22Hybrid%20Theory%22%20AND%20artist%3A%22Linkin%20Park%22%20AND%20tracks%3A16&limit=15&fmt=json": {
+  "file": "musicbrainz-release-448cc861ea.json",
+  "status": 200
+ },
+ "https://musicbrainz.org/ws/2/release/89f4f6d5-f3a6-4a4c-b03f-4b52777fb8e8?inc=recordings+artist-credits+labels+release-groups+media+isrcs+genres+tags&fmt=json": {
+  "file": "release-89f4f6d5-f3a6-4a4c-b03f-4b52777fb8e8.json",
+  "status": 200
+ }
+}

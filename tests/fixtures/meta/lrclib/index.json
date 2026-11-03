@@ -1,0 +1,22 @@
+{
+ "https://lrclib.net/api/get?artist_name=Porter+Robinson&track_name=Get+Your+Wish&album_name=Nurture&duration=219": {
+  "file": "lrclib-get-73729541ac.json",
+  "status": 200
+ },
+ "https://lrclib.net/api/get?artist_name=Porter+Robinson&track_name=Get+Your+Wish&album_name=Porter+Robinson+-+Singles&duration=220": {
+  "file": "lrclib-get-dca74e8e57.json",
+  "status": 404
+ },
+ "https://lrclib.net/api/search?track_name=Get+Your+Wish&artist_name=Porter+Robinson": {
+  "file": "lrclib-search-866a1c0c33.json",
+  "status": 200
+ },
+ "https://lrclib.net/api/get?artist_name=Zzyzx+Nobody&track_name=Qqq+Nonexistent+Song&duration=100": {
+  "file": "lrclib-get-318c5af567.json",
+  "status": 404
+ },
+ "https://lrclib.net/api/search?track_name=Qqq+Nonexistent+Song&artist_name=Zzyzx+Nobody": {
+  "file": "lrclib-search-d7b1f1318f.json",
+  "status": 200
+ }
+}
