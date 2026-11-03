@@ -1,0 +1,132 @@
+{
+  "more_available": false,
+  "last_token": "1600000000:5005:a::",
+  "items": [
+    {
+      "added": "07 Jul 2023 01:34:59 GMT",
+      "also_collected_count": 3,
+      "band_id": 42,
+      "currency": "USD",
+      "download_available": true,
+      "fan_id": 5550001,
+      "gift_id": null,
+      "hidden": null,
+      "is_preorder": false,
+      "is_private": false,
+      "is_purchasable": true,
+      "is_subscription_item": false,
+      "item_art_ids": null,
+      "label": null,
+      "price": 7,
+      "purchased": "07 Jul 2023 01:34:59 GMT",
+      "url_hints": {},
+      "album_id": 3100,
+      "album_title": "Vinyl Only",
+      "band_name": "Synth Artist",
+      "item_id": 3003,
+      "item_title": "Vinyl Only",
+      "item_type": "package",
+      "item_url": "https://synthartist.bandcamp.com/album/vinyl-only",
+      "item_art_id": 333,
+      "sale_item_id": 9003,
+      "sale_item_type": "p",
+      "tralbum_id": 3100,
+      "tralbum_type": "a",
+      "token": "1600000003:3003:p::",
+      "package_details": null
+    },
+    {
+      "added": "07 Jul 2023 01:34:59 GMT",
+      "also_collected_count": 3,
+      "band_id": 42,
+      "currency": "USD",
+      "download_available": true,
+      "fan_id": 5550001,
+      "gift_id": null,
+      "hidden": null,
+      "is_preorder": false,
+      "is_private": false,
+      "is_purchasable": true,
+      "is_subscription_item": false,
+      "item_art_ids": null,
+      "label": null,
+      "price": 7,
+      "purchased": "07 Jul 2023 01:34:59 GMT",
+      "url_hints": {},
+      "album_id": 4100,
+      "album_title": "LP With Download",
+      "band_name": "Synth Artist",
+      "item_id": 4004,
+      "item_title": "LP With Download",
+      "item_type": "package",
+      "item_url": "https://synthartist.bandcamp.com/album/lp-with-download",
+      "item_art_id": 444,
+      "sale_item_id": 9004,
+      "sale_item_type": "p",
+      "tralbum_id": 4100,
+      "tralbum_type": "a",
+      "token": "1600000002:4004:p::"
+    },
+    {
+      "added": "07 Jul 2023 01:34:59 GMT",
+      "also_collected_count": 3,
+      "band_id": 42,
+      "currency": "USD",
+      "download_available": true,
+      "fan_id": 5550001,
+      "gift_id": null,
+      "hidden": null,
+      "is_preorder": true,
+      "is_private": false,
+      "is_purchasable": true,
+      "is_subscription_item": false,
+      "item_art_ids": null,
+      "label": null,
+      "price": 7,
+      "purchased": "07 Jul 2023 01:34:59 GMT",
+      "url_hints": {},
+      "album_id": 5005,
+      "album_title": "Coming Soon",
+      "band_name": "Synth Artist",
+      "item_id": 5005,
+      "item_title": "Coming Soon",
+      "item_type": "album",
+      "item_url": "https://synthartist.bandcamp.com/album/coming-soon",
+      "item_art_id": 555,
+      "sale_item_id": 9005,
+      "sale_item_type": "a",
+      "tralbum_id": 5005,
+      "tralbum_type": "a",
+      "token": "1600000000:5005:a::"
+    }
+  ],
+  "redownload_urls": {
+    "a9001": "https://bandcamp.com/download?from=collection&payment_id=1&sig=aaa&sitem_id=9001",
+    "p9004": "https://bandcamp.com/download?from=collection&payment_id=4&sig=ddd&sitem_id=9004",
+    "a9005": "https://bandcamp.com/download?from=collection&payment_id=5&sig=eee&sitem_id=9005"
+  },
+  "tracklists": {
+    "p4004": [
+      {
+        "artist": "Synth Artist",
+        "duration": 2,
+        "file": {
+          "mp3-v0": "https://bandcamp.com/stream_redirect?enc=mp3-v0&track_id=8001"
+        },
+        "id": 8001,
+        "title": "LP Song 1",
+        "track_number": 1
+      },
+      {
+        "artist": "Synth Artist",
+        "duration": 3,
+        "file": {
+          "mp3-v0": "https://bandcamp.com/stream_redirect?enc=mp3-v0&track_id=8002"
+        },
+        "id": 8002,
+        "title": "LP Song 2",
+        "track_number": 2
+      }
+    ]
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "more_available": false,
+  "last_token": "1500000000:6006:a::",
+  "items": [
+    {
+      "added": "07 Jul 2023 01:34:59 GMT",
+      "also_collected_count": 3,
+      "band_id": 42,
+      "currency": "USD",
+      "download_available": true,
+      "fan_id": 5550001,
+      "gift_id": null,
+      "hidden": true,
+      "is_preorder": false,
+      "is_private": false,
+      "is_purchasable": true,
+      "is_subscription_item": false,
+      "item_art_ids": null,
+      "label": null,
+      "price": 7,
+      "purchased": "07 Jul 2023 01:34:59 GMT",
+      "url_hints": {},
+      "album_id": 6006,
+      "band_name": "Hidden Act",
+      "item_id": 6006,
+      "item_title": "Hidden Gem",
+      "item_type": "album",
+      "item_url": "https://hiddenact.bandcamp.com/album/hidden-gem",
+      "item_art_id": 666,
+      "sale_item_id": 9006,
+      "sale_item_type": "a",
+      "tralbum_id": 6006,
+      "tralbum_type": "a",
+      "token": "1500000000:6006:a::"
+    }
+  ],
+  "redownload_urls": {
+    "a9006": "https://bandcamp.com/download?from=collection&payment_id=6&sig=fff&sitem_id=9006"
+  },
+  "tracklists": {}
+}

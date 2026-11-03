@@ -1,0 +1,111 @@
+{
+  "more_available": true,
+  "last_token": "1700000000:2002:t::",
+  "items": [
+    {
+      "added": "07 Jul 2023 01:34:59 GMT",
+      "also_collected_count": 3,
+      "band_id": 42,
+      "currency": "USD",
+      "download_available": true,
+      "fan_id": 5550001,
+      "gift_id": null,
+      "hidden": null,
+      "is_preorder": false,
+      "is_private": false,
+      "is_purchasable": true,
+      "is_subscription_item": false,
+      "item_art_ids": null,
+      "label": null,
+      "price": 7,
+      "purchased": "07 Jul 2023 01:34:59 GMT",
+      "url_hints": {},
+      "album_id": 1001,
+      "album_title": "Synthetic Album",
+      "band_name": "Synth Artist",
+      "item_id": 1001,
+      "item_title": "Synthetic Album",
+      "item_type": "album",
+      "item_url": "https://synthlabel.bandcamp.com/album/synthetic-album",
+      "item_art_id": 111,
+      "sale_item_id": 9001,
+      "sale_item_type": "a",
+      "tralbum_id": 1001,
+      "tralbum_type": "a",
+      "token": "1700000001:1001:a::",
+      "num_streamable_tracks": 3
+    },
+    {
+      "added": "07 Jul 2023 01:34:59 GMT",
+      "also_collected_count": 3,
+      "band_id": 42,
+      "currency": "USD",
+      "download_available": true,
+      "fan_id": 5550001,
+      "gift_id": null,
+      "hidden": null,
+      "is_preorder": false,
+      "is_private": false,
+      "is_purchasable": true,
+      "is_subscription_item": false,
+      "item_art_ids": null,
+      "label": null,
+      "price": 7,
+      "purchased": "07 Jul 2023 01:34:59 GMT",
+      "url_hints": {},
+      "album_id": null,
+      "band_name": "Other Band",
+      "item_id": 2002,
+      "item_title": "Lone Track",
+      "item_type": "track",
+      "item_url": "https://otherband.bandcamp.com/track/lone-track",
+      "item_art_id": 222,
+      "sale_item_id": 9002,
+      "sale_item_type": "t",
+      "tralbum_id": 2002,
+      "tralbum_type": "t",
+      "token": "1700000000:2002:t::",
+      "num_streamable_tracks": 1
+    }
+  ],
+  "redownload_urls": {
+    "t9002": "https://bandcamp.com/download?from=collection&payment_id=2&sig=bbb&sitem_id=9002"
+  },
+  "tracklists": {
+    "a1001": [
+      {
+        "artist": "Synth Artist",
+        "duration": 2,
+        "id": 7001,
+        "title": "Opening & \"Intro\"",
+        "track_number": 1
+      },
+      {
+        "artist": "Guest Singer",
+        "duration": 2,
+        "id": 7002,
+        "title": "Café Noir",
+        "track_number": 2
+      },
+      {
+        "artist": "Synth Artist",
+        "duration": 2,
+        "id": 7003,
+        "title": "Closing Theme",
+        "track_number": 3
+      }
+    ],
+    "t2002": [
+      {
+        "artist": "Other Band",
+        "duration": 3.5,
+        "id": 2002,
+        "title": "Lone Track",
+        "track_number": 1
+      }
+    ]
+  },
+  "purchase_infos": {},
+  "collectors": {},
+  "item_lookup": {}
+}
