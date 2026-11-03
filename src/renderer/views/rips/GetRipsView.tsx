@@ -12,6 +12,7 @@ import { CenterSpin, copyLink, DownloadControl, ErrorState, LoadMore, openLink, 
 import { YoutubeTab } from './YoutubeTab'
 import { downloadAllMissing, downloadRelease, driveFolderUrl } from './rips-state'
 import '../bandcamp/bandcamp.css'
+import './rips.css'
 
 type Tab = 'albums' | 'sgfr' | 'youtube'
 

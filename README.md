@@ -66,6 +66,17 @@ The morning-after checklist is in [MORNING.md](MORNING.md).
 
   Token names are any CSS custom property from `src/renderer/theme/theme.css`. A broken file shows its error under Your themes instead of applying.
 
+## SiIvaGunner High Quality Rips
+
+Rips live in their own section of the library (sidebar → SiIvaGunner: Seasons, Rip Albums, Rip Songs, Get Rips) and in their own folder, `~/Music/High Quality Rips/<Album>/<Title>`. The normal views, search, smart playlists, dedupe and TIDAL/Bandcamp badges leave them out.
+
+- **Marker:** every rip carries `HIGH QUALITY RIP` = `SiIvaGunner` / `SGFR` / `YouTube` and the genre `High Quality Rip`, so phone players can separate them too. Get Info → High Quality Rip moves songs you already have in or out.
+- **Rip albums:** Get Rips → Albums / SGFR list the official Google Drive mirrors from highquality.rip and sgfr.highquality.rip, with in-library badges. Downloads use the FLAC folders: MP3 320 for the library, FLAC masters to the archive. Drive quota pages back off and retry; a CAPTCHA pauses the source for you.
+- **YouTube seasons:** set a public playlist of SiIvaGunner uploads (Get Rips → YouTube, or Settings → SiIvaGunner). Valence syncs it on startup and every 6 hours, downloads new uploads from the SiIvaGunner channel with yt-dlp (best audio, kept as-is), and files each into one album per channel season, numbered by upload time. An older rip added later slots in where it was released.
+- **Seasons:** the table (names, start dates) lives in `~/Music/.valence/rips/seasons.json` and is editable in Settings → SiIvaGunner. Covers start as placeholders; setting one embeds it into every rip of that season.
+- **yt-dlp** is downloaded on first use from its official GitHub release (SHA-256 checked) into Valence's data folder and updated daily. Valence's own Electron serves as its JavaScript runtime.
+- MusicBrainz, AcoustID and lyrics lookups are skipped for rips (they'd match the real soundtracks).
+
 ## Multi-device model (Syncthing)
 
 - **Files are the truth.** Every file carries its identity in its tags (`VALENCE_ID`, source IDs, ISRC, MBIDs), so any device can rebuild its database from a scan.

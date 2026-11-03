@@ -85,7 +85,8 @@ export interface EnqueueRequest {
 }
 
 export interface ImportQueue {
-  registerAcquirer(source: string, fn: Acquirer, opts?: { concurrency?: number }): void
+  /** `afterDone` runs once a job of this source imported successfully (e.g. to renumber a season album). */
+  registerAcquirer(source: string, fn: Acquirer, opts?: { concurrency?: number; afterDone?: (payload: any, release: SourceRelease) => Promise<void> }): void
   enqueue(req: EnqueueRequest): string
   /** Release keys currently queued or running (for "Queued/Downloading" badges). */
   activeKeys(): Map<string, 'queued' | 'running'>

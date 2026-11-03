@@ -1,6 +1,7 @@
 // Tag + stream reader (music-metadata). Standard fields come from `common`; Valence/source custom
 // fields are pulled from the native tag lists so they round-trip exactly as written.
 
+import { statSync } from 'node:fs'
 import { parseFile, type IAudioMetadata } from 'music-metadata'
 
 type INativeTags = IAudioMetadata['native']
@@ -208,11 +209,16 @@ function mapFormat(meta: IAudioMetadata): AudioFormat {
 }
 
 export async function probeFile(path: string, opts: { covers?: boolean; duration?: boolean } = {}): Promise<ProbeResult> {
-  const meta = await parseFile(path, { duration: opts.duration ?? false, skipCovers: !(opts.covers ?? true) })
+  const skipCovers = !(opts.covers ?? true)
+  let meta = await parseFile(path, { duration: opts.duration ?? false, skipCovers })
+  // Some files (Ogg Opus from YouTube, headerless VBR) only reveal their length to a full scan.
+  if (!meta.format.duration && !opts.duration) meta = await parseFile(path, { duration: true, skipCovers })
+  const format = mapFormat(meta)
+  if (!format.bitrate && format.durationMs > 0) format.bitrate = Math.round((statSync(path).size * 8) / (format.durationMs / 1000))
   const pic = meta.common.picture?.find((p) => /front/i.test(p.type ?? '')) ?? meta.common.picture?.[0]
   return {
     tags: mapTags(meta),
-    format: mapFormat(meta),
+    format,
     picture: pic ? { data: Buffer.from(pic.data), mime: pic.format?.includes('/') ? pic.format : `image/${pic.format || 'jpeg'}` } : null,
     tagTypes: meta.format.tagTypes ?? [],
   }

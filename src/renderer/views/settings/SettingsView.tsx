@@ -12,6 +12,7 @@ import { AccountsSection } from './sections/AccountsSection'
 import { PlaybackSection } from './sections/PlaybackSection'
 import { AppearanceSection } from './sections/AppearanceSection'
 import { AboutSection, DiscordSection } from './sections/AboutSections'
+import { SiIvaGunnerSection } from './sections/SiIvaGunnerSection'
 import './settings.css'
 
 interface SectionDef {
@@ -30,13 +31,14 @@ const SECTIONS: SectionDef[] = [
   { id: 'artwork', label: 'Artwork', icon: 'albums', group: 'Importing', Component: ArtworkSection },
   { id: 'metadata', label: 'Metadata', icon: 'tag', group: 'Importing', Component: MetadataSection },
   { id: 'accounts', label: 'Accounts', icon: 'user', group: 'Importing', Component: AccountsSection },
+  { id: 'siivagunner', label: 'SiIvaGunner', icon: 'star', group: 'Importing', Component: SiIvaGunnerSection },
   { id: 'playback', label: 'Playback', icon: 'volume', group: 'App', Component: PlaybackSection },
   { id: 'appearance', label: 'Appearance', icon: 'smart', group: 'App', Component: AppearanceSection },
   { id: 'discord', label: 'Discord', icon: 'link', group: 'App', Component: DiscordSection },
   { id: 'about', label: 'About', icon: 'info', group: 'App', Component: AboutSection },
 ]
 
-const ALIASES: Record<string, string> = { devices: 'about', device: 'about', eq: 'playback', equalizer: 'playback', theme: 'appearance', tidal: 'accounts', bandcamp: 'accounts', transcode: 'transcoding', art: 'artwork', lyrics: 'metadata' }
+const ALIASES: Record<string, string> = { devices: 'about', device: 'about', eq: 'playback', equalizer: 'playback', theme: 'appearance', tidal: 'accounts', bandcamp: 'accounts', transcode: 'transcoding', art: 'artwork', lyrics: 'metadata', rips: 'siivagunner', seasons: 'siivagunner', youtube: 'siivagunner' }
 
 export function SettingsView({ section }: { section?: string }) {
   const id = section && SECTIONS.some((s) => s.id === section) ? section : ((section && ALIASES[section]) ?? 'library')

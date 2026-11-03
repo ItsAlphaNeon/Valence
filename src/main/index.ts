@@ -14,6 +14,7 @@ import { registerAudio, registerAudioSchemes } from './audio'
 import { registerTidal } from './sources/tidal'
 import { registerBandcamp } from './sources/bandcamp'
 import { registerHqrip } from './sources/hqrip'
+import { registerYoutube } from './sources/youtube'
 import { onMessage } from './ipc'
 import { closeMini, isMiniOpen, setMiniOnTop, toggleMini } from './windows/mini'
 import { createTray, destroyTray, refreshTray } from './integrations/tray'
@@ -181,7 +182,8 @@ if (SMOKE) {
     registerTidal(ctx)
     registerBandcamp(ctx)
     const hqrip = registerHqrip(ctx)
-    stopIntegrations.push(() => hqrip.stop())
+    const youtube = registerYoutube(ctx, library)
+    stopIntegrations.push(() => hqrip.stop(), () => youtube.stop())
     createMainWindow(settings)
     registerWindowIpc(settings)
     const coverQuery = lib.db.prepare('SELECT mb_release_id FROM tracks WHERE id = ?')
@@ -198,6 +200,7 @@ if (SMOKE) {
     app.on('second-instance', () => showMain(settings))
     await library.start()
     imports.start()
+    youtube.start()
     app.on('activate', () => showMain(settings))
   })
   app.on('before-quit', () => {

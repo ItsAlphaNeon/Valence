@@ -4,6 +4,7 @@
 import { useMemo, useState } from 'react'
 import type { AlbumRow, TrackQuery } from '@shared/types'
 import { LIB } from '@shared/ipc/library'
+import { HQRIP_IPC, type SeasonInfo } from '@shared/ipc/hqrip'
 import { invoke } from '../../lib/ipc'
 import { plural } from '../../lib/format'
 import { useLib, useLibData } from '../../state/library'
@@ -63,8 +64,14 @@ function RipAlbums({ seasons }: { seasons: boolean }) {
   }
   const kinds = seasons ? SEASON_KINDS : ALBUM_KINDS
   const { data } = useLibData(() => invoke<AlbumRow[]>(LIB.albums, { collection: 'rips', ripKinds: kinds, sort: seasons ? 'title' : sort }), [seasons, sort])
-  // Seasons read in channel order (Season 1 … Season X), not alphabetically.
-  const albums = useMemo(() => (seasons && data ? [...data].sort((a, b) => seasonOrder(a.title) - seasonOrder(b.title)) : data), [data, seasons])
+  const table = useLibData(() => (seasons ? invoke<SeasonInfo[]>(HQRIP_IPC.seasons) : Promise.resolve([])), [seasons]).data
+  // Seasons read in channel order (the season table, else Season 1 … Season X), not alphabetically.
+  const albums = useMemo(() => {
+    if (!seasons || !data) return data
+    const order = new Map((table ?? []).map((s, i) => [s.album, i]))
+    const rank = (a: AlbumRow) => order.get(a.title) ?? 100 + seasonOrder(a.title)
+    return [...data].sort((a, b) => rank(a) - rank(b))
+  }, [data, seasons, table])
   const src = { kind: 'library' as const, title: seasons ? 'Seasons' : 'Rip Albums' }
   const query: TrackQuery = { collection: 'rips', ripKinds: kinds }
   return (

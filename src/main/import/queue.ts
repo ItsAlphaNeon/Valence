@@ -34,6 +34,7 @@ export interface QueueDeps {
 interface Registered {
   fn: Acquirer
   concurrency: number
+  afterDone?: (payload: unknown, release: SourceRelease) => Promise<void>
 }
 
 interface Running {
@@ -86,8 +87,8 @@ export class ImportQueueImpl implements ImportQueue {
 
   // ---- ImportQueue (used by source modules) ----
 
-  registerAcquirer(source: string, fn: Acquirer, opts: { concurrency?: number } = {}): void {
-    this.acquirers.set(source, { fn, concurrency: Math.max(1, opts.concurrency ?? 1) })
+  registerAcquirer(source: string, fn: Acquirer, opts: { concurrency?: number; afterDone?: Registered['afterDone'] } = {}): void {
+    this.acquirers.set(source, { fn, concurrency: Math.max(1, opts.concurrency ?? 1), afterDone: opts.afterDone })
     this.schedule()
   }
 
@@ -369,6 +370,7 @@ export class ImportQueueImpl implements ImportQueue {
         this.update(job.id, { status: 'done', stage: null, progress: 1, message: summaryLine(outcome.summary), reportId: outcome.reportId })
         this.deps.broadcast(IMPORT.reportAdded, { id: outcome.reportId, title: job.title, summary: outcome.summary })
         await this.deps.afterDone?.(job, payload, release).catch((e) => this.deps.log.warn('import: afterDone failed', (e as Error).message))
+        await reg.afterDone?.(payload, release).catch((e) => this.deps.log.warn(`import: ${job.source} afterDone failed`, (e as Error).message))
         await this.cleanup(job.id)
       }
     } catch (e) {
