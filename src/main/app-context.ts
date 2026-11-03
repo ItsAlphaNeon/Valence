@@ -85,6 +85,7 @@ export function createContext(env: ValenceEnv, settings: SettingsStore): AppCont
     secrets: createSecretStore(env.dataDir),
     library: placeholderLibrary,
     imports: placeholderImports,
+    playlists: { mirror: () => {} },
     broadcast,
     log,
   }

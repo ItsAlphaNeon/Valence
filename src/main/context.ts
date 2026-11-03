@@ -93,12 +93,18 @@ export interface Logger {
   error(msg: string, extra?: unknown): void
 }
 
+/** Mirrors a source playlist as a relative .m3u8 in ~/Music/Playlists (resolved against the library). */
+export interface PlaylistMirror {
+  mirror(req: { name: string; sourceKey: string; tracks: BadgeQueryTrack[] }): void
+}
+
 export interface AppContext {
   env: ValenceEnv
   settings: SettingsStore
   secrets: SecretStore
   library: LibraryLookup
   imports: ImportQueue
+  playlists: PlaylistMirror
   broadcast(channel: string, ...args: unknown[]): void
   log: Logger
 }

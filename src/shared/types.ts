@@ -57,7 +57,9 @@ export interface TrackTags {
   valence_id?: string
   tidal_track_id?: string
   tidal_album_id?: string
+  /** Bandcamp tralbum id of the release (album id, or track id for a standalone track purchase) */
   bandcamp_item_id?: string
+  bandcamp_track_id?: string
   bandcamp_url?: string
   source?: SourceKind
   /** Quality of the original source, e.g. "lossless:16:44100" or "lossy:mp3:320" (used for upgrade decisions) */

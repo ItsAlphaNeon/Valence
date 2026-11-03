@@ -62,6 +62,7 @@ export const CUSTOM_FIELDS: Array<[keyof TrackTags, string, string, string]> = [
   ['tidal_track_id', 'TIDAL_TRACK_ID', 'TIDAL_TRACK_ID', 'TIDAL_TRACK_ID'],
   ['tidal_album_id', 'TIDAL_ALBUM_ID', 'TIDAL_ALBUM_ID', 'TIDAL_ALBUM_ID'],
   ['bandcamp_item_id', 'BANDCAMP_ITEM_ID', 'BANDCAMP_ITEM_ID', 'BANDCAMP_ITEM_ID'],
+  ['bandcamp_track_id', 'BANDCAMP_TRACK_ID', 'BANDCAMP_TRACK_ID', 'BANDCAMP_TRACK_ID'],
   ['bandcamp_url', 'BANDCAMP_URL', 'BANDCAMP_URL', 'BANDCAMP_URL'],
   ['source', 'VALENCE_SOURCE', 'VALENCE_SOURCE', 'VALENCE_SOURCE'],
   ['source_quality', 'VALENCE_SOURCE_QUALITY', 'VALENCE_SOURCE_QUALITY', 'VALENCE_SOURCE_QUALITY'],
