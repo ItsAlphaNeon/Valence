@@ -135,6 +135,12 @@ export function Sidebar() {
           <Item icon="star" label="Seasons" to={{ view: 'rips', tab: 'seasons' }} />
           <Item icon="albums" label="Rip Albums" to={{ view: 'rips', tab: 'albums' }} />
           <Item icon="songs" label="Rip Songs" to={{ view: 'rips', tab: 'songs' }} extra={stats?.ripTracks ? <span className="sb-count">{stats.ripTracks}</span> : undefined} />
+          <Item
+            icon="download"
+            label="Get Rips"
+            to={{ view: 'hqrip' }}
+            extra={paused.hqrip || paused.youtube ? <span className="sb-pill warn">Paused</span> : undefined}
+          />
         </div>
         <div className="sb-section">
           <div className="sb-head">

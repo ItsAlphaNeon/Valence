@@ -8,7 +8,10 @@ import { SETTINGS, type AppInfo } from '@shared/ipc/settings'
 import { loadUserThemes, writeExampleTheme } from './library/themes'
 
 // Only links the UI itself shows (setup pages for keys and IDs).
-const EXTERNAL_HOSTS = new Set(['acoustid.org', 'discord.com', 'musicbrainz.org', 'syncthing.net', 'docs.syncthing.net', 'tidal.com', 'listen.tidal.com', 'bandcamp.com'])
+const EXTERNAL_HOSTS = new Set([
+  'acoustid.org', 'discord.com', 'musicbrainz.org', 'syncthing.net', 'docs.syncthing.net', 'tidal.com', 'listen.tidal.com', 'bandcamp.com',
+  'highquality.rip', 'sgfr.highquality.rip', 'drive.google.com', 'www.youtube.com', 'youtube.com', 'siivagunner.fandom.com',
+])
 const externalOk = (host: string) => EXTERNAL_HOSTS.has(host) || host.endsWith('.bandcamp.com')
 
 export function registerSettingsIpc(ctx: AppContext, settings: PersistentSettings): void {

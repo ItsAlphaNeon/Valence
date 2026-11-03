@@ -53,8 +53,8 @@ export class ImportService {
       claims: library.claims,
       broadcast: ctx.broadcast,
       maxPipelines: 2,
-      // TIDAL and Bandcamp always download lossless; loose imports are checked once probed.
-      archive: { accepting: () => this.archive.accepting(), losslessSources: ['tidal', 'bandcamp'] },
+      // TIDAL, Bandcamp and rip albums (FLAC from Drive) always download lossless; loose imports are checked once probed.
+      archive: { accepting: () => this.archive.accepting(), losslessSources: ['tidal', 'bandcamp', 'hqrip'] },
       process: (release, opts) =>
         runPipeline(
           release,

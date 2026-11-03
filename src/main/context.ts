@@ -61,6 +61,10 @@ export interface LibraryLookup {
   albumBadges(albums: BadgeQueryAlbum[]): InLibraryBadge[]
   /** Library tracks credited to each artist (as album artist or track artist). Optional for test fakes. */
   artistTracks?(names: string[]): number[]
+  /** Rip tracks in the library per catalog release (HQR_RELEASE tag), for rip album badges. */
+  ripReleaseCounts?(): Map<string, number>
+  /** YouTube video ids of rips already in the library. */
+  youtubeVideoIds?(): Set<string>
 }
 
 export interface AcquireContext {

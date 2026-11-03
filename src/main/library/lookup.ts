@@ -50,6 +50,8 @@ export function createLibraryLookup(db: DB): LibraryLookupEx {
   const albumByBarcode = db.prepare("SELECT id FROM albums WHERE barcode = ? AND hq_rip = '' LIMIT 1")
   const albumsByTitle = db.prepare("SELECT id, album_artist FROM albums WHERE match_title = ? AND hq_rip = '' LIMIT 20")
   const albumCount = db.prepare('SELECT count(*) n FROM tracks WHERE album_id = ?')
+  const ripReleases = db.prepare("SELECT hqr_release k, count(*) n FROM tracks WHERE hqr_release IS NOT NULL AND hqr_release <> '' GROUP BY hqr_release")
+  const youtubeIds = db.prepare('SELECT DISTINCT youtube_video_id v FROM tracks WHERE youtube_video_id IS NOT NULL')
   const artistCount = db.prepare(
     "SELECT count(*) n FROM tracks WHERE hq_rip = '' AND (match_artist = @k OR album_id IN (SELECT id FROM albums WHERE match_artist = @k))",
   )
@@ -132,5 +134,8 @@ export function createLibraryLookup(db: DB): LibraryLookupEx {
         const k = matchKey(name)
         return k ? (artistCount.get({ k }) as { n: number }).n : 0
       }),
+    ripReleaseCounts: () =>
+      new Map((ripReleases.all() as Array<{ k: string; n: number }>).map((r) => [r.k, r.n])),
+    youtubeVideoIds: () => new Set((youtubeIds.all() as Array<{ v: string }>).map((r) => r.v)),
   }
 }

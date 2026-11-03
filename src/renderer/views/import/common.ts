@@ -17,8 +17,8 @@ export function openReport(reportId: string): void {
   useUi.getState().navigate({ view: 'import', tab: 'reports', reportId })
 }
 
-const SOURCE_LABEL: Record<string, string> = { tidal: 'TIDAL', bandcamp: 'Bandcamp', import: 'Files' }
-const SOURCE_ICON: Record<string, IconName> = { tidal: 'wave', bandcamp: 'disc', import: 'folder' }
+const SOURCE_LABEL: Record<string, string> = { tidal: 'TIDAL', bandcamp: 'Bandcamp', import: 'Files', hqrip: 'Rip Albums', youtube: 'YouTube Rips' }
+const SOURCE_ICON: Record<string, IconName> = { tidal: 'wave', bandcamp: 'disc', import: 'folder', hqrip: 'star', youtube: 'star' }
 
 export const sourceLabel = (s: string): string => SOURCE_LABEL[s] ?? s.charAt(0).toUpperCase() + s.slice(1)
 export const sourceIcon = (s: string): IconName => SOURCE_ICON[s] ?? 'download'

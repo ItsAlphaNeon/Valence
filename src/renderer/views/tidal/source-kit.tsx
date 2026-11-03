@@ -26,8 +26,8 @@ import {
 } from './source-helpers'
 import './source-kit.css'
 
-export type SourceId = 'tidal' | 'bandcamp'
-export const SOURCE_LABEL: Record<SourceId, string> = { tidal: 'TIDAL', bandcamp: 'Bandcamp' }
+export type SourceId = 'tidal' | 'bandcamp' | 'hqrip' | 'youtube'
+export const SOURCE_LABEL: Record<SourceId, string> = { tidal: 'TIDAL', bandcamp: 'Bandcamp', hqrip: 'Google Drive', youtube: 'YouTube' }
 export const MISSING_BADGE: InLibraryBadge = { status: 'missing', have: 0, total: 0 }
 export const trackBadge = (inLibrary: boolean): InLibraryBadge => (inLibrary ? { status: 'in-library', have: 1, total: 1 } : MISSING_BADGE)
 
