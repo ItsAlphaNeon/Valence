@@ -34,6 +34,7 @@ let wired = false
 export function initBandcampSession(): void {
   if (!wired) {
     wired = true
+    on<[BandcampStatus]>(CH.statusChanged, (s) => s && setStatus(s))
     on(CH.collectionUpdated, () => {
       useBandcampSession.setState((s) => ({ collectionVersion: s.collectionVersion + 1 }))
       void refreshBandcampStatus()

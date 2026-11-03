@@ -19,6 +19,8 @@ export const TIDAL_IPC = {
   artist: 'tidal:artist',
   /** (uuid: string) → TidalPlaylistDetail */
   playlist: 'tidal:playlist',
+  /** (id: string) → TidalTrackSummary (for pasted track links) */
+  track: 'tidal:track',
   /** (url: string) → TidalLink | null */
   resolveLink: 'tidal:resolveLink',
   /** (req: TidalDownloadRequest) → TidalDownloadResult */
@@ -101,8 +103,10 @@ export interface TidalArtistSummary {
   name: string
   picture: string | null
   url: string
-  /** No artist-level library lookup exists yet; true only when known. */
+  /** Some of this artist's songs are in the library. */
   inLibrary: boolean
+  /** How many (album artist or track artist match). */
+  libraryTracks?: number
 }
 
 export interface TidalPlaylistSummary {

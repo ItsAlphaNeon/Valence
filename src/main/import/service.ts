@@ -14,6 +14,10 @@ import { runPipeline } from './pipeline'
 import { ImportQueueImpl } from './queue'
 import { enqueueLoose, looseAcquirer, planLooseImport, type LoosePayload } from './loose'
 import { Inbox } from './inbox'
+import { lookupTracks } from './lookup'
+import { tracksByIds } from '@main/library/queries'
+import { toAbs } from '@main/library/organizer'
+import { probeFile } from '@main/tags/read'
 import type { Transport } from './source-types'
 
 export class ImportService {
@@ -107,6 +111,17 @@ export class ImportService {
     handle(IMPORT.resumeSource, (s: string) => q.resumeSource(s))
     handle(IMPORT.resolveReview, (id: string, choice: { releaseId?: string; asIs?: boolean }) => q.resolveReview(id, choice))
     handle(IMPORT.searchReleases, (query: { artist?: string; album?: string; barcode?: string }) => this.metadata.searchReleases(query))
+    handle(IMPORT.lookupTracks, async (ids: number[], releaseId?: string) => {
+      const rows = tracksByIds(this.library.db, ids.slice(0, 200))
+      const tracks = await Promise.all(
+        rows.map(async (r) => {
+          const file = toAbs(env.libraryRoot, r.relPath)
+          const p = await probeFile(file)
+          return { id: r.id, relPath: r.relPath, file, tags: p.tags, durationMs: p.format.durationMs }
+        }),
+      )
+      return lookupTracks(this.metadata, tracks, releaseId)
+    })
     handle(IMPORT.reports, (limit?: number) => this.reports.list(limit))
     handle(IMPORT.report, (id: string) => this.reports.get(id))
     handle(IMPORT.undo, async (id: string) => {

@@ -10,7 +10,7 @@
 import { _electron as electron } from 'playwright'
 import { spawnSync } from 'node:child_process'
 import { createRequire } from 'node:module'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 
@@ -173,6 +173,54 @@ try {
   }
   await win.evaluate(() => window.valence.invoke('settings:set', 'ui.tier', 'auto'))
   await scheme('system')
+
+  // User themes: the example file loads, applies its tokens, and edits hot-reload through the watcher.
+  {
+    const cssVar = (name) => win.evaluate((n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim(), name)
+    const until = async (fn, ms = 8000) => {
+      const t0 = Date.now()
+      for (;;) {
+        const v = await fn()
+        if (v || Date.now() - t0 > ms) return v
+        await sleep(250)
+      }
+    }
+    const file = await win.evaluate(() => window.valence.invoke('settings:themeExample'))
+    const listed = await until(async () => (await win.evaluate(() => window.valence.invoke('settings:themes'))).themes.some((t) => t.id === 'user:example'))
+    check('user theme: example file listed', listed, file)
+    await win.evaluate(() => window.valence.invoke('settings:set', 'ui.theme', 'user:example'))
+    const applied = await until(async () => (await cssVar('--r-lg')) === '16px')
+    check('user theme: tokens applied', applied, `--r-lg=${await cssVar('--r-lg')}`)
+    await go({ view: 'settings', section: 'appearance' })
+    await sleep(700)
+    await win.screenshot({ path: join(shots, 'settings-appearance-user-theme.png') })
+    const json = JSON.parse(readFileSync(file, 'utf8'))
+    writeFileSync(file, JSON.stringify({ ...json, tokens: { ...json.tokens, 'r-lg': '7px' } }, null, 2))
+    const reloaded = await until(async () => (await cssVar('--r-lg')) === '7px', 12000)
+    check('user theme: edit hot-reloads', reloaded, `--r-lg=${await cssVar('--r-lg')}`)
+    await win.evaluate(() => window.valence.invoke('settings:set', 'ui.theme', 'liquid-glass'))
+    await sleep(300)
+  }
+
+  // Get Info → MusicBrainz tab renders (the lookup itself needs the network, so it isn't clicked).
+  {
+    const first = albumList[0]
+    const detail = await win.evaluate((id) => window.valence.invoke('library:album', id), first.id)
+    await win.evaluate((id) => window.__valence.ui.getState().openGetInfo([id]), detail.tracks[0].id)
+    await win.waitForSelector('.modal .segmented-opt', { timeout: 5000 })
+    const gap = await win.evaluate(() => {
+      const actions = document.querySelector('.modal .gi-art-actions')?.getBoundingClientRect()
+      const tabs = document.querySelector('.modal .segmented')?.getBoundingClientRect()
+      return actions && tabs ? Math.round(tabs.top - actions.bottom) : null
+    })
+    check('get info: art buttons clear the tabs', gap != null && gap >= 0, `gap ${gap}px`)
+    await win.locator('.modal .segmented-opt', { hasText: 'MusicBrainz' }).click()
+    const ok = await win.waitForSelector('.gi-mb', { timeout: 3000 }).then(() => true, () => false)
+    await win.screenshot({ path: join(shots, 'getinfo-musicbrainz.png') })
+    check('get info: MusicBrainz tab', ok)
+    await win.keyboard.press('Escape')
+    await sleep(300)
+  }
 
   if (!argv.has('--views-only')) {
     // Playback from the UI: open the lyrics album, double-click the first row.

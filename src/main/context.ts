@@ -59,6 +59,8 @@ export interface LibraryLookup {
   matchTracks(tracks: BadgeQueryTrack[]): boolean[]
   albumBadge(album: BadgeQueryAlbum): InLibraryBadge
   albumBadges(albums: BadgeQueryAlbum[]): InLibraryBadge[]
+  /** Library tracks credited to each artist (as album artist or track artist). Optional for test fakes. */
+  artistTracks?(names: string[]): number[]
 }
 
 export interface AcquireContext {
@@ -85,7 +87,12 @@ export interface ImportQueue {
   activeKeys(): Map<string, 'queued' | 'running'>
   pauseSource(source: string, reason: string): void
   resumeSource(source: string): void
+  /** Resumes a source paused only because its login lapsed (not, e.g., an abuse stop). */
+  resumeAfterLogin(source: string): void
 }
+
+/** Pause reason the queue uses for auth failures; a fresh login clears it. */
+export const LOGIN_REQUIRED = 'Login required'
 
 export interface Logger {
   info(msg: string, extra?: unknown): void

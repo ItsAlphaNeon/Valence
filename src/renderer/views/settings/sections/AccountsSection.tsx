@@ -171,8 +171,10 @@ function BandcampAccount() {
         toast(`Bandcamp: ${sourceError(e)}`, 'error')
       },
     )
+    const off = on<[BandcampStatus]>(BANDCAMP_CHANNELS.statusChanged, (s) => s && live && setStatus(s))
     return () => {
       live = false
+      off()
     }
   }, [])
   const run = async (kind: 'login' | 'logout') => {

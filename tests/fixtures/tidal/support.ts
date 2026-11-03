@@ -105,6 +105,7 @@ export function fakeContext(inLibrary: (q: BadgeQueryTrack) => boolean = () => f
       activeKeys: () => active,
       pauseSource: () => {},
       resumeSource: () => {},
+      resumeAfterLogin: () => {},
     },
     playlists: { mirror: (req) => void mirrored.push(req) },
     broadcast: () => {},

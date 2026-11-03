@@ -12,7 +12,7 @@ import { invoke, on, send } from '../lib/ipc'
 import { cx, duration } from '../lib/format'
 import { Artwork, IconButton, Slider } from '../components/ui'
 import { applyAccent, setFixedAccent } from '../theme/accent'
-import { BUILTIN_THEMES, applyTheme } from '../theme/themes'
+import { applyTheme, findTheme, watchUserThemes } from '../theme/themes'
 import { applyTier } from '../theme/tiers'
 
 const remote = new RemotePlayer()
@@ -26,7 +26,7 @@ function artHash(s: PlayerState | null): string | null {
 
 async function initAppearance(): Promise<void> {
   const apply = (all: Record<string, unknown>) => {
-    const th = BUILTIN_THEMES.find((t) => t.id === all['ui.theme']) ?? BUILTIN_THEMES[0]
+    const th = findTheme(all['ui.theme'])
     applyTheme(th)
     // Never more than blur here: the refraction filter is sized for the main player bar.
     const tier = localStorage.getItem('valence.tier.auto')
@@ -35,6 +35,7 @@ async function initAppearance(): Promise<void> {
     setFixedAccent(typeof accent === 'string' && /^#[0-9a-f]{6}$/i.test(accent) ? accent : (th.accent ?? null))
   }
   let all = await invoke<Record<string, unknown>>(SETTINGS.all).catch(() => ({}) as Record<string, unknown>)
+  await watchUserThemes(() => apply(all))
   apply(all)
   on<[string, unknown]>(SETTINGS.changed, (k, v) => {
     if (!k.startsWith('ui.')) return

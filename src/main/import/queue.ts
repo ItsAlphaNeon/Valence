@@ -7,7 +7,7 @@ import { rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { DB } from '@main/db/db'
 import { kvGet, kvSet } from '@main/db/db'
-import type { Acquirer, EnqueueRequest, ImportQueue, Logger, ValenceEnv } from '@main/context'
+import { LOGIN_REQUIRED, type Acquirer, type EnqueueRequest, type ImportQueue, type Logger, type ValenceEnv } from '@main/context'
 import type { Claims } from '@main/sync/claims'
 import { SourceError, type SourceRelease } from './source-types'
 import type { PipelineOptions, PipelineOutcome } from './pipeline'
@@ -122,6 +122,10 @@ export class ImportQueueImpl implements ImportQueue {
   hasJobFor(keys: string[]): boolean {
     const rows = this.deps.db.prepare("SELECT release_keys FROM jobs WHERE status != 'done'").all() as Array<{ release_keys: string }>
     return rows.some((r) => (JSON.parse(r.release_keys) as string[]).some((k) => keys.includes(k)))
+  }
+
+  resumeAfterLogin(source: string): void {
+    if (this.paused[source] === LOGIN_REQUIRED) this.resumeSource(source)
   }
 
   pausedSources(): Record<string, string> {
@@ -344,7 +348,7 @@ export class ImportQueueImpl implements ImportQueue {
           this.update(job.id, { status: 'queued', stage: null, progress: 0, attempts, message: `Paused: ${e.message}` })
           return
         case 'auth':
-          this.pauseSource(job.source, 'Login required')
+          this.pauseSource(job.source, LOGIN_REQUIRED)
           this.update(job.id, { status: 'queued', stage: null, progress: 0, attempts, message: 'Waiting for login' })
           return
         case 'rate-limit': {

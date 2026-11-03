@@ -49,6 +49,9 @@ export function createLibraryLookup(db: DB): LibraryLookupEx {
   const albumByBarcode = db.prepare('SELECT id FROM albums WHERE barcode = ? LIMIT 1')
   const albumsByTitle = db.prepare('SELECT id, album_artist FROM albums WHERE match_title = ? LIMIT 20')
   const albumCount = db.prepare('SELECT count(*) n FROM tracks WHERE album_id = ?')
+  const artistCount = db.prepare(
+    'SELECT count(*) n FROM tracks WHERE match_artist = @k OR album_id IN (SELECT id FROM albums WHERE match_artist = @k)',
+  )
 
   const fuzzy = (t: BadgeQueryTrack): string | null => {
     const keys = [matchKey(t.title), looseTitleKey(t.title)].filter((k, i, a) => k && a.indexOf(k) === i)
@@ -123,5 +126,10 @@ export function createLibraryLookup(db: DB): LibraryLookupEx {
     matchTracks: (tracks) => tracks.map(matchOne),
     albumBadge,
     albumBadges: (albums) => albums.map(albumBadge),
+    artistTracks: (names) =>
+      names.map((name) => {
+        const k = matchKey(name)
+        return k ? (artistCount.get({ k }) as { n: number }).n : 0
+      }),
   }
 }

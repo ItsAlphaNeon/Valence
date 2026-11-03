@@ -90,6 +90,13 @@ describe('tidal service', () => {
     expect(d.playlist.image).toMatch(/aaaa\/bbbb\/640x640\.jpg$/)
   })
 
+  it('track(): summary with library badge for pasted track links', async () => {
+    const { svc } = setup(['1002'], new Map([['tidal:track:1002', 'queued']]))
+    const t = await svc.track('1002')
+    expect(t).toMatchObject({ id: '1002', title: 'Second Song (Club Mix)', inLibrary: true, queue: 'queued', url: 'https://tidal.com/browse/track/1002' })
+    await expect(svc.track('abc')).rejects.toThrow(/Invalid TIDAL track id/)
+  })
+
   it('resolveLink() delegates to the link parser', () => {
     const { svc } = setup()
     expect(svc.resolveLink('https://tidal.com/browse/track/1002?u')).toEqual({ kind: 'track', id: '1002' })

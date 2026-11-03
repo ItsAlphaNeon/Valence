@@ -17,6 +17,8 @@ export const IMPORT = {
   resolveReview: 'import:resolveReview',
   /** ({ artist?, album?, barcode? }) → ReleaseCandidate[] for the Review view's manual search. */
   searchReleases: 'import:searchReleases',
+  /** (trackIds, releaseId?) → TrackLookupResult. Get Info's MusicBrainz lookup; writes nothing. */
+  lookupTracks: 'import:lookupTracks',
   reports: 'import:reports',
   report: 'import:report',
   undo: 'import:undo',
@@ -51,6 +53,15 @@ export interface ReviewCandidate {
   score: number
   status?: string
   type?: string
+}
+
+export interface TrackLookupResult {
+  status: 'auto' | 'review' | 'unmatched'
+  score: number
+  release?: ReviewCandidate
+  candidates: ReviewCandidate[]
+  /** In release order; `patch` holds only fields that would change (apply with library:editTags). */
+  changes: Array<{ id: number; title: string; patch: Record<string, unknown> }>
 }
 
 export interface JobReview {

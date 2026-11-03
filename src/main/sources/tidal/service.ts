@@ -15,6 +15,7 @@ import type {
   TidalSearchResult,
   TidalSearchType,
   TidalStatus,
+  TidalTrackSummary,
 } from '@shared/ipc/tidal'
 import type { AppContext } from '../../context'
 import { SourceError } from '../../import/source-types'
@@ -23,7 +24,7 @@ import { parseTidalLink } from './links'
 import { fullTitle, mainArtists, mapAlbumTags, releaseKeys, toBadgeQueryAlbum, toBadgeQueryTrack } from './mapper'
 import { joinCredit } from '@shared/artist-credit'
 import { albumSummary, artistSummary, countBadge, playlistSummary, trackSummary } from './summaries'
-import type { TidalAlbum, TidalTrack } from './types'
+import type { TidalAlbum, TidalArtist, TidalTrack } from './types'
 
 export interface TidalAuthLike {
   status(): TidalStatus
@@ -79,6 +80,11 @@ export function createTidalService(deps: TidalServiceDeps) {
     return { have, items: list.map((t, i) => trackSummary(t, !!have[i], trackQueue(t, k))) }
   }
 
+  function artists(list: TidalArtist[]) {
+    const n = ctx.library.artistTracks?.(list.map((a) => a.name)) ?? []
+    return list.map((a, i) => artistSummary(a, n[i] ?? 0))
+  }
+
   const changed = () => {
     const s = auth.status()
     deps.onSessionChange?.(s)
@@ -108,7 +114,7 @@ export function createTidalService(deps: TidalServiceDeps) {
       if (kind !== 'albums' && kind !== 'tracks' && kind !== 'artists') throw new SourceError(`Unknown favorites kind: ${kind}`, 'parse')
       const page = await api.favorites<any>(kind, offset, limit)
       const raw = (page.items ?? []).map((f) => f.item).filter(Boolean)
-      const items = kind === 'albums' ? albums(raw) : kind === 'tracks' ? tracks(raw).items : raw.map(artistSummary)
+      const items = kind === 'albums' ? albums(raw) : kind === 'tracks' ? tracks(raw).items : artists(raw)
       return { items, offset: page.offset ?? offset, limit: page.limit ?? limit, total: page.totalNumberOfItems ?? items.length }
     },
 
@@ -121,7 +127,7 @@ export function createTidalService(deps: TidalServiceDeps) {
       const kind = hit ? ({ ARTISTS: 'artist', ALBUMS: 'album', TRACKS: 'track', PLAYLISTS: 'playlist' } as const)[hit.type as TidalSearchType] : undefined
       const hitId = hit?.value?.uuid ?? hit?.value?.id
       return {
-        artists: (r.artists?.items ?? []).map(artistSummary),
+        artists: artists(r.artists?.items ?? []),
         albums: albums(r.albums?.items ?? []),
         tracks: tracks(r.tracks?.items ?? []).items,
         playlists: (r.playlists?.items ?? []).map((p) => playlistSummary(p)),
@@ -145,7 +151,7 @@ export function createTidalService(deps: TidalServiceDeps) {
         api.artistAlbums(aid, 'EPSANDSINGLES'),
         api.artistAlbums(aid, 'COMPILATIONS'),
       ])
-      return { artist: artistSummary(artist), albums: albums(main), epsAndSingles: albums(eps), compilations: albums(comps) }
+      return { artist: artists([artist])[0], albums: albums(main), epsAndSingles: albums(eps), compilations: albums(comps) }
     },
 
     async playlist(uuid: string): Promise<TidalPlaylistDetail> {
@@ -153,6 +159,11 @@ export function createTidalService(deps: TidalServiceDeps) {
       const [pl, list] = await Promise.all([api.playlist(pid), api.playlistTracks(pid)])
       const t = tracks(list)
       return { playlist: playlistSummary(pl, countBadge(t.have)), tracks: t.items }
+    },
+
+    async track(id: string): Promise<TidalTrackSummary> {
+      const t = await api.track(numericId(id, 'track'))
+      return tracks([t]).items[0]
     },
 
     resolveLink: (url: string): TidalLink | null => parseTidalLink(String(url ?? '')),

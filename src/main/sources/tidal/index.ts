@@ -26,7 +26,10 @@ export function registerTidal(ctx: AppContext): void {
     secrets: ctx.secrets,
     transport,
     log: ctx.log,
-    onChange: (s) => ctx.broadcast(TIDAL_IPC.statusChanged, s),
+    onChange: (s) => {
+      ctx.broadcast(TIDAL_IPC.statusChanged, s)
+      if (s.loggedIn) ctx.imports.resumeAfterLogin('tidal')
+    },
   })
   const client = new TidalClient({
     cfg,
@@ -60,6 +63,7 @@ export function registerTidal(ctx: AppContext): void {
   on(TIDAL_IPC.album, (id) => svc.album(id))
   on(TIDAL_IPC.artist, (id) => svc.artist(id))
   on(TIDAL_IPC.playlist, (uuid) => svc.playlist(uuid))
+  on(TIDAL_IPC.track, (id) => svc.track(id))
   on(TIDAL_IPC.resolveLink, (url) => svc.resolveLink(url))
   on(TIDAL_IPC.download, (req) => svc.download(req))
   on(TIDAL_IPC.downloadPlaylist, (uuid) => svc.downloadPlaylist(uuid))

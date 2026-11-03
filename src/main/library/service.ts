@@ -22,6 +22,7 @@ import { PlayLog, type PlayEvent } from '@main/sync/plays'
 import { ensureStignore } from '@main/sync/stignore'
 import { Claims } from '@main/sync/claims'
 import { DEFAULT_TEMPLATE } from '@shared/path-template'
+import { SETTINGS } from '@shared/ipc/settings'
 import { LIB, type EditTagsRequest, type EditTagsResult, type LibraryPlayItem } from '@shared/ipc/library'
 import type { TrackQuery, TrackRow, TrackTags } from '@shared/types'
 
@@ -80,6 +81,7 @@ export class LibraryService {
         if (kind === 'valence') {
           if (this.plays.ingest()) this.ctx.broadcast(LIB.changed, { plays: true })
           if (rels.some((r) => r.startsWith('.valence/playlists/'))) this.reindexPlaylists()
+          if (rels.some((r) => r.startsWith('.valence/themes/'))) this.ctx.broadcast(SETTINGS.themesChanged)
         } else if (kind === 'playlist') this.reindexPlaylists()
         else void this.onAudioChanged(rels)
       },

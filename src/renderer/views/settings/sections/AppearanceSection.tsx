@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { cx } from '../../../lib/format'
-import { BUILTIN_THEMES, type ThemeDef } from '../../../theme/themes'
+import { SETTINGS } from '@shared/ipc/settings'
+import { errorMessage, invoke } from '../../../lib/ipc'
+import { toast } from '../../../state/ui'
+import { findTheme, useThemes, type ThemeDef } from '../../../theme/themes'
 import { TIERS, type Tier } from '../../../theme/tiers'
-import { Segmented } from '../../../components/ui'
+import { Button, Segmented } from '../../../components/ui'
 import { Icon } from '../../../components/Icon'
-import { Card, Row, SectionHead, ToggleRow, useHtmlAttr, useSettingValue } from '../controls'
+import { Card, openPath, PathLine, Row, SectionHead, ToggleRow, useHtmlAttr, useSettingValue } from '../controls'
 
 const THEME_DESC: Record<string, string> = {
   'liquid-glass': 'Layered glass that takes on the colors of the album playing.',
@@ -31,18 +34,21 @@ function schemeLabel(t: ThemeDef): string {
 
 function ThemePicker() {
   const [themeId, setTheme] = useSettingValue<string>('ui.theme', 'liquid-glass')
+  const { themes } = useThemes()
+  const active = findTheme(themeId).id
   return (
     <div className="set-tiles" role="radiogroup" aria-label="Theme">
-      {BUILTIN_THEMES.map((t) => {
-        const on = t.id === themeId || (!BUILTIN_THEMES.some((b) => b.id === themeId) && t.id === 'liquid-glass')
+      {themes.map((t) => {
+        const on = t.id === active
         return (
           <button key={t.id} role="radio" aria-checked={on} className={cx('set-tile', on && 'on')} onClick={() => setTheme(t.id)}>
             <div className="set-tile-top">
               <span className="set-tile-name">{t.name}</span>
               {on && <Icon name="check" size={14} className="set-tile-check" />}
             </div>
-            <div className="set-tile-desc">{THEME_DESC[t.id] ?? (t.artTint === false ? 'Fixed accent color.' : 'Tinted by album art.')}</div>
+            <div className="set-tile-desc">{THEME_DESC[t.id] ?? t.description ?? (t.artTint === false ? 'Fixed accent color.' : 'Tinted by album art.')}</div>
             <div className="set-tile-tags">
+              {t.file && <span className="chip">Custom</span>}
               <span className="chip">{schemeLabel(t)}</span>
               {t.maxTier && <span className="chip">Up to {TIER_INFO[t.maxTier].label}</span>}
             </div>
@@ -57,7 +63,8 @@ function TierPicker() {
   const [tier, setTier] = useSettingValue<Tier | 'auto'>('ui.tier', 'auto')
   const [themeId] = useSettingValue<string>('ui.theme', 'liquid-glass')
   const resolved = useHtmlAttr('data-tier') as Tier | null
-  const theme = BUILTIN_THEMES.find((t) => t.id === themeId)
+  useThemes()
+  const theme = findTheme(themeId)
   const options: Array<Tier | 'auto'> = ['auto', ...TIERS]
   return (
     <>
@@ -142,6 +149,43 @@ function AccentPicker() {
   )
 }
 
+function UserThemesCard() {
+  const { user } = useThemes()
+  const [busy, setBusy] = useState(false)
+  const createExample = async () => {
+    setBusy(true)
+    try {
+      await invoke<string>(SETTINGS.themeExample)
+      toast('Example theme added — edit it and changes apply right away')
+      void openPath(user.dir)
+    } catch (e) {
+      toast(errorMessage(e), 'error')
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <Card
+      title="Your themes"
+      aside={
+        <Button small kind="ghost" onClick={() => void createExample()} disabled={busy}>
+          {user.themes.length ? 'Add example' : 'Create example'}
+        </Button>
+      }
+    >
+      <p className="set-card-note">
+        Put theme files (.json) in the themes folder inside your library. They sync to every device, and edits apply live. Start from the example to see every option.
+      </p>
+      <PathLine path={user.dir || null} empty="—" onOpen={() => void openPath(user.dir)} />
+      {user.errors.map((e) => (
+        <p key={e.file} className="set-callout warn">
+          <Icon name="warning" size={13} /> <span className="mono">{e.file}</span>: {e.error}
+        </p>
+      ))}
+    </Card>
+  )
+}
+
 export function AppearanceSection() {
   return (
     <>
@@ -151,6 +195,7 @@ export function AppearanceSection() {
       <Card title="Theme">
         <ThemePicker />
       </Card>
+      <UserThemesCard />
       <Card title="Visual effects">
         <TierPicker />
       </Card>

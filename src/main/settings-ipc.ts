@@ -5,6 +5,7 @@ import type { AppContext } from './context'
 import type { PersistentSettings } from './settings'
 import { broadcast, handle } from './ipc'
 import { SETTINGS, type AppInfo } from '@shared/ipc/settings'
+import { loadUserThemes, writeExampleTheme } from './library/themes'
 
 // Only links the UI itself shows (setup pages for keys and IDs).
 const EXTERNAL_HOSTS = new Set(['acoustid.org', 'discord.com', 'musicbrainz.org', 'syncthing.net', 'docs.syncthing.net', 'tidal.com', 'listen.tidal.com', 'bandcamp.com'])
@@ -27,6 +28,8 @@ export function registerSettingsIpc(ctx: AppContext, settings: PersistentSetting
     if (u.protocol !== 'https:' || !externalOk(u.hostname)) throw new Error(`Not opening ${u.hostname}`)
     return shell.openExternal(u.toString())
   })
+  handle(SETTINGS.themes, () => loadUserThemes(ctx.env.libraryRoot))
+  handle(SETTINGS.themeExample, () => writeExampleTheme(ctx.env.libraryRoot))
   handle(
     SETTINGS.appInfo,
     (): AppInfo => ({

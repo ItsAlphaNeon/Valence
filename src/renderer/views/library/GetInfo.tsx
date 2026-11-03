@@ -9,6 +9,7 @@ import { duration, plural, quality, relativeTime } from '../../lib/format'
 import { toast, useUi } from '../../state/ui'
 import { Artwork, Button, Modal, Segmented, Spinner, Stars } from '../../components/ui'
 import { cx } from '../../lib/format'
+import { MusicBrainzLookup } from './GetInfoLookup'
 
 type Kind = 'text' | 'int' | 'bool' | 'area'
 interface FieldDef {
@@ -69,7 +70,7 @@ function GetInfoModal({ ids, onClose }: { ids: number[]; onClose: () => void }) 
   const [tags, setTags] = useState<TrackTags[] | null>(null)
   const [hasArt, setHasArt] = useState(false)
   const [edits, setEdits] = useState<Values>({})
-  const [tab, setTab] = useState<'details' | 'sorting' | 'lyrics' | 'file'>('details')
+  const [tab, setTab] = useState<'details' | 'sorting' | 'lyrics' | 'file' | 'musicbrainz'>('details')
   const [saving, setSaving] = useState(false)
   const [art, setArt] = useState<{ data: Uint8Array; mime: string; url: string } | null | undefined>(undefined)
   const [dropping, setDropping] = useState(false)
@@ -260,12 +261,14 @@ function GetInfoModal({ ids, onClose }: { ids: number[]; onClose: () => void }) 
               { value: 'sorting', label: 'Sorting & IDs' },
               ...(!multi ? [{ value: 'lyrics' as const, label: 'Lyrics' }] : []),
               ...(!multi ? [{ value: 'file' as const, label: 'File' }] : []),
+              { value: 'musicbrainz', label: 'MusicBrainz' },
             ]}
           />
           {tab === 'details' && <div className="form-grid">{DETAILS.map(renderField)}</div>}
           {tab === 'sorting' && <div className="form-grid">{SORTING.map(renderField)}</div>}
           {tab === 'lyrics' && <div className="form-grid">{LYRICS.map(renderField)}</div>}
           {tab === 'file' && first && <FileInfo row={first} tags={tags[0]} />}
+          {tab === 'musicbrainz' && <MusicBrainzLookup ids={ids} tagsById={new Map(rows.slice(0, tags.length).map((r, i) => [r.id, tags[i]]))} onApplied={onClose} />}
         </>
       )}
     </Modal>

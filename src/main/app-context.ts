@@ -66,6 +66,7 @@ export const placeholderImports: ImportQueue = {
   activeKeys: () => new Map(),
   pauseSource: () => {},
   resumeSource: () => {},
+  resumeAfterLogin: () => {},
 }
 
 export function ensureDirs(env: ValenceEnv): void {

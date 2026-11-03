@@ -19,7 +19,7 @@ function mostCommon(xs: string[]): string {
   return best
 }
 
-function CandidateRow({ c, picked, onPick, fileCount, relevance }: { c: ReviewCandidate; picked: boolean; onPick: () => void; fileCount: number; relevance?: boolean }) {
+export function CandidateRow({ c, picked, onPick, fileCount, relevance }: { c: ReviewCandidate; picked: boolean; onPick: () => void; fileCount: number; relevance?: boolean }) {
   const year = c.date?.slice(0, 4)
   const meta = [c.artist, c.date, c.country, c.format, plural(c.trackCount, 'track')].filter(Boolean)
   const mismatch = c.trackCount !== fileCount

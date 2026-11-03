@@ -10,6 +10,8 @@ export const BANDCAMP_CHANNELS = {
   item: 'bandcamp:item',
   download: 'bandcamp:download',
   downloadAllMissing: 'bandcamp:downloadAllMissing',
+  /** main → renderer broadcast: (status: BandcampStatus) after login/logout. */
+  statusChanged: 'bandcamp:status-changed',
   /** main → renderer broadcast, no payload: re-request `bandcamp:collection`. */
   collectionUpdated: 'bandcamp:collection-updated',
 } as const

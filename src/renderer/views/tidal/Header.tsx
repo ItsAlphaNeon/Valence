@@ -1,11 +1,12 @@
 // TIDAL view header: catalog search, "paste a link" field and account menu.
 
 import { useEffect, useState } from 'react'
-import { TIDAL_IPC, type TidalLink, type TidalStatus } from '@shared/ipc/tidal'
+import { TIDAL_IPC, type TidalLink, type TidalStatus, type TidalTrackSummary } from '@shared/ipc/tidal'
 import { invoke } from '../../lib/ipc'
 import { cx } from '../../lib/format'
 import { navigate, toast } from '../../state/ui'
-import { Button, IconButton, Modal, Spinner, showMenu } from '../../components/ui'
+import { Artwork, Button, IconButton, Modal, Spinner, showMenu } from '../../components/ui'
+import { duration } from '../../lib/format'
 import { Icon } from '../../components/Icon'
 import { looksLikeTidalLink, routeForLink } from './source-helpers'
 import { downloadTrackById, tidalError, tidalLogout } from './tidal-state'
@@ -104,6 +105,18 @@ async function resolve(url: string): Promise<'ok' | TidalLink | null> {
 
 function TrackLinkModal({ id, onClose }: { id: string; onClose: () => void }) {
   const [busy, setBusy] = useState(false)
+  // undefined = loading, null = lookup failed (the download can still be queued by id).
+  const [t, setT] = useState<TidalTrackSummary | null | undefined>(undefined)
+  useEffect(() => {
+    let live = true
+    invoke<TidalTrackSummary>(TIDAL_IPC.track, id).then(
+      (r) => live && setT(r),
+      () => live && setT(null),
+    )
+    return () => {
+      live = false
+    }
+  }, [id])
   return (
     <Modal
       title="Download this track?"
@@ -117,7 +130,7 @@ function TrackLinkModal({ id, onClose }: { id: string; onClose: () => void }) {
           <Button
             kind="primary"
             icon="download"
-            disabled={busy}
+            disabled={busy || t?.streamable === false}
             onClick={async () => {
               setBusy(true)
               const ok = await downloadTrackById(id)
@@ -125,13 +138,38 @@ function TrackLinkModal({ id, onClose }: { id: string; onClose: () => void }) {
               if (ok) onClose()
             }}
           >
-            Download Track
+            {t?.inLibrary ? 'Download Again' : 'Download Track'}
           </Button>
         </>
       }
     >
+      {t === undefined ? (
+        <div className="row" style={{ minHeight: 64 }}>
+          <Spinner />
+        </div>
+      ) : t ? (
+        <div className="row" style={{ gap: 14, marginBottom: 12 }}>
+          <Artwork url={t.album?.cover} size={64} title={t.album?.title ?? t.title} />
+          <div className="stack grow" style={{ gap: 2, minWidth: 0 }}>
+            <b className="ellipsis">{t.title}</b>
+            <span className="muted ellipsis">{t.artist}</span>
+            <span className="faint ellipsis">
+              {[t.album?.title, t.durationSec ? duration(t.durationSec * 1000) : null].filter(Boolean).join(' · ')}
+            </span>
+          </div>
+          {t.inLibrary ? <span className="chip ok">In library</span> : !t.streamable ? <span className="chip warn">Unavailable</span> : null}
+        </div>
+      ) : null}
       <p className="src-note" style={{ margin: 0 }}>
-        This is a link to a single TIDAL track (id <span className="mono">{id}</span>). Valence queues it as a LOSSLESS 16-bit/44.1 kHz FLAC download, transcoded to your library format with the master archived.
+        {t?.streamable === false
+          ? 'TIDAL doesn’t offer this track for streaming in your country, so it can’t be downloaded.'
+          : 'Valence queues it as a LOSSLESS 16-bit/44.1 kHz FLAC download, transcoded to your library format with the master archived.'}
+        {t === null && (
+          <>
+            {' '}
+            (Track id <span className="mono">{id}</span>; its details couldn’t be loaded.)
+          </>
+        )}
       </p>
     </Modal>
   )

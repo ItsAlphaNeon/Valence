@@ -61,8 +61,15 @@ export function trackSummary(t: TidalTrack, inLibrary: boolean, queue?: TidalQue
   }
 }
 
-export function artistSummary(a: TidalArtist): TidalArtistSummary {
-  return { id: String(a.id), name: a.name, picture: imageUrl(a.picture, 320), url: `https://tidal.com/browse/artist/${a.id}`, inLibrary: false }
+export function artistSummary(a: TidalArtist, libraryTracks = 0): TidalArtistSummary {
+  return {
+    id: String(a.id),
+    name: a.name,
+    picture: imageUrl(a.picture, 320),
+    url: `https://tidal.com/browse/artist/${a.id}`,
+    inLibrary: libraryTracks > 0,
+    ...(libraryTracks ? { libraryTracks } : {}),
+  }
 }
 
 export function playlistSummary(p: TidalPlaylist, badge: InLibraryBadge | null = null): TidalPlaylistSummary {

@@ -5,7 +5,7 @@
 import { SETTINGS, type AppInfo } from '@shared/ipc/settings'
 import { invoke, on } from '../lib/ipc'
 import { applyAccent, setFixedAccent } from './accent'
-import { BUILTIN_THEMES, applyTheme, capTier, type ThemeDef } from './themes'
+import { applyTheme, capTier, findTheme, watchUserThemes, type ThemeDef } from './themes'
 import { applyTier, downgrade, guessTier, measureFrames, TIERS, type Tier } from './tiers'
 import { usePlayer } from '../state/player'
 
@@ -14,7 +14,7 @@ let settings: Record<string, unknown> = {}
 let gpu: Record<string, string> | undefined
 
 function theme(): ThemeDef {
-  return BUILTIN_THEMES.find((t) => t.id === settings['ui.theme']) ?? BUILTIN_THEMES[0]
+  return findTheme(settings['ui.theme'])
 }
 
 function autoTier(): Tier {
@@ -44,6 +44,7 @@ export async function initAppearance(): Promise<void> {
   const [all, info] = await Promise.all([
     invoke<Record<string, unknown>>(SETTINGS.all).catch(() => ({})),
     invoke<AppInfo>(SETTINGS.appInfo).catch(() => null),
+    watchUserThemes(() => apply()),
   ])
   settings = all
   gpu = info?.gpu

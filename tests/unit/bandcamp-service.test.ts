@@ -38,6 +38,7 @@ function setup(opts: { inLibraryAlbums?: string[]; inLibraryTracks?: string[]; a
       activeKeys: () => new Map(opts.active ?? []),
       pauseSource: () => {},
       resumeSource: () => {},
+      resumeAfterLogin: () => {},
     },
     broadcast: (ch: string) => void broadcasts.push(ch),
     log: { info: () => {}, warn: () => {}, error: () => {} },

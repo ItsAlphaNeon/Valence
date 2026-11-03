@@ -91,6 +91,7 @@ export const ArtistTile = memo(function ArtistTile({ a }: { a: TidalArtistSummar
       round
       art={a.picture}
       title={a.name}
+      sub={a.libraryTracks ? `✓ ${plural(a.libraryTracks, 'song')} in library` : undefined}
       onOpen={() => openArtist(a.id)}
       onContextMenu={(e) =>
         showMenu(e, [

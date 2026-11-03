@@ -36,11 +36,35 @@ The morning-after checklist is in [MORNING.md](MORNING.md).
 - **System integration:** the Media Session shows up in Windows media controls, macOS Now Playing and Linux MPRIS.
 - **Queue:** Up Next, history, shuffle and repeat. The queue resumes after a restart.
 - **Extras:** synced-lyrics karaoke view, mini player (Ctrl/⌘+Alt+M), tray, Discord Rich Presence (optional).
-- **Organization:** smart playlists, and a Get Info tag editor that re-paths files when you edit them.
+- **Organization:** smart playlists, and a Get Info tag editor that re-paths files when you edit them. Its MusicBrainz tab re-identifies songs and previews every changed field before writing.
 
 **Look**
 - Liquid Glass UI that follows system light/dark and is tinted by the playing album's art.
 - Four performance tiers (full refraction → blur → flat → minimal). The tier is picked automatically and steps down if frames drop.
+- **Your own themes:** JSON files in `~/Music/.valence/themes/` sync to every device and reload live. To get a starting file, go to Settings → Appearance → Your themes → Create example.
+
+  ```json
+  {
+    "name": "Midnight Ember",
+    "scheme": "auto",
+    "maxTier": "glass",
+    "artTint": false,
+    "accent": "#ff7a45",
+    "tokens": { "r-lg": "16px" },
+    "light": { "bg-solid": "#f6f1ec" },
+    "dark": { "bg-solid": "#141010" },
+    "css": [".sidebar { letter-spacing: 0.01em; }"]
+  }
+  ```
+
+  The fields:
+  - `scheme` is `light`, `dark` or `auto`.
+  - `maxTier` optionally caps the effects tier.
+  - `artTint: false` turns off album-art tinting.
+  - `tokens` applies in both modes; `light` and `dark` apply in one mode only.
+  - `css` is extra CSS.
+
+  Token names are any CSS custom property from `src/renderer/theme/theme.css`. A broken file shows its error under Your themes instead of applying.
 
 ## Multi-device model (Syncthing)
 
@@ -68,6 +92,8 @@ End-to-end scripts (run from PowerShell on Windows):
 node scripts/e2e-ui.mjs         # every view light/dark/tiers, playback, lyrics, mini player → test-results/ui/
 node scripts/e2e-playback.mjs   # gapless continuity, seek accuracy, SMTC registration
 npm run smoke                   # native modules + binaries load inside Electron
+node scripts/smoke-packaged.mjs # after dist:win: packaged exe imports + plays in a sandbox, opens ~/Music
+node scripts/real-import.mjs <folder>...   # import real folders into ~/Music, summary → test-results/
 ```
 
 Useful environment overrides:

@@ -177,6 +177,7 @@ describe('scanner + indexer + queries + lookup', () => {
     expect(lookup.albumBadge({ upc: '724384960650', trackCount: 14 }).status).toBe('partial')
     expect(lookup.albumBadge({ title: 'Homework', albumArtist: 'Daft Punk', trackCount: 16 }).status).toBe('missing')
     expect(lookup.resolve({ tidalTrackId: '111' })).toBe('Daft Punk/Discovery (2001)/One More Time.mp3')
+    expect(lookup.artistTracks!(['daft punk', 'Nobody', ''])).toEqual([2, 0, 0])
   })
 
   it('detects moves by VALENCE_ID and keeps the row id', async () => {

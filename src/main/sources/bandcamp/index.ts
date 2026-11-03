@@ -1,6 +1,6 @@
 // Bandcamp source: wires the persistent session, client, acquirer and IPC handlers.
 
-import { BANDCAMP_CHANNELS as CH, type BandcampCollectionRequest } from '@shared/ipc/bandcamp'
+import { BANDCAMP_CHANNELS as CH, type BandcampCollectionRequest, type BandcampStatus } from '@shared/ipc/bandcamp'
 import type { AppContext } from '../../context'
 import { handle } from '../../ipc'
 import { createAcquirer } from './acquire'
@@ -20,8 +20,15 @@ export function registerBandcamp(ctx: AppContext): void {
   )
 
   handle(CH.status, () => service.status())
-  handle(CH.login, () => service.login())
-  handle(CH.logout, () => service.logout())
+  // Every open view (Bandcamp tab, Settings → Accounts) follows login changes made in any other.
+  const announce = async (s: BandcampStatus | Promise<BandcampStatus>): Promise<BandcampStatus> => {
+    const v = await s
+    ctx.broadcast(CH.statusChanged, v)
+    if (v.loggedIn) ctx.imports.resumeAfterLogin('bandcamp')
+    return v
+  }
+  handle(CH.login, () => announce(service.login()))
+  handle(CH.logout, () => announce(service.logout()))
   handle(CH.collection, (req?: BandcampCollectionRequest) => service.collection(req ?? {}))
   handle(CH.item, (key: string) => service.item(String(key)))
   handle(CH.download, (key: string) => service.download(String(key)))

@@ -1686,7 +1686,6 @@ select {
 .gi-art {
   position: relative;
   width: 128px;
-  height: 128px;
   flex: none;
 }
 .gi-art .art {
@@ -1703,6 +1702,83 @@ select {
   gap: 4px;
   margin-top: 8px;
   justify-content: center;
+}
+
+/* Get Info → MusicBrainz */
+.gi-mb {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 220px;
+}
+.gi-mb-head {
+  gap: 10px;
+  min-width: 0;
+}
+.gi-mb-changes {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 300px;
+  overflow: auto;
+  padding-right: 4px;
+}
+.gi-mb-track {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px 10px;
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+}
+.gi-mb-track-title {
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+.gi-mb-diff {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+  font-size: 12.5px;
+  align-items: baseline;
+}
+.gi-mb-old {
+  color: var(--fg-3);
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--fg-3) 60%, transparent);
+}
+.gi-mb-new {
+  color: var(--fg);
+}
+.gi-mb-more {
+  align-self: flex-start;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.gi-mb-more:hover {
+  color: var(--accent);
+}
+.gi-mb-others summary {
+  cursor: pointer;
+  color: var(--fg-2);
+  margin-bottom: 8px;
+}
+.gi-mb-others .imp-cands {
+  max-height: 220px;
+  overflow: auto;
+}
+.gi-mb-use {
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+.gi-mb-actions {
+  gap: 8px;
+  border-top: 1px solid var(--sep);
+  padding-top: 10px;
 }
 
 /* ---- Drag & drop import overlay ---- */

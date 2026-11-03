@@ -207,4 +207,13 @@ describe('import pipeline (integration)', () => {
     expect(files(env.archiveDir!).filter((f) => f.endsWith('.flac'))).toEqual([])
     expect(queryTracks(library.db, {}).rows.filter((t) => t.album === 'Generated Album')).toHaveLength(1)
   })
+
+  it('a fresh login resumes only a source paused for login', () => {
+    queue.pauseSource('tidal', 'Login required')
+    queue.pauseSource('bandcamp', 'Account flagged: slow down')
+    queue.resumeAfterLogin('tidal')
+    queue.resumeAfterLogin('bandcamp')
+    expect(queue.pausedSources()).toEqual({ bandcamp: 'Account flagged: slow down' })
+    queue.resumeSource('bandcamp')
+  })
 })
