@@ -6,6 +6,7 @@ import { createContext, ensureDirs } from './app-context'
 import { createSettings } from './settings'
 import { HlcClock } from './sync/hlc'
 import { LibraryService } from './library/service'
+import { ImportService } from './import/service'
 import { ART_SCHEME } from './library/art'
 import { initPortBroker } from './ipc'
 import { registerAudio, registerAudioSchemes } from './audio'
@@ -66,6 +67,7 @@ function createMainWindow(): BrowserWindow {
 
 let ctx: AppContext | null = null
 let library: LibraryService | null = null
+let imports: ImportService | null = null
 
 if (SMOKE) {
   void app.whenReady().then(async () => {
@@ -92,6 +94,8 @@ if (SMOKE) {
     library = new LibraryService(ctx)
     ctx.library = library.lookup
     ctx.playlists = library.playlists
+    imports = new ImportService(ctx, library)
+    ctx.imports = imports.queue
     const lib = library
     protocol.handle(ART_SCHEME, (req) => lib.art.handle(req))
     registerAudio(ctx)
@@ -99,11 +103,15 @@ if (SMOKE) {
     registerBandcamp(ctx)
     createMainWindow()
     await library.start()
+    imports.start()
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createMainWindow()
     })
   })
-  app.on('will-quit', () => library?.stop())
+  app.on('will-quit', () => {
+    imports?.stop()
+    library?.stop()
+  })
   app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit()
   })

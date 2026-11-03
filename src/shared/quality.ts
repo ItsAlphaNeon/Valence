@@ -32,9 +32,9 @@ export function qualityRank(q: QualityInfo): number {
   return Math.round(((q.bitrate || 0) / 1000) * factor)
 }
 
-/** True if `incoming` is meaningfully better than `existing` (5% margin avoids churn on VBR noise). */
+/** True if `incoming` is meaningfully better than `existing` (10% margin avoids churn on VBR noise). */
 export function isUpgrade(incoming: QualityInfo, existing: QualityInfo): boolean {
   if (incoming.lossless !== existing.lossless) return incoming.lossless
   if (incoming.lossless) return qualityRank(incoming) > qualityRank(existing)
-  return qualityRank(incoming) > qualityRank(existing) * 1.05
+  return qualityRank(incoming) > qualityRank(existing) * 1.1
 }
