@@ -1,0 +1,16 @@
+{
+  "id": 300,
+  "title": "Summer Hits",
+  "version": null,
+  "cover": "11112222-3333-4444-5555-666677778888",
+  "releaseDate": "2019-06-01",
+  "numberOfTracks": 2,
+  "numberOfVolumes": 1,
+  "duration": 400,
+  "upc": "0999999999999",
+  "copyright": "℗ 2019 Compilation Co",
+  "type": "ALBUM",
+  "audioQuality": "LOSSLESS",
+  "artist": { "id": 2935, "name": "Various Artists", "type": "MAIN" },
+  "artists": [{ "id": 2935, "name": "Various Artists", "type": "MAIN" }]
+}

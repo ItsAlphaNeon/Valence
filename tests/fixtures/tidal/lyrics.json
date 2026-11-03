@@ -1,0 +1,9 @@
+{
+  "trackId": 1001,
+  "lyricsProvider": "SYNTHETIC",
+  "providerCommontrackId": "0",
+  "providerLyricsId": "0",
+  "lyrics": "First line\nSecond line",
+  "subtitles": "[00:01.00] First line\n[00:02.50] Second line",
+  "isRightToLeft": false
+}

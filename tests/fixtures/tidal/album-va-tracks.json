@@ -1,0 +1,19 @@
+{
+  "limit": 100,
+  "offset": 0,
+  "totalNumberOfItems": 2,
+  "items": [
+    {
+      "id": 3001, "title": "Sunny", "duration": 200, "trackNumber": 1, "volumeNumber": 1, "isrc": "GBXYZ1900001",
+      "artist": { "id": 11, "name": "Artist One", "type": "MAIN" },
+      "artists": [{ "id": 11, "name": "Artist One", "type": "MAIN" }],
+      "album": { "id": 300, "title": "Summer Hits", "cover": "11112222-3333-4444-5555-666677778888" }
+    },
+    {
+      "id": 3002, "title": "Beach", "duration": 200, "trackNumber": 2, "volumeNumber": 1, "isrc": "GBXYZ1900002",
+      "artist": { "id": 12, "name": "Artist Two", "type": "MAIN" },
+      "artists": [{ "id": 12, "name": "Artist Two", "type": "MAIN" }, { "id": 13, "name": "MC Three", "type": "FEATURED" }],
+      "album": { "id": 300, "title": "Summer Hits", "cover": "11112222-3333-4444-5555-666677778888" }
+    }
+  ]
+}
