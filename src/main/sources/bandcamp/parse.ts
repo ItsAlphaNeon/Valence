@@ -340,10 +340,12 @@ export function parseDownloadPage(html: string): DownloadPage | null {
       flacUrl: downloads.flac?.url ?? null,
     })
   }
+  // The live page always renders this block and toggles it client-side (`data-bind="visible: …"`), so
+  // its presence only means a reauth when no item offers a download either.
   let emailReauth = false
   for (const t of scanTags(html)) {
     if (!/(^|\s)email-reauth-error(\s|$)/.test(t.attrs.class ?? '')) continue
-    emailReauth = !/display\s*:\s*none/i.test(t.attrs.style ?? '')
+    emailReauth = !/display\s*:\s*none/i.test(t.attrs.style ?? '') && !items.some((d) => Object.keys(d.downloads).length > 0)
     break
   }
   const verified = page.identities?.fan?.verified

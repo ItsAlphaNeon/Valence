@@ -113,6 +113,15 @@ describe('download page', () => {
     expect(page.items[0].flacUrl).toBeNull()
   })
 
+  it('ignores the client-toggled reauth block when downloads are offered', () => {
+    // The live page renders the block without an inline style; knockout shows it only on expiry.
+    const html = fixture('download-page.html').replace(/<div class="email-reauth-error"[^>]*>/, '<div class="email-reauth-error" data-bind="visible: expiredError()">')
+    expect(html).toContain('data-bind="visible: expiredError()"')
+    const page = parseDownloadPage(html)!
+    expect(page.emailReauth).toBe(false)
+    expect(pickDigitalItem(page, { saleItemId: 9001 })?.flacUrl).toContain('enc=flac')
+  })
+
   it('returns null without #pagedata', () => {
     expect(parseDownloadPage('<html><body>Log in</body></html>')).toBeNull()
   })

@@ -239,7 +239,8 @@ describe('encoding backoff', () => {
     const t = fakeTransport(() => new Response(noFlac, { headers: { 'content-type': 'text/html' } }))
     const opts = { redownloadUrl: 'https://bandcamp.com/download?x', stagingDir: join(box.dir, 'nf'), signal: new AbortController().signal, progress: () => {} }
     await expect(downloadRelease({ ...opts, client: new BandcampClient({ transport: t, gate: new RateGate() }) })).rejects.toMatchObject({ kind: 'unavailable', message: expect.stringMatching(/mp3-320/) })
-    const reauth = noFlac.replace('style="display:none"', '')
+    // A reauth page shows the block and offers no downloads at all.
+    const reauth = downloadPageHtml([{ sale_id: 9001, item_id: 1001, downloads: {} }]).replace('style="display:none"', '')
     const t2 = fakeTransport(() => new Response(reauth, { headers: { 'content-type': 'text/html' } }))
     await expect(downloadRelease({ ...opts, client: new BandcampClient({ transport: t2, gate: new RateGate() }) })).rejects.toMatchObject({ kind: 'auth', message: expect.stringMatching(/re-confirm/) })
   })
