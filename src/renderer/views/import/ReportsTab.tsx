@@ -4,9 +4,9 @@ import { useCallback, useEffect, useState } from 'react'
 import { cx, plural } from '../../lib/format'
 import { errorMessage, invoke, on } from '../../lib/ipc'
 import { IMPORT, type ImportSummary, type ReportListItem } from '@shared/ipc/import'
-import { Empty, Spinner } from '../../components/ui'
+import { Button, Empty, Spinner } from '../../components/ui'
 import { Icon } from '../../components/Icon'
-import { dayLabel, openReport, sourceIcon, sourceLabel } from './common'
+import { dayLabel, openReport, retryAllErrors, sourceIcon, sourceLabel } from './common'
 import { ReportDetailView } from './ReportDetail'
 
 export function SummaryChips({ s, compact }: { s: ImportSummary; compact?: boolean }) {
@@ -61,6 +61,15 @@ function ReportsList() {
       </Empty>
     )
 
+  // A job's newest report is its current state; an older one with errors was already retried.
+  const seenJobs = new Set<string>()
+  let withErrors = 0
+  for (const r of items) {
+    if (!r.jobId || seenJobs.has(r.jobId)) continue
+    seenJobs.add(r.jobId)
+    if (r.summary.errors > 0 && !r.undoneAt) withErrors++
+  }
+
   const groups: Array<{ label: string; items: ReportListItem[] }> = []
   for (const r of items) {
     const label = dayLabel(r.createdAt)
@@ -70,6 +79,17 @@ function ReportsList() {
 
   return (
     <div className="imp-reports">
+      {withErrors > 0 && (
+        <div className="imp-reports-bar card glass">
+          <Icon name="warning" size={16} className="imp-err-text" />
+          <span className="grow">
+            <b>{plural(withErrors, 'import')}</b> finished with errors
+          </span>
+          <Button small icon="refresh" onClick={() => void retryAllErrors()} title="Run every import with errors (and every failed one) again. Files already in your library are skipped.">
+            Retry All
+          </Button>
+        </div>
+      )}
       {groups.map((g) => (
         <section key={g.label} className="imp-group">
           <div className="imp-group-head">

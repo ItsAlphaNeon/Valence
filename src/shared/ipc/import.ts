@@ -7,7 +7,10 @@ export const IMPORT = {
   /** ('folder' | 'files') → job ids, after a native picker. */
   chooseAndImport: 'import:chooseAndImport',
   cancel: 'import:cancel',
+  /** (jobId) → boolean. Failed, cancelled or finished jobs run again (already-imported files are skipped). */
   retry: 'import:retry',
+  /** () → number of jobs re-queued: failed ones and finished ones whose latest report has errors. */
+  retryErrors: 'import:retryErrors',
   remove: 'import:remove',
   clearFinished: 'import:clearFinished',
   pausedSources: 'import:pausedSources',

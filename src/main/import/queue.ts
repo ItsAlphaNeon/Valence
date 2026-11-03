@@ -37,6 +37,7 @@ interface Running {
 }
 
 const ACTIVE: JobStatus[] = ['queued', 'running', 'review']
+const RETRYABLE: JobStatus[] = ['failed', 'cancelled', 'done']
 const NETWORK_RETRIES = 3
 
 function rowToJob(r: Record<string, any>): JobInfo {
@@ -150,13 +151,29 @@ export class ImportQueueImpl implements ImportQueue {
     this.changed()
   }
 
-  retry(id: string): void {
-    const job = this.get(id)
-    if (!job || !['failed', 'cancelled'].includes(job.status)) return
-    this.update(id, { status: 'queued', error: null, message: null, progress: 0, attempts: 0, stage: null })
-    this.notBefore.delete(id)
+  /** Runs a failed, cancelled or finished job again; false if it can't (or another job has the release). */
+  retry(id: string): boolean {
+    if (!this.requeue(id)) return false
     this.changed()
     this.schedule()
+    return true
+  }
+
+  /** Re-queues failed jobs and finished ones whose latest report has errors; returns how many. */
+  retryErrors(): number {
+    const rows = this.deps.db
+      .prepare(
+        `SELECT j.id FROM jobs j LEFT JOIN import_reports r ON r.id = j.report_id
+         WHERE j.status = 'failed' OR (j.status = 'done' AND r.undone_at IS NULL AND json_extract(r.summary_json, '$.errors') > 0)
+         ORDER BY j.created_at`,
+      )
+      .all() as Array<{ id: string }>
+    const n = rows.filter((r) => this.requeue(r.id)).length
+    if (n) {
+      this.changed()
+      this.schedule()
+    }
+    return n
   }
 
   remove(id: string): void {
@@ -206,6 +223,14 @@ export class ImportQueueImpl implements ImportQueue {
       if (ks.some((k) => keys.includes(k))) return rowToJob(r)
     }
     return null
+  }
+
+  private requeue(id: string): boolean {
+    const job = this.get(id)
+    if (!job || !RETRYABLE.includes(job.status) || this.findActive(job.releaseKeys)) return false
+    this.update(id, { status: 'queued', error: null, message: null, progress: 0, attempts: 0, stage: null })
+    this.notBefore.delete(id)
+    return true
   }
 
   private update(id: string, f: Partial<Pick<JobInfo, 'status' | 'stage' | 'progress' | 'message' | 'error' | 'attempts' | 'reportId' | 'review'>>): void {

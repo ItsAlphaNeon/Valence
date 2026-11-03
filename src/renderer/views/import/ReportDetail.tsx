@@ -7,7 +7,7 @@ import { toast, useUi } from '../../state/ui'
 import { IMPORT, type ReportAction, type ReportDetail } from '@shared/ipc/import'
 import { Button, Empty, Modal, Spinner } from '../../components/ui'
 import { Icon, type IconName } from '../../components/Icon'
-import { basename, fmtQuality, IDENTIFIED_LABEL, sourceLabel } from './common'
+import { basename, fmtQuality, IDENTIFIED_LABEL, retryJob, sourceLabel } from './common'
 
 interface UndoPlan {
   removeLibrary?: string
@@ -193,6 +193,11 @@ export function ReportDetailView({ id }: { id: string }) {
             {s.release && s.release !== report.title && <span className="faint ellipsis">· {s.release}</span>}
           </div>
         </div>
+        {s.errors > 0 && report.jobId && !report.undoneAt && (
+          <Button icon="refresh" onClick={() => void retryJob(report.jobId!, report.title)} title="Run this import again. Files already in your library are skipped.">
+            Retry
+          </Button>
+        )}
         {report.undoneAt ? (
           <span className="chip">
             <Icon name="undo" size={12} /> Undone {new Date(report.undoneAt).toLocaleDateString()}

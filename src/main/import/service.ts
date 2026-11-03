@@ -104,6 +104,7 @@ export class ImportService {
     })
     handle(IMPORT.cancel, (id: string) => q.cancel(id))
     handle(IMPORT.retry, (id: string) => q.retry(id))
+    handle(IMPORT.retryErrors, () => q.retryErrors())
     handle(IMPORT.remove, (id: string) => q.remove(id))
     handle(IMPORT.clearFinished, () => q.clearFinished())
     handle(IMPORT.pausedSources, () => q.pausedSources())

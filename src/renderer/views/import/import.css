@@ -77,6 +77,13 @@
   font-weight: 650;
   color: var(--fg-2);
 }
+.imp-reports-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  margin-bottom: 16px;
+}
 .imp-group-aside {
   margin-left: auto;
 }

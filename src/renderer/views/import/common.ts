@@ -43,6 +43,23 @@ export async function attempt(channel: string, args: unknown[], failure: string)
   }
 }
 
+const viewQueue = { label: 'View Queue', run: () => goTab('queue') }
+
+/** Runs one import's job again (a report's Retry). */
+export async function retryJob(jobId: string, title: string): Promise<void> {
+  const ok = await run<boolean>(IMPORT.retry, [jobId], `Couldn’t retry “${title}”`)
+  if (ok) toast(`Retrying “${title}”`, 'ok', viewQueue)
+  else if (ok === false) toast(`Couldn’t retry “${title}”: it was cleared from the queue, or it’s already queued`, 'error')
+}
+
+/** Re-queues every failed import and every finished one whose report has errors. */
+export async function retryAllErrors(): Promise<void> {
+  const n = await run<number>(IMPORT.retryErrors, [], 'Couldn’t retry the imports')
+  if (n === undefined) return
+  if (n) toast(`Retrying ${plural(n, 'import')}`, 'ok', viewQueue)
+  else toast('Nothing to retry: those imports were cleared from the queue, or they’re already queued')
+}
+
 export async function chooseAndImport(kind: 'folder' | 'files'): Promise<void> {
   const ids = await run<string[]>(IMPORT.chooseAndImport, [kind], 'Couldn’t start the import')
   if (!ids?.length) return
