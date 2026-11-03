@@ -1,0 +1,141 @@
+/* Mini player (400×124, frameless). The whole window drags except its controls. */
+
+.mini {
+  position: relative;
+  display: flex;
+  gap: 14px;
+  height: 100%;
+  padding: 14px 14px 12px;
+  overflow: hidden;
+  -webkit-app-region: drag;
+  background: var(--glass-bg);
+  isolation: isolate;
+}
+:root[data-tier='flat'] .mini,
+:root[data-tier='minimal'] .mini {
+  background: var(--bg-solid);
+}
+/* Linux has no native material behind the window; paint one. */
+.platform-linux .mini {
+  background: var(--bg-solid);
+}
+
+.mini-backdrop {
+  position: absolute;
+  inset: -40px;
+  z-index: -1;
+  background-size: cover;
+  background-position: center;
+  filter: blur(36px) saturate(1.5);
+  opacity: 0.42;
+  transition: background-image 600ms var(--ease);
+}
+:root[data-tier='minimal'] .mini-backdrop {
+  display: none;
+}
+
+.mini button,
+.mini .slider {
+  -webkit-app-region: no-drag;
+}
+
+.mini-art {
+  flex: none;
+  width: 96px;
+  height: 96px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  overflow: hidden;
+  box-shadow: var(--shadow-art);
+  cursor: pointer;
+}
+.mini-art .art {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  object-fit: cover;
+  font-size: 34px;
+  color: #fff;
+}
+
+.mini-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+.mini-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+.mini-meta {
+  flex: 1;
+  min-width: 0;
+}
+.mini-title {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mini-sub {
+  margin-top: 1px;
+  font-size: 12px;
+  color: var(--fg-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mini-idle .mini-title,
+.mini-idle .mini-sub {
+  color: var(--fg-3);
+}
+
+.mini-win {
+  display: flex;
+  gap: 2px;
+  margin: -4px -4px 0 0;
+  opacity: 0;
+  transition: opacity var(--dur) var(--ease);
+}
+.mini:hover .mini-win,
+.mini:focus-within .mini-win {
+  opacity: 1;
+}
+.mini-win .icon-btn {
+  width: 24px;
+  height: 24px;
+}
+
+.mini-controls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-top: auto;
+}
+.mini-controls .icon-btn {
+  width: 30px;
+  height: 30px;
+}
+.mini-controls .mini-play {
+  width: 36px;
+  height: 36px;
+  color: var(--fg);
+}
+.mini-spacer {
+  flex: 1;
+}
+.mini-volume {
+  width: 76px;
+  padding-right: 2px;
+}
+
+.mini-seek {
+  margin-top: 6px;
+}

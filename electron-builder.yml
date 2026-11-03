@@ -6,6 +6,7 @@ directories:
 files:
   - out/**/*
   - package.json
+  - resources/icons/*.png
 asarUnpack:
   - "**/node_modules/sharp/**/*"
   - "**/node_modules/@img/**/*"

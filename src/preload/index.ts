@@ -1,10 +1,12 @@
 // Generic, channel-based bridge. Feature modules define their own channels in shared/ipc-contract.ts
 // so this file rarely needs to change.
 
-import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
+import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from 'electron'
 
 const api = {
   platform: process.platform,
+  /** Absolute path of a dropped File (File.path no longer exists). */
+  pathForFile: (file: File): string => webUtils.getPathForFile(file),
   invoke: (channel: string, ...args: unknown[]): Promise<unknown> => ipcRenderer.invoke(channel, ...args),
   send: (channel: string, ...args: unknown[]): void => ipcRenderer.send(channel, ...args),
   on: (channel: string, cb: (...args: unknown[]) => void): (() => void) => {

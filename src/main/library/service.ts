@@ -257,6 +257,7 @@ export class LibraryService {
     const db = this.db
     handle(LIB.stats, () => libraryStats(db, this.root, this.scanning))
     handle(LIB.tracks, (q: TrackQuery) => queryTracks(db, q))
+    handle(LIB.trackIds, (q: TrackQuery) => queryTracks(db, { ...q, limit: q?.limit ?? 1_000_000, offset: 0 }).rows.map((r) => r.id))
     handle(LIB.track, (id: number) => trackById(db, id))
     handle(LIB.tracksByIds, (ids: number[]) => tracksByIds(db, ids))
     handle(LIB.albums, (q) => queryAlbums(db, q ?? {}))
@@ -266,6 +267,7 @@ export class LibraryService {
     })
     handle(LIB.artists, (q) => queryArtists(db, q ?? {}))
     handle(LIB.genres, () => queryGenres(db))
+    handle(LIB.artColor, (hash: string) => (hash ? this.art.color(String(hash)) : null))
     handle(LIB.search, (text: string) => ({
       tracks: queryTracks(db, { search: text, limit: 50 }).rows,
       albums: queryAlbums(db, { search: text, limit: 24 }),

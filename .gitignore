@@ -9,3 +9,4 @@ resources/bin/*/
 !resources/bin/.gitkeep
 .DS_Store
 Thumbs.db
+test-results/

@@ -14,6 +14,7 @@ const README = 'Drop music here to add it to Valence. Imported originals move to
 export class Inbox {
   private watcher: FSWatcher | null = null
   private timer: NodeJS.Timeout | null = null
+  private poll: NodeJS.Timeout | null = null
   private busy = false
   private again = false
 
@@ -27,6 +28,7 @@ export class Inbox {
   ) {}
 
   start(): void {
+    if (this.poll) return
     mkdirSync(join(this.dir, IMPORTED_DIR), { recursive: true })
     const readme = join(this.dir, 'README.txt')
     if (!existsSync(readme)) void import('node:fs/promises').then((f) => f.writeFile(readme, README)).catch(() => {})
@@ -40,12 +42,17 @@ export class Inbox {
     }
     // Initial sweep + slow safety poll (network drives, missed events).
     this.poke()
-    setInterval(() => this.poke(), 5 * 60_000).unref()
+    this.poll = setInterval(() => this.poke(), 5 * 60_000)
+    this.poll.unref()
   }
 
   stop(): void {
     this.watcher?.close()
+    this.watcher = null
     if (this.timer) clearTimeout(this.timer)
+    this.timer = null
+    if (this.poll) clearInterval(this.poll)
+    this.poll = null
   }
 
   private isImported(abs: string): boolean {

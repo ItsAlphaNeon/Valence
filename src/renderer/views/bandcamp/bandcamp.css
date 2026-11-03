@@ -1,0 +1,85 @@
+/* Bandcamp view. Shared source styles are in ../tidal/source-kit.css. */
+
+.bc-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 0 0 22px;
+}
+.bc-filter {
+  width: 260px;
+}
+.search-box.bc-filter input[type='search'] {
+  height: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.bc-filter input[type='search']::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+}
+.bc-clear {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  margin-right: -4px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--surface-active);
+  color: var(--fg-2);
+  cursor: pointer;
+}
+.bc-clear:hover {
+  color: var(--fg);
+}
+.bc-sort,
+.bc-hidden {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+}
+.bc-sort select {
+  height: 28px;
+  border-radius: var(--r-pill);
+  padding: 0 10px;
+}
+.bc-hidden {
+  color: var(--fg-2);
+  cursor: pointer;
+}
+.bc-count {
+  margin-left: auto;
+  font-size: 12px;
+}
+
+.bc-hidden-mark {
+  color: var(--fg-3);
+}
+.bc-tile-foot {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+}
+.bc-tag {
+  text-transform: lowercase;
+}
+
+.bc-confirm p {
+  margin: 0;
+  line-height: 1.5;
+}
+.bc-confirm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--sep);
+  font-size: 12.5px;
+}

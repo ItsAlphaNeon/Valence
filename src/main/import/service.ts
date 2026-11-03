@@ -64,6 +64,11 @@ export class ImportService {
   start(): void {
     this.archive.start()
     if (this.ctx.settings.get('import.inbox', true)) this.inbox.start()
+    this.ctx.settings.onChange((k, v) => {
+      if (k !== 'import.inbox') return
+      if (v === false) this.inbox.stop()
+      else this.inbox.start()
+    })
     void this.reports.sweepVault()
     this.registerIpc()
   }

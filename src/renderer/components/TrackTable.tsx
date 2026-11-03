@@ -1,0 +1,475 @@
+// Virtualized track list. Either `rows` (album/playlist) or a paged `query` (Songs: 50k+ rows are
+// fetched 300 at a time as they scroll into view).
+
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useVirtualizer } from '@tanstack/react-virtual'
+import type { TrackQuery, TrackRow } from '@shared/types'
+import { LIB } from '@shared/ipc/library'
+import type { QueueSource } from '../audio'
+import { invoke, revealLabel } from '../lib/ipc'
+import { cx, duration, quality, relativeTime } from '../lib/format'
+import { useLib } from '../state/library'
+import { addToQueue, playQuery, playNext, playTracks, usePlayer } from '../state/player'
+import { Artwork, Stars, showMenu, type MenuItem } from './ui'
+import { Icon } from './Icon'
+import { navigate, toast, useUi } from '../state/ui'
+
+export const ScrollParent = createContext<React.RefObject<HTMLElement | null> | null>(null)
+
+export type ColumnKey = 'index' | 'title' | 'artist' | 'album' | 'albumArtist' | 'time' | 'genre' | 'year' | 'rating' | 'plays' | 'added' | 'lastPlayed' | 'quality'
+
+interface Column {
+  key: ColumnKey
+  label: string
+  width: string
+  sort?: keyof TrackRow
+  align?: 'right' | 'center'
+}
+
+const COLUMNS: Record<ColumnKey, Column> = {
+  index: { key: 'index', label: '#', width: '44px', align: 'right', sort: 'trackNo' },
+  title: { key: 'title', label: 'Title', width: 'minmax(180px, 3fr)', sort: 'title' },
+  artist: { key: 'artist', label: 'Artist', width: 'minmax(120px, 2fr)', sort: 'artist' },
+  album: { key: 'album', label: 'Album', width: 'minmax(120px, 2fr)', sort: 'album' },
+  albumArtist: { key: 'albumArtist', label: 'Album Artist', width: 'minmax(120px, 1.5fr)', sort: 'albumArtist' },
+  time: { key: 'time', label: 'Time', width: '64px', align: 'right', sort: 'durationMs' },
+  genre: { key: 'genre', label: 'Genre', width: 'minmax(90px, 1fr)', sort: 'genre' },
+  year: { key: 'year', label: 'Year', width: '56px', align: 'right', sort: 'year' },
+  rating: { key: 'rating', label: 'Rating', width: '86px', sort: 'rating' },
+  plays: { key: 'plays', label: 'Plays', width: '56px', align: 'right', sort: 'playCount' },
+  added: { key: 'added', label: 'Added', width: '96px', sort: 'addedAt' },
+  lastPlayed: { key: 'lastPlayed', label: 'Last Played', width: '104px', sort: 'lastPlayed' },
+  quality: { key: 'quality', label: 'Format', width: '104px', sort: 'bitrate' },
+}
+
+const PAGE = 300
+
+function useTrackPages(query: TrackQuery | undefined, version: number) {
+  const [total, setTotal] = useState(0)
+  const [, force] = useState(0)
+  const pages = useRef(new Map<number, TrackRow[]>())
+  const loading = useRef(new Set<number>())
+  const key = JSON.stringify(query ?? null)
+  const gen = useRef(0)
+  const lastKey = useRef<string | null>(null)
+  useEffect(() => {
+    if (!query) return
+    const g = ++gen.current
+    // A new query starts over; a library change refreshes loaded pages in place (no flash).
+    const fresh = lastKey.current !== key
+    lastKey.current = key
+    loading.current.clear()
+    const want = fresh || !pages.current.size ? [0] : [...pages.current.keys()]
+    if (fresh) pages.current = new Map()
+    for (const p of want) {
+      loading.current.add(p)
+      void invoke<{ rows: TrackRow[]; total: number }>(LIB.tracks, { ...query, limit: PAGE, offset: p * PAGE }).then((r) => {
+        if (g !== gen.current) return
+        loading.current.delete(p)
+        pages.current.set(p, r.rows)
+        setTotal(r.total)
+        force((n) => n + 1)
+      })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, version])
+  const ensure = useCallback(
+    (start: number, end: number) => {
+      if (!query) return
+      for (let p = Math.floor(start / PAGE); p <= Math.floor(end / PAGE); p++) {
+        if (pages.current.has(p) || loading.current.has(p)) continue
+        loading.current.add(p)
+        const g = gen.current
+        void invoke<{ rows: TrackRow[]; total: number }>(LIB.tracks, { ...query, limit: PAGE, offset: p * PAGE }).then((r) => {
+          if (g !== gen.current) return
+          loading.current.delete(p)
+          pages.current.set(p, r.rows)
+          force((n) => n + 1)
+        })
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [key],
+  )
+  const get = (i: number): TrackRow | undefined => pages.current.get(Math.floor(i / PAGE))?.[i % PAGE]
+  return { total, get, ensure }
+}
+
+export interface TrackTableProps {
+  rows?: TrackRow[]
+  query?: TrackQuery
+  columns: ColumnKey[]
+  source: QueueSource
+  /** Sorting for query mode is controlled by the parent. */
+  sort?: TrackQuery['sort']
+  onSort?: (s: TrackQuery['sort']) => void
+  playlistId?: string
+  /** Show disc headers between discs (album view). */
+  discHeaders?: boolean
+  showArt?: boolean
+  header?: ReactNode
+  emptyText?: string
+}
+
+export function TrackTable(props: TrackTableProps) {
+  const { rows, query, columns, source } = props
+  const version = useLib((s) => s.version)
+  const paged = useTrackPages(rows ? undefined : query, version)
+  const count = rows ? rows.length : paged.total
+  const getRow = useCallback((i: number) => (rows ? rows[i] : paged.get(i)), [rows, paged])
+  const scrollRef = useContext(ScrollParent)
+  const bodyRef = useRef<HTMLDivElement>(null)
+  const [margin, setMargin] = useState(0)
+  const [sel, setSel] = useState<Set<number>>(new Set())
+  const anchor = useRef<number | null>(null)
+  const currentTrackId = usePlayer((s) => s.currentTrackId)
+  const playing = usePlayer((s) => !!s.state?.playing)
+  const playlists = useLib((s) => s.playlists)
+  const allIds = useRef<number[] | null>(null)
+
+  const rowsKey = rows ? `${rows.length}:${rows[0]?.id ?? ''}` : ''
+  useEffect(() => {
+    setSel(new Set())
+    allIds.current = null
+  }, [JSON.stringify(query ?? null), rowsKey])
+  useEffect(() => {
+    allIds.current = null
+  }, [version])
+
+  useLayoutEffect(() => {
+    const el = bodyRef.current
+    const sp = scrollRef?.current
+    if (!el || !sp) return
+    const update = () => setMargin(el.getBoundingClientRect().top - sp.getBoundingClientRect().top + sp.scrollTop)
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(sp)
+    if (el.parentElement) ro.observe(el.parentElement)
+    const view = el.closest('.view')
+    if (view) ro.observe(view)
+    return () => ro.disconnect()
+  }, [scrollRef, props.header])
+
+  const rowH = props.showArt ? 44 : 34
+  // Multi-disc albums get "Disc N" header rows mixed into the virtual list.
+  const display = useMemo(() => {
+    if (!props.discHeaders || !rows || new Set(rows.map((r) => r.discNo ?? 1)).size < 2) return null
+    const out: Array<number | { disc: number }> = []
+    let last: number | null = null
+    rows.forEach((r, i) => {
+      const d = r.discNo ?? 1
+      if (d !== last) out.push({ disc: d })
+      last = d
+      out.push(i)
+    })
+    return out
+  }, [rows, props.discHeaders])
+  const v = useVirtualizer({
+    count: display ? display.length : count,
+    getScrollElement: () => scrollRef?.current ?? null,
+    estimateSize: (k) => (display && typeof display[k] !== 'number' ? 40 : rowH),
+    overscan: 16,
+    scrollMargin: margin,
+  })
+  const items = v.getVirtualItems()
+  useEffect(() => {
+    if (!rows && items.length) paged.ensure(items[0].index, items[items.length - 1].index)
+  })
+  const toDisplay = (i: number) => (display ? display.indexOf(i) : i)
+
+  const ids = async (indices: number[]): Promise<number[]> => {
+    if (rows) return indices.map((i) => rows[i]?.id).filter((x): x is number => x != null)
+    const missing = indices.some((i) => !paged.get(i))
+    if (missing) {
+      allIds.current ??= await invoke<number[]>(LIB.trackIds, query)
+      return indices.map((i) => allIds.current![i]).filter((x) => x != null)
+    }
+    return indices.map((i) => paged.get(i)!.id)
+  }
+  const selectedIndices = () => [...sel].sort((a, b) => a - b)
+
+  const play = async (i: number) => {
+    const r = getRow(i)
+    if (!r) return
+    if (rows) await playTracks(rows.map((x) => x.id), i, source)
+    else await playQuery(query ?? {}, r.id, source)
+  }
+
+  const onRowClick = (e: React.MouseEvent, i: number) => {
+    if (e.shiftKey && anchor.current != null) {
+      const [a, b] = [Math.min(anchor.current, i), Math.max(anchor.current, i)]
+      const next = new Set(e.ctrlKey || e.metaKey ? sel : [])
+      for (let k = a; k <= b; k++) next.add(k)
+      setSel(next)
+    } else if (e.ctrlKey || e.metaKey) {
+      const next = new Set(sel)
+      if (next.has(i)) next.delete(i)
+      else next.add(i)
+      setSel(next)
+      anchor.current = i
+    } else {
+      setSel(new Set([i]))
+      anchor.current = i
+    }
+  }
+
+  const menuFor = async (e: React.MouseEvent, i: number) => {
+    e.preventDefault()
+    let indices = selectedIndices()
+    if (!sel.has(i)) {
+      indices = [i]
+      setSel(new Set([i]))
+      anchor.current = i
+    }
+    const r = getRow(i)
+    const event = { clientX: e.clientX, clientY: e.clientY }
+    const chosen = await ids(indices)
+    const n = chosen.length
+    const items: MenuItem[] = [
+      { label: 'Play', icon: 'play', onClick: () => (n === 1 ? void play(i) : void playTracks(chosen, 0, source)) },
+      { label: 'Play Next', icon: 'queue', onClick: () => void playNext(chosen) },
+      { label: 'Add to Up Next', onClick: () => void addToQueue(chosen) },
+      { separator: true },
+      {
+        label: 'Add to Playlist',
+        icon: 'playlist',
+        submenu: [
+          {
+            label: 'New Playlist…',
+            icon: 'plus',
+            onClick: () => window.dispatchEvent(new CustomEvent('valence:new-playlist', { detail: chosen })),
+          },
+          ...(playlists.some((p) => p.kind === 'static') ? [{ separator: true } as MenuItem] : []),
+          ...playlists
+            .filter((p) => p.kind === 'static')
+            .map((p) => ({
+              label: p.name,
+              onClick: () => void invoke(LIB.addToPlaylist, p.id, chosen).then(() => toast(`Added to “${p.name}”`, 'ok')),
+            })),
+        ],
+      },
+      {
+        label: 'Rating',
+        icon: 'star',
+        submenu: [0, 1, 2, 3, 4, 5].map((s) => ({
+          label: s ? '★'.repeat(s) : 'None',
+          checked: n === 1 && r ? Math.round(r.rating / 20) === s : false,
+          onClick: () => void invoke(LIB.setRating, chosen, s),
+        })),
+      },
+      { label: n > 1 ? `Get Info (${n})` : 'Get Info', icon: 'info', onClick: () => useUi.getState().openGetInfo(chosen) },
+      { separator: true },
+    ]
+    if (r && n === 1) {
+      if (r.albumId != null) items.push({ label: 'Go to Album', icon: 'albums', onClick: () => navigate({ view: 'album', id: r.albumId! }) })
+      items.push({ label: 'Go to Artist', icon: 'artists', onClick: () => navigate({ view: 'artist', artist: r.albumArtist || r.artist }) })
+      items.push({ label: revealLabel, icon: 'folder', onClick: () => void invoke(LIB.reveal, r.id) })
+    }
+    if (props.playlistId && playlists.find((p) => p.id === props.playlistId)?.kind === 'static' && rows) {
+      items.push({ separator: true })
+      items.push({
+        label: n > 1 ? `Remove ${n} from Playlist` : 'Remove from Playlist',
+        icon: 'trash',
+        danger: true,
+        onClick: () => {
+          const drop = new Set(indices)
+          void invoke(
+            LIB.setPlaylistItems,
+            props.playlistId,
+            rows.filter((_, k) => !drop.has(k)).map((x) => x.id),
+          )
+        },
+      })
+    }
+    showMenu(event, items)
+  }
+
+  const onKey = async (e: React.KeyboardEvent) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
+      e.preventDefault()
+      setSel(new Set(Array.from({ length: count }, (_, k) => k)))
+    } else if (e.key === 'Enter' && sel.size) {
+      const idx = selectedIndices()
+      if (idx.length === 1) void play(idx[0])
+      else void playTracks(await ids(idx), 0, source)
+    } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'i' && sel.size) {
+      useUi.getState().openGetInfo(await ids(selectedIndices()))
+    } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault()
+      const cur = anchor.current ?? -1
+      const next = Math.min(count - 1, Math.max(0, cur + (e.key === 'ArrowDown' ? 1 : -1)))
+      setSel(new Set([next]))
+      anchor.current = next
+      v.scrollToIndex(toDisplay(next), { align: 'auto' })
+    }
+  }
+
+  const grid = columns.map((c) => COLUMNS[c].width).join(' ')
+  const sort = props.sort
+  const header = (
+    <div className="tt-head" style={{ gridTemplateColumns: grid }}>
+      {columns.map((c) => {
+        const col = COLUMNS[c]
+        const active = sort?.key === col.sort
+        return (
+          <button
+            key={c}
+            className={cx('tt-hcell', col.align && `al-${col.align}`, active && 'sorted')}
+            disabled={!props.onSort || !col.sort}
+            onClick={() => props.onSort?.(active && sort?.dir === 'asc' ? { key: col.sort!, dir: 'desc' } : { key: col.sort!, dir: 'asc' })}
+          >
+            {col.label}
+            {active && <Icon name="chevronDown" size={10} style={{ transform: sort?.dir === 'asc' ? 'rotate(180deg)' : undefined }} />}
+          </button>
+        )
+      })}
+    </div>
+  )
+
+
+  if (!count && (rows || paged.total === 0)) {
+    return (
+      <div className="tt">
+        {props.header}
+        {header}
+        <div className="tt-empty">{props.emptyText ?? 'No songs'}</div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="tt" tabIndex={0} onKeyDown={onKey}>
+      {props.header}
+      {header}
+      <div ref={bodyRef} className="tt-body" style={{ height: v.getTotalSize() }}>
+        {items.map((it) => {
+          const top = it.start - margin
+          const entry = display ? display[it.index] : it.index
+          if (typeof entry !== 'number')
+            return (
+              <div key={it.key} className="tt-discrow" style={{ transform: `translateY(${top}px)`, height: 40 }}>
+                <Icon name="disc" size={14} /> Disc {entry.disc}
+              </div>
+            )
+          const i = entry
+          const r = getRow(i)
+          if (!r)
+            return (
+              <div key={it.key} className="tt-row placeholder" style={{ transform: `translateY(${top}px)`, height: rowH, gridTemplateColumns: grid }}>
+                <span className="skeleton" />
+              </div>
+            )
+          const isCur = r.id === currentTrackId
+          return (
+            <div
+              key={it.key}
+              className={cx('tt-row', sel.has(i) && 'sel', isCur && 'current', i % 2 === 1 && 'odd')}
+              style={{ transform: `translateY(${top}px)`, height: rowH, gridTemplateColumns: grid }}
+              onClick={(e) => onRowClick(e, i)}
+              onDoubleClick={() => void play(i)}
+              onContextMenu={(e) => void menuFor(e, i)}
+              draggable
+              onDragStart={async (e) => {
+                const idx = sel.has(i) ? selectedIndices() : [i]
+                const chosen = rows ? idx.map((k) => rows[k].id) : idx.map((k) => paged.get(k)?.id).filter((x): x is number => x != null)
+                e.dataTransfer.setData('application/x-valence-tracks', JSON.stringify(chosen))
+                e.dataTransfer.effectAllowed = 'copy'
+              }}
+            >
+              {columns.map((c) => (
+                <Cell key={c} col={COLUMNS[c]} r={r} index={i} isCur={isCur} playing={playing} showArt={props.showArt} onRate={(s) => void invoke(LIB.setRating, [r.id], s)} />
+              ))}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function NowBars({ playing }: { playing: boolean }) {
+  return (
+    <span className={cx('now-bars', playing && 'on')}>
+      <i />
+      <i />
+      <i />
+    </span>
+  )
+}
+
+function Cell({ col, r, index, isCur, playing, showArt, onRate }: { col: Column; r: TrackRow; index: number; isCur: boolean; playing: boolean; showArt?: boolean; onRate: (s: number) => void }) {
+  const cls = cx('tt-cell', col.align && `al-${col.align}`, `c-${col.key}`)
+  switch (col.key) {
+    case 'index':
+      return <span className={cls}>{isCur ? <NowBars playing={playing} /> : (r.trackNo ?? index + 1)}</span>
+    case 'title':
+      return (
+        <span className={cls}>
+          {showArt && (
+            <span className="tt-art">
+              <Artwork hash={r.artHash} px={64} size={32} radius={5} title={r.album} />
+              {isCur && <NowBars playing={playing} />}
+            </span>
+          )}
+          <span className="tt-title">
+            <span className="ellipsis">{r.title}</span>
+            {r.lyricsKind === 'synced' && <span className="tt-flag" title="Synced lyrics">LRC</span>}
+          </span>
+        </span>
+      )
+    case 'artist':
+      return (
+        <span className={cls}>
+          <a
+            className="ellipsis link-muted"
+            onClick={(e) => {
+              e.stopPropagation()
+              navigate({ view: 'artist', artist: r.albumArtist || r.artist })
+            }}
+          >
+            {r.artist}
+          </a>
+        </span>
+      )
+    case 'album':
+      return (
+        <span className={cls}>
+          <a
+            className="ellipsis link-muted"
+            onClick={(e) => {
+              e.stopPropagation()
+              if (r.albumId != null) navigate({ view: 'album', id: r.albumId })
+            }}
+          >
+            {r.album}
+          </a>
+        </span>
+      )
+    case 'albumArtist':
+      return <span className={cx(cls, 'ellipsis')}>{r.albumArtist}</span>
+    case 'time':
+      return <span className={cx(cls, 'tnum')}>{duration(r.durationMs)}</span>
+    case 'genre':
+      return <span className={cx(cls, 'ellipsis')}>{r.genre}</span>
+    case 'year':
+      return <span className={cx(cls, 'tnum')}>{r.year ?? ''}</span>
+    case 'rating':
+      return (
+        <span className={cls}>
+          <Stars rating={r.rating} onRate={onRate} />
+        </span>
+      )
+    case 'plays':
+      return <span className={cx(cls, 'tnum')}>{r.playCount || ''}</span>
+    case 'added':
+      return <span className={cx(cls, 'ellipsis')}>{relativeTime(r.addedAt)}</span>
+    case 'lastPlayed':
+      return <span className={cx(cls, 'ellipsis')}>{relativeTime(r.lastPlayed)}</span>
+    case 'quality':
+      return <span className={cx(cls, 'ellipsis', 'muted')}>{quality(r)}</span>
+  }
+}
+
+export function useSelectionIds(rows: TrackRow[] | undefined): number[] {
+  return useMemo(() => (rows ?? []).map((r) => r.id), [rows])
+}

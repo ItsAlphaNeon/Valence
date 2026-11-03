@@ -5,12 +5,16 @@ import type { AlbumRow, ArtistRow, GenreRow, LibraryStats, TrackQuery, TrackRow,
 export const LIB = {
   stats: 'library:stats',
   tracks: 'library:tracks',
+  /** (TrackQuery) → number[] in query order (for "play all"). */
+  trackIds: 'library:trackIds',
   track: 'library:track',
   tracksByIds: 'library:tracksByIds',
   albums: 'library:albums',
   album: 'library:album',
   artists: 'library:artists',
   genres: 'library:genres',
+  /** (artHash) → { r, g, b, luminance } | null */
+  artColor: 'library:artColor',
   search: 'library:search',
   rescan: 'library:rescan',
   setRating: 'library:setRating',
