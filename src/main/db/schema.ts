@@ -218,4 +218,22 @@ export const MIGRATIONS: string[] = [
 
   CREATE TABLE kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);
   `,
+  /* 2: SiIvaGunner rips (hq_rip <> '' keeps a track out of the main library) */ `
+  ALTER TABLE tracks ADD COLUMN hq_rip TEXT NOT NULL DEFAULT '';
+  ALTER TABLE tracks ADD COLUMN composer TEXT;
+  ALTER TABLE tracks ADD COLUMN youtube_video_id TEXT;
+  ALTER TABLE tracks ADD COLUMN youtube_uploaded TEXT;
+  ALTER TABLE tracks ADD COLUMN gdrive_file_id TEXT;
+  ALTER TABLE tracks ADD COLUMN hqr_release TEXT;
+  ALTER TABLE tracks ADD COLUMN rip_game TEXT;
+  ALTER TABLE tracks ADD COLUMN rip_platform TEXT;
+  ALTER TABLE albums ADD COLUMN hq_rip TEXT NOT NULL DEFAULT '';
+  CREATE INDEX tracks_hq_rip ON tracks(hq_rip);
+  CREATE INDEX tracks_youtube ON tracks(youtube_video_id);
+  CREATE INDEX tracks_gdrive ON tracks(gdrive_file_id);
+  CREATE INDEX tracks_hqr_release ON tracks(hqr_release);
+  CREATE INDEX albums_hq_rip ON albums(hq_rip);
+  -- Existing rows predate these columns: the next start rescans every file once.
+  INSERT OR REPLACE INTO kv(key, value) VALUES ('library.fullRescanPending', '1');
+  `,
 ]

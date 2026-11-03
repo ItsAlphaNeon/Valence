@@ -8,6 +8,7 @@ import { cpus } from 'node:os'
 import { extname, join } from 'node:path'
 import type { AudioFormat, TrackTags } from '@shared/types'
 import { encodeSourceQuality, decodeSourceQuality } from '@shared/quality'
+import { RIP_GENRE } from '@shared/types'
 import { cleanText } from '@shared/sanitize'
 import type { Logger, SettingsStore, ValenceEnv } from '@main/context'
 import { SourceError, type SourceRelease, type Transport } from './source-types'
@@ -130,7 +131,7 @@ export async function runPipeline(release: SourceRelease, deps: PipelineDeps, op
 
   // 3. Identify with MusicBrainz.
   let ident: IdentifyResultLike | null = null
-  const mbEnabled = settings.get('metadata.musicbrainz', true) && deps.metadata && !opts.choice?.asIs
+  const mbEnabled = !release.skipLookups && settings.get('metadata.musicbrainz', true) && deps.metadata && !opts.choice?.asIs
   if (mbEnabled) {
     progress(0.08, 'Looking up MusicBrainz')
     const input: IdentifyInputLike = {
@@ -185,6 +186,8 @@ export async function runPipeline(release: SourceRelease, deps: PipelineDeps, op
     let genre = singleGenre(merged.genre)
     if (!genre && bandcampTags.length) genre = pickGenre(bandcampTags, undefined)
     if (!genre) genre = singleGenre(probe.tags.genre)
+    // Rips carry one fixed genre so players that only read standard tags can still separate them.
+    if (merged.hq_rip) genre = RIP_GENRE
     const tags: TrackTags = {
       ...merged,
       genre,
@@ -208,7 +211,7 @@ export async function runPipeline(release: SourceRelease, deps: PipelineDeps, op
       summary.skipped++
     }
   }
-  if (deps.metadata && settings.get('lyrics.fetch', true)) {
+  if (!release.skipLookups && deps.metadata && settings.get('lyrics.fetch', true)) {
     progress(0.15, 'Fetching lyrics')
     await pool(todo.filter((p) => !p.tags.lyrics), 2, async (p) => {
       try {
@@ -273,7 +276,7 @@ export async function runPipeline(release: SourceRelease, deps: PipelineDeps, op
   }
 
   // 8. Transcode/copy, tag, archive, place.
-  const template = library.template()
+  const templateFor = (tags: TrackTags) => library.templateFor(tags)
   const taken = new Set<string>()
   const placed: string[] = []
   let done = 0
@@ -293,6 +296,7 @@ export async function runPipeline(release: SourceRelease, deps: PipelineDeps, op
 
       // Lossless master to the archive.
       let archived: { where: 'archive' | 'pending'; rel: string } | null = null
+      const template = templateFor(p.tags)
       const libRel = await chooseRelPath(env.libraryRoot, p.tags, ext, {
         template,
         taken,

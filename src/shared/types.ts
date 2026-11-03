@@ -1,6 +1,12 @@
 // Types shared between main, preload and renderer.
 
-export type SourceKind = 'tidal' | 'bandcamp' | 'import'
+export type SourceKind = 'tidal' | 'bandcamp' | 'import' | 'hqrip' | 'youtube'
+
+/** SiIvaGunner "High Quality Rip" collections; any value marks a track as a rip (kept out of the main library). */
+export type RipCollection = 'SiIvaGunner' | 'SGFR' | 'YouTube'
+
+/** Genre every rip carries so other players (phones) can separate rips too. */
+export const RIP_GENRE = 'High Quality Rip'
 
 /**
  * Canonical track metadata. Field names follow MusicBrainz Picard's internal tag names so the
@@ -66,6 +72,18 @@ export interface TrackTags {
   source?: SourceKind
   /** Quality of the original source, e.g. "lossless:16:44100" or "lossy:mp3:320" (used for upgrade decisions) */
   source_quality?: string
+  composer?: string
+  /** Rip collection; set = the track lives in the SiIvaGunner section, not the main library. */
+  hq_rip?: string
+  youtube_video_id?: string
+  /** ISO time the video went up (premiere time when it had one); orders season albums. */
+  youtube_uploaded?: string
+  gdrive_file_id?: string
+  /** Catalog release a rip came from, e.g. "hqr:<flac folder id>" or "sgfr:0016". */
+  hqr_release?: string
+  /** Game a rip is from, and its platform (from the video description). */
+  rip_game?: string
+  rip_platform?: string
 }
 
 export interface AudioFormat {
@@ -115,7 +133,15 @@ export interface TrackRow {
   rgAlbumGain: number | null
   rgAlbumPeak: number | null
   compilation: boolean
+  /** Rip collection ('' for normal music). */
+  hqRip: string
+  composer: string | null
+  ripGame: string | null
+  youtubeVideoId: string | null
 }
+
+/** Which half of the library a query covers: normal music, SiIvaGunner rips, or both. */
+export type LibraryCollection = 'main' | 'rips' | 'all'
 
 export interface AlbumRow {
   id: number
@@ -130,6 +156,7 @@ export interface AlbumRow {
   genre: string | null
   addedAt: number
   compilation: boolean
+  hqRip: string
 }
 
 export interface ArtistRow {
@@ -158,14 +185,21 @@ export interface TrackQuery {
   limit?: number
   offset?: number
   recentlyAdded?: boolean
+  /** Default 'main'; album and playlist lookups default to 'all' (a rip album must still open). */
+  collection?: LibraryCollection
+  /** With collection 'rips': only these rip collections (e.g. ['YouTube'] for season albums). */
+  ripKinds?: string[]
 }
 
 export interface LibraryStats {
+  /** Counts cover the main library only. */
   tracks: number
   albums: number
   artists: number
   durationMs: number
   bytes: number
+  ripTracks: number
+  ripAlbums: number
   libraryRoot: string
   scanning: boolean
 }

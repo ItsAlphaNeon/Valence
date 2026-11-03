@@ -67,6 +67,13 @@ export const CUSTOM_FIELDS: Array<[keyof TrackTags, string, string, string]> = [
   ['bandcamp_url', 'BANDCAMP_URL', 'BANDCAMP_URL', 'BANDCAMP_URL'],
   ['source', 'VALENCE_SOURCE', 'VALENCE_SOURCE', 'VALENCE_SOURCE'],
   ['source_quality', 'VALENCE_SOURCE_QUALITY', 'VALENCE_SOURCE_QUALITY', 'VALENCE_SOURCE_QUALITY'],
+  ['hq_rip', 'HIGH QUALITY RIP', 'HIGH QUALITY RIP', 'HIGH QUALITY RIP'],
+  ['youtube_video_id', 'YOUTUBE_VIDEO_ID', 'YOUTUBE_VIDEO_ID', 'YOUTUBE_VIDEO_ID'],
+  ['youtube_uploaded', 'YOUTUBE_UPLOADED', 'YOUTUBE_UPLOADED', 'YOUTUBE_UPLOADED'],
+  ['gdrive_file_id', 'GDRIVE_FILE_ID', 'GDRIVE_FILE_ID', 'GDRIVE_FILE_ID'],
+  ['hqr_release', 'HQR_RELEASE', 'HQR_RELEASE', 'HQR_RELEASE'],
+  ['rip_game', 'HQR_GAME', 'HQR_GAME', 'HQR_GAME'],
+  ['rip_platform', 'HQR_PLATFORM', 'HQR_PLATFORM', 'HQR_PLATFORM'],
 ]
 
 /** ReplayGain uses Picard/foobar naming everywhere (TXXX in ID3, Vorbis keys, MP4 freeform). */

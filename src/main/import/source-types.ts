@@ -40,6 +40,11 @@ export interface SourceRelease {
   raw?: unknown
   /** Human-readable label for the import report, e.g. "TIDAL · Artist — Album". */
   title: string
+  /**
+   * Skip MusicBrainz/AcoustID identification and lyrics lookups. Rips need this: their titles and
+   * fingerprints match the real game soundtracks they parody.
+   */
+  skipLookups?: boolean
 }
 
 export interface AcquireProgress {

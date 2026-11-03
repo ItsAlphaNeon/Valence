@@ -128,6 +128,8 @@ const FIELDS: Array<{ field: SmartField; label: string; type: FieldType }> = [
   { field: 'lossless', label: 'Lossless', type: 'bool' },
   { field: 'source', label: 'Source', type: 'text' },
   { field: 'compilation', label: 'Compilation', type: 'bool' },
+  // SiIvaGunner, SGFR or YouTube; any rule on it brings rips into the playlist ("is not" empty = every rip).
+  { field: 'hqRip', label: 'High Quality Rip', type: 'text' },
 ]
 const OPS: Record<FieldType, Array<{ op: SmartOp; label: string }>> = {
   text: [

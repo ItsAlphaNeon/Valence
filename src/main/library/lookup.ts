@@ -42,15 +42,16 @@ export interface LibraryLookupEx extends LibraryLookup {
 export function createLibraryLookup(db: DB): LibraryLookupEx {
   const byTidal = db.prepare('SELECT rel_path FROM tracks WHERE tidal_track_id = ? LIMIT 1')
   const byBandcamp = db.prepare('SELECT rel_path FROM tracks WHERE bandcamp_track_id = ? LIMIT 1')
-  const byIsrc = db.prepare('SELECT rel_path FROM tracks WHERE isrc = ? LIMIT 1')
-  const byTitle = db.prepare('SELECT id, rel_path, artist, album_artist, title, duration_ms FROM tracks WHERE match_title = ? LIMIT 50')
+  // Fuzzy matches (ISRC, title, barcode, artist) never land on a rip: a rip is not the song it parodies.
+  const byIsrc = db.prepare("SELECT rel_path FROM tracks WHERE isrc = ? AND hq_rip = '' LIMIT 1")
+  const byTitle = db.prepare("SELECT id, rel_path, artist, album_artist, title, duration_ms FROM tracks WHERE match_title = ? AND hq_rip = '' LIMIT 50")
   const albumByTidal = db.prepare('SELECT count(*) n FROM tracks WHERE tidal_album_id = ?')
   const albumByBandcamp = db.prepare('SELECT count(*) n FROM tracks WHERE bandcamp_item_id = ?')
-  const albumByBarcode = db.prepare('SELECT id FROM albums WHERE barcode = ? LIMIT 1')
-  const albumsByTitle = db.prepare('SELECT id, album_artist FROM albums WHERE match_title = ? LIMIT 20')
+  const albumByBarcode = db.prepare("SELECT id FROM albums WHERE barcode = ? AND hq_rip = '' LIMIT 1")
+  const albumsByTitle = db.prepare("SELECT id, album_artist FROM albums WHERE match_title = ? AND hq_rip = '' LIMIT 20")
   const albumCount = db.prepare('SELECT count(*) n FROM tracks WHERE album_id = ?')
   const artistCount = db.prepare(
-    'SELECT count(*) n FROM tracks WHERE match_artist = @k OR album_id IN (SELECT id FROM albums WHERE match_artist = @k)',
+    "SELECT count(*) n FROM tracks WHERE hq_rip = '' AND (match_artist = @k OR album_id IN (SELECT id FROM albums WHERE match_artist = @k))",
   )
 
   const fuzzy = (t: BadgeQueryTrack): string | null => {

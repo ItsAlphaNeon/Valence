@@ -10,6 +10,8 @@ import { AlbumTile } from '../../components/AlbumGrid'
 import { Artwork, Button, Empty, IconButton, Spinner, showMenu } from '../../components/ui'
 
 function kindOf(a: AlbumRow): string {
+  if (a.hqRip === 'YouTube') return 'High Quality Rips · Season'
+  if (a.hqRip) return `High Quality Rips · ${a.hqRip === 'SGFR' ? 'SGFR' : 'Album'}`
   if (a.compilation) return 'Compilation'
   // trackTotal is per disc (from the tags), so a multi-disc set can have a small one.
   const n = Math.max(a.trackCount, a.trackTotal ?? 0)
@@ -22,8 +24,11 @@ export function AlbumDetailView({ id }: { id: number }) {
   const { data, loading } = useLibData(() => invoke<AlbumDetail | null>(LIB.album, id), [id])
   const album = data?.album
   const more = useLibData(
-    () => (album ? invoke<AlbumRow[]>(LIB.albums, { albumArtist: album.albumArtist, sort: 'year' }) : Promise.resolve([])),
-    [album?.albumArtist],
+    () =>
+      album
+        ? invoke<AlbumRow[]>(LIB.albums, { albumArtist: album.albumArtist, sort: 'year', collection: album.hqRip ? 'rips' : 'main' })
+        : Promise.resolve([]),
+    [album?.albumArtist, album?.hqRip],
   ).data?.filter((a) => a.id !== id)
 
   if (!data) return loading ? <div className="view center-spin"><Spinner /></div> : <div className="view"><Empty icon="albums" title="Album not found" /></div>

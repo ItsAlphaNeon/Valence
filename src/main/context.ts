@@ -1,7 +1,7 @@
 // Services shared by feature modules (sources, audio, integrations). Implemented in main/app.ts;
 // feature modules depend only on these interfaces so they can be unit-tested with fakes.
 
-import type { InLibraryBadge } from '@shared/types'
+import type { InLibraryBadge, SourceKind } from '@shared/types'
 import type { ProgressFn, SourceRelease } from './import/source-types'
 
 export interface ValenceEnv {
@@ -72,7 +72,7 @@ export interface AcquireContext {
 export type Acquirer = (payload: any, ctx: AcquireContext) => Promise<SourceRelease>
 
 export interface EnqueueRequest {
-  source: 'tidal' | 'bandcamp' | 'import'
+  source: SourceKind
   title: string
   /** Keys used for "already queued/in library" checks, e.g. ["tidal:album:123"]. */
   releaseKeys: string[]

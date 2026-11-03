@@ -13,6 +13,9 @@ import { IconButton, ProgressBar, showMenu, usePrompt } from '../components/ui'
 const TRACKS_MIME = 'application/x-valence-tracks'
 
 function same(a: Route, b: Route): boolean {
+  // Rip albums highlight the SiIvaGunner list they came from, not the main Albums.
+  if (a.view === 'album' && a.rip) return b.view === 'rips' && (b.tab ?? 'seasons') === a.rip
+  if (a.view === 'rips' && b.view === 'rips') return (a.tab ?? 'seasons') === (b.tab ?? 'seasons')
   if (a.view !== b.view) {
     // Album/artist/genre detail pages highlight their parent section.
     const parent: Partial<Record<Route['view'], Route['view']>> = { album: 'albums', artist: 'artists', genre: 'genres' }
@@ -126,6 +129,12 @@ export function Sidebar() {
           <Item icon="artists" label="Artists" to={{ view: 'artists' }} />
           <Item icon="genres" label="Genres" to={{ view: 'genres' }} />
           <Item icon="clock" label="Recently Added" to={{ view: 'recent' }} />
+        </div>
+        <div className="sb-section">
+          <div className="sb-head">SiIvaGunner</div>
+          <Item icon="star" label="Seasons" to={{ view: 'rips', tab: 'seasons' }} />
+          <Item icon="albums" label="Rip Albums" to={{ view: 'rips', tab: 'albums' }} />
+          <Item icon="songs" label="Rip Songs" to={{ view: 'rips', tab: 'songs' }} extra={stats?.ripTracks ? <span className="sb-count">{stats.ripTracks}</span> : undefined} />
         </div>
         <div className="sb-section">
           <div className="sb-head">

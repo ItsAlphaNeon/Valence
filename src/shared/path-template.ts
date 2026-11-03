@@ -8,6 +8,9 @@ import { VARIOUS_ARTISTS, isVariousArtists, primaryArtist } from './artist-credi
 
 export const DEFAULT_TEMPLATE = '{albumartist_primary}/{album}[ ({year})]/{title}'
 
+/** SiIvaGunner rips: one top folder, kept apart from the rest of the library (and on synced devices). */
+export const RIP_TEMPLATE = 'High Quality Rips/{album}/{title}'
+
 export type TemplateVars = Record<string, string | undefined>
 
 export function yearOf(date: string | undefined | null): string | undefined {

@@ -136,6 +136,7 @@ function mapTags(meta: IAudioMetadata): TrackTags {
   set('label', first(c.label))
   set('catalognumber', first(c.catalognumber) ?? cv('CATALOGNUMBER'))
   set('copyright', c.copyright)
+  set('composer', first(c.composer))
   set('bpm', c.bpm)
   set('key', c.key)
   const comment = first(c.comment)

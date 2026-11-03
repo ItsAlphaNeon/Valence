@@ -5,7 +5,7 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import type { AlbumRow } from '@shared/types'
 import { LIB } from '@shared/ipc/library'
 import { invoke } from '../lib/ipc'
-import { navigate, useUi } from '../state/ui'
+import { albumRoute, navigate, useUi } from '../state/ui'
 import { addToQueue, playNext, playQuery, usePlayer } from '../state/player'
 import { Artwork, showMenu } from './ui'
 import { Icon } from './Icon'
@@ -31,7 +31,7 @@ export function albumMenu(e: React.MouseEvent, a: AlbumRow): void {
 export function AlbumTile({ a, sub }: { a: AlbumRow; sub?: ReactNode }) {
   const playingAlbum = usePlayer((s) => s.state?.current?.albumKey)
   return (
-    <div className="tile" onClick={() => navigate({ view: 'album', id: a.id })} onContextMenu={(e) => albumMenu(e, a)}>
+    <div className="tile" onClick={() => navigate(albumRoute(a.id, a.hqRip))} onContextMenu={(e) => albumMenu(e, a)}>
       <div className="tile-art">
         <Artwork hash={a.artHash} px={300} radius={10} title={a.title} />
         <button

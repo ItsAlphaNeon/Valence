@@ -1,7 +1,21 @@
 // Read-side queries backing the library views.
 
-import type { AlbumRow, ArtistRow, GenreRow, LibraryStats, TrackQuery, TrackRow } from '@shared/types'
+import type { AlbumRow, ArtistRow, GenreRow, LibraryCollection, LibraryStats, TrackQuery, TrackRow } from '@shared/types'
 import type { DB } from '@main/db/db'
+
+/**
+ * SQL condition for one half of the library on a table alias with an hq_rip column (tracks or
+ * albums), or null for both. `kinds` narrows rips to some collections (SiIvaGunner, SGFR, YouTube).
+ */
+export function collectionWhere(alias: string, c: LibraryCollection, kinds?: readonly string[], params?: unknown[]): string | null {
+  if (c === 'all') return null
+  if (c === 'main') return `${alias}.hq_rip = ''`
+  if (kinds?.length && params) {
+    params.push(JSON.stringify(kinds))
+    return `${alias}.hq_rip IN (SELECT value FROM json_each(?))`
+  }
+  return `${alias}.hq_rip <> ''`
+}
 
 const TRACK_SELECT = `
   SELECT t.*, coalesce(ps.play_count, 0) AS play_count, ps.last_played AS last_played
@@ -45,6 +59,10 @@ export function toTrackRow(r: Record<string, any>): TrackRow {
     rgAlbumGain: r.rg_album_gain,
     rgAlbumPeak: r.rg_album_peak,
     compilation: !!r.compilation,
+    hqRip: r.hq_rip ?? '',
+    composer: r.composer ?? null,
+    ripGame: r.rip_game ?? null,
+    youtubeVideoId: r.youtube_video_id ?? null,
   }
 }
 
@@ -63,6 +81,8 @@ const SORT_COLUMNS: Partial<Record<keyof TrackRow, string>> = {
   bitrate: 't.bitrate',
   trackNo: 't.track_no',
   codec: 't.codec',
+  ripGame: 't.rip_game COLLATE NOCASE',
+  composer: 't.composer COLLATE NOCASE',
 }
 
 const ALBUM_ORDER = 'coalesce(t.album_artist_sort, t.album_artist) COLLATE NOCASE, t.year, t.album COLLATE NOCASE, coalesce(t.disc_no, 1), coalesce(t.track_no, 9999), t.title COLLATE NOCASE'
@@ -81,6 +101,8 @@ export function ftsQuery(text: string): string | null {
 export function queryTracks(db: DB, q: TrackQuery = {}): { rows: TrackRow[]; total: number } {
   const where: string[] = []
   const params: unknown[] = []
+  const coll = collectionWhere('t', q.collection ?? (q.albumId !== undefined || q.playlistId ? 'all' : 'main'), q.ripKinds, params)
+  if (coll) where.push(coll)
   if (q.search) {
     const fts = ftsQuery(q.search)
     if (fts) {
@@ -149,6 +171,7 @@ function toAlbumRow(r: Record<string, any>): AlbumRow {
     genre: r.genre,
     addedAt: r.added_at,
     compilation: !!r.compilation,
+    hqRip: r.hq_rip ?? '',
   }
 }
 
@@ -158,10 +181,20 @@ const ALBUM_SELECT = `
 
 export function queryAlbums(
   db: DB,
-  q: { albumArtist?: string; genre?: string; search?: string; sort?: 'artist' | 'title' | 'year' | 'added'; limit?: number } = {},
+  q: {
+    albumArtist?: string
+    genre?: string
+    search?: string
+    sort?: 'artist' | 'title' | 'year' | 'added'
+    limit?: number
+    collection?: LibraryCollection
+    ripKinds?: string[]
+  } = {},
 ): AlbumRow[] {
   const where: string[] = []
   const params: unknown[] = []
+  const coll = collectionWhere('a', q.collection ?? 'main', q.ripKinds, params)
+  if (coll) where.push(coll)
   if (q.albumArtist) {
     where.push('a.album_artist = ? COLLATE NOCASE')
     params.push(q.albumArtist)
@@ -195,28 +228,33 @@ export function albumById(db: DB, id: number): AlbumRow | null {
   return r ? toAlbumRow(r) : null
 }
 
-export function queryArtists(db: DB, q: { search?: string } = {}): ArtistRow[] {
+export function queryArtists(db: DB, q: { search?: string; collection?: LibraryCollection } = {}): ArtistRow[] {
   const params: unknown[] = []
-  let w = ''
+  const where: string[] = []
+  const coll = collectionWhere('t', q.collection ?? 'main')
+  const artColl = collectionWhere('a', q.collection ?? 'main')
+  if (coll) where.push(coll)
   if (q.search) {
-    w = 'WHERE album_artist LIKE ?'
+    where.push('album_artist LIKE ?')
     params.push(`%${q.search}%`)
   }
+  const w = where.length ? `WHERE ${where.join(' AND ')}` : ''
   const rows = db
     .prepare(
       `SELECT album_artist AS name, count(DISTINCT album_id) AS album_count, count(*) AS track_count,
-         (SELECT a.art_hash FROM albums a WHERE a.album_artist = t.album_artist AND a.art_hash IS NOT NULL ORDER BY a.year DESC LIMIT 1) AS art_hash
+         (SELECT a.art_hash FROM albums a WHERE a.album_artist = t.album_artist${artColl ? ` AND ${artColl}` : ''} AND a.art_hash IS NOT NULL ORDER BY a.year DESC LIMIT 1) AS art_hash
        FROM tracks t ${w} GROUP BY album_artist COLLATE NOCASE ORDER BY coalesce(max(album_artist_sort), album_artist) COLLATE NOCASE`,
     )
     .all(...params) as Array<{ name: string; album_count: number; track_count: number; art_hash: string | null }>
   return rows.map((r) => ({ name: r.name, albumCount: r.album_count, trackCount: r.track_count, artHash: r.art_hash }))
 }
 
-export function queryGenres(db: DB): GenreRow[] {
+export function queryGenres(db: DB, q: { collection?: LibraryCollection } = {}): GenreRow[] {
+  const coll = collectionWhere('t', q.collection ?? 'main')
   const rows = db
     .prepare(
       `SELECT genre AS name, count(*) AS track_count, count(DISTINCT album_id) AS album_count
-       FROM tracks WHERE genre IS NOT NULL AND genre <> '' GROUP BY genre COLLATE NOCASE ORDER BY genre COLLATE NOCASE`,
+       FROM tracks t WHERE genre IS NOT NULL AND genre <> ''${coll ? ` AND ${coll}` : ''} GROUP BY genre COLLATE NOCASE ORDER BY genre COLLATE NOCASE`,
     )
     .all() as Array<{ name: string; track_count: number; album_count: number }>
   return rows.map((r) => ({ name: r.name, trackCount: r.track_count, albumCount: r.album_count }))
@@ -226,8 +264,9 @@ export function libraryStats(db: DB, libraryRoot: string, scanning: boolean): Li
   const r = db
     .prepare(
       `SELECT count(*) tracks, count(DISTINCT album_id) albums, count(DISTINCT album_artist COLLATE NOCASE) artists,
-         coalesce(sum(duration_ms), 0) duration, coalesce(sum(size), 0) bytes FROM tracks`,
+         coalesce(sum(duration_ms), 0) duration, coalesce(sum(size), 0) bytes FROM tracks WHERE hq_rip = ''`,
     )
     .get() as { tracks: number; albums: number; artists: number; duration: number; bytes: number }
-  return { tracks: r.tracks, albums: r.albums, artists: r.artists, durationMs: r.duration, bytes: r.bytes, libraryRoot, scanning }
+  const rips = db.prepare(`SELECT count(*) tracks, count(DISTINCT album_id) albums FROM tracks WHERE hq_rip <> ''`).get() as { tracks: number; albums: number }
+  return { tracks: r.tracks, albums: r.albums, artists: r.artists, durationMs: r.duration, bytes: r.bytes, ripTracks: rips.tracks, ripAlbums: rips.albums, libraryRoot, scanning }
 }

@@ -17,7 +17,7 @@ export const PLAYLISTS_DIR = 'Playlists'
 
 export type SmartField =
   | 'title' | 'artist' | 'album' | 'albumArtist' | 'genre' | 'year' | 'rating' | 'playCount' | 'skipCount'
-  | 'addedAt' | 'lastPlayed' | 'durationMs' | 'codec' | 'lossless' | 'source' | 'compilation'
+  | 'addedAt' | 'lastPlayed' | 'durationMs' | 'codec' | 'lossless' | 'source' | 'compilation' | 'hqRip'
 export type SmartOp = 'is' | 'isNot' | 'contains' | 'notContains' | 'startsWith' | 'gt' | 'lt' | 'between' | 'inLast' | 'notInLast'
 export interface SmartRule {
   field: SmartField
@@ -60,6 +60,7 @@ const FIELD_SQL: Record<SmartField, string> = {
   lossless: 't.lossless',
   source: 't.source',
   compilation: 't.compilation',
+  hqRip: 't.hq_rip',
 }
 
 export function smartSql(rules: SmartRules, now = Date.now()): { sql: string; params: unknown[] } {
@@ -127,8 +128,10 @@ export function smartSql(rules: SmartRules, now = Date.now()): { sql: string; pa
               : rules.sort === 'title'
                 ? 't.title COLLATE NOCASE'
                 : 't.album_artist COLLATE NOCASE, t.year, t.album COLLATE NOCASE, coalesce(t.disc_no, 1), t.track_no'
+  // Rips stay out of smart playlists unless a rule asks about them.
+  const rips = rules.rules.some((r) => r.field === 'hqRip') ? '' : " AND t.hq_rip = ''"
   const sql = `SELECT t.rel_path FROM tracks t LEFT JOIN play_stats ps ON ps.track_key = coalesce(t.valence_id, 'path:' || t.rel_path)
-    WHERE (${where}) ORDER BY ${order}${rules.limit ? ` LIMIT ${Math.floor(rules.limit)}` : ''}`
+    WHERE (${where})${rips} ORDER BY ${order}${rules.limit ? ` LIMIT ${Math.floor(rules.limit)}` : ''}`
   return { sql, params }
 }
 

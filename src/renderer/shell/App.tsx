@@ -27,6 +27,8 @@ import { SettingsView } from '../views/settings/SettingsView'
 import { ImportView } from '../views/import/ImportView'
 import { TidalView } from '../views/tidal/TidalView'
 import { BandcampView } from '../views/bandcamp/BandcampView'
+import { RipsView } from '../views/rips/RipsView'
+import { GetRipsView } from '../views/rips/GetRipsView'
 
 function titleOf(r: Route): string | undefined {
   switch (r.view) {
@@ -54,6 +56,10 @@ function titleOf(r: Route): string | undefined {
       return 'TIDAL'
     case 'bandcamp':
       return 'Bandcamp'
+    case 'rips':
+      return r.tab === 'songs' ? 'Rip Songs' : r.tab === 'albums' ? 'Rip Albums' : 'Seasons'
+    case 'hqrip':
+      return 'Get Rips'
     default:
       return undefined
   }
@@ -93,6 +99,10 @@ function renderRoute(r: Route): ReactNode {
       return <TidalView tab={r.tab} id={r.id} />
     case 'bandcamp':
       return <BandcampView id={r.id} />
+    case 'rips':
+      return <RipsView tab={r.tab} />
+    case 'hqrip':
+      return <GetRipsView tab={r.tab} />
   }
 }
 

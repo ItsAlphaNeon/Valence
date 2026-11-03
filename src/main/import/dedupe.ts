@@ -50,10 +50,20 @@ function sameArtist(a: string, b: string): boolean {
 }
 
 export function findExisting(db: DB, tags: TrackTags, durationMs: number): ExistingTrack | null {
-  const one = (sql: string, ...p: unknown[]) => db.prepare(`SELECT ${COLS} FROM tracks WHERE ${sql} LIMIT 1`).get(...p) as ExistingTrack | undefined
-  const many = (sql: string, ...p: unknown[]) => db.prepare(`SELECT ${COLS} FROM tracks WHERE ${sql} LIMIT 50`).all(...p) as ExistingTrack[]
+  // Rips only ever match rips, and music only music: a rip of a song is not a copy of that song.
+  const side = tags.hq_rip ? "hq_rip <> ''" : "hq_rip = ''"
+  const one = (sql: string, ...p: unknown[]) => db.prepare(`SELECT ${COLS} FROM tracks WHERE (${sql}) AND ${side} LIMIT 1`).get(...p) as ExistingTrack | undefined
+  const many = (sql: string, ...p: unknown[]) => db.prepare(`SELECT ${COLS} FROM tracks WHERE (${sql}) AND ${side} LIMIT 50`).all(...p) as ExistingTrack[]
   if (tags.valence_id) {
     const r = one('valence_id = ?', tags.valence_id)
+    if (r) return r
+  }
+  if (tags.youtube_video_id) {
+    const r = one('youtube_video_id = ?', tags.youtube_video_id)
+    if (r) return r
+  }
+  if (tags.gdrive_file_id) {
+    const r = one('gdrive_file_id = ?', tags.gdrive_file_id)
     if (r) return r
   }
   if (tags.tidal_track_id) {

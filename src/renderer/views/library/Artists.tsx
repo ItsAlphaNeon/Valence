@@ -63,8 +63,12 @@ export function ArtistsView() {
 }
 
 export function ArtistDetailView({ artist }: { artist: string }) {
-  const albums = useLibData(() => invoke<AlbumRow[]>(LIB.albums, { albumArtist: artist, sort: 'year' }), [artist]).data
-  const tracks = useLibData(() => invoke<{ rows: TrackRow[] }>(LIB.tracks, { artist, sort: { key: 'playCount', dir: 'desc' } }).then((r) => r.rows), [artist]).data
+  // An artist's own page shows everything by them, rips included (rip artists are only reachable from rips).
+  const albums = useLibData(() => invoke<AlbumRow[]>(LIB.albums, { albumArtist: artist, sort: 'year', collection: 'all' }), [artist]).data
+  const tracks = useLibData(
+    () => invoke<{ rows: TrackRow[] }>(LIB.tracks, { artist, sort: { key: 'playCount', dir: 'desc' }, collection: 'all' }).then((r) => r.rows),
+    [artist],
+  ).data
   const appearsOn = useMemo(() => {
     if (!tracks) return []
     const seen = new Map<number, AlbumRow>()
@@ -83,6 +87,7 @@ export function ArtistDetailView({ artist }: { artist: string }) {
         genre: t.genre,
         addedAt: t.addedAt,
         compilation: t.compilation,
+        hqRip: t.hqRip,
       })
     }
     return [...seen.values()]

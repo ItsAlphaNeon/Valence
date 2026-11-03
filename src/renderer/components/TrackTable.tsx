@@ -12,11 +12,13 @@ import { useLib } from '../state/library'
 import { addToQueue, playQuery, playNext, playTracks, usePlayer } from '../state/player'
 import { Artwork, Stars, showMenu, type MenuItem } from './ui'
 import { Icon } from './Icon'
-import { navigate, toast, useUi } from '../state/ui'
+import { albumRoute, navigate, toast, useUi } from '../state/ui'
 
 export const ScrollParent = createContext<React.RefObject<HTMLElement | null> | null>(null)
 
-export type ColumnKey = 'index' | 'title' | 'artist' | 'album' | 'albumArtist' | 'time' | 'genre' | 'year' | 'rating' | 'plays' | 'added' | 'lastPlayed' | 'quality'
+export type ColumnKey =
+  | 'index' | 'title' | 'artist' | 'album' | 'albumArtist' | 'time' | 'genre' | 'year' | 'rating' | 'plays' | 'added' | 'lastPlayed' | 'quality'
+  | 'game' | 'composer'
 
 interface Column {
   key: ColumnKey
@@ -34,6 +36,8 @@ const COLUMNS: Record<ColumnKey, Column> = {
   albumArtist: { key: 'albumArtist', label: 'Album Artist', width: 'minmax(120px, 1.5fr)', sort: 'albumArtist' },
   time: { key: 'time', label: 'Time', width: '64px', align: 'right', sort: 'durationMs' },
   genre: { key: 'genre', label: 'Genre', width: 'minmax(90px, 1fr)', sort: 'genre' },
+  game: { key: 'game', label: 'Game', width: 'minmax(120px, 2fr)', sort: 'ripGame' },
+  composer: { key: 'composer', label: 'Composer', width: 'minmax(110px, 1.5fr)', sort: 'composer' },
   year: { key: 'year', label: 'Year', width: '56px', align: 'right', sort: 'year' },
   rating: { key: 'rating', label: 'Rating', width: '86px', sort: 'rating' },
   plays: { key: 'plays', label: 'Plays', width: '56px', align: 'right', sort: 'playCount' },
@@ -261,7 +265,7 @@ export function TrackTable(props: TrackTableProps) {
       { separator: true },
     ]
     if (r && n === 1) {
-      if (r.albumId != null) items.push({ label: 'Go to Album', icon: 'albums', onClick: () => navigate({ view: 'album', id: r.albumId! }) })
+      if (r.albumId != null) items.push({ label: 'Go to Album', icon: 'albums', onClick: () => navigate(albumRoute(r.albumId!, r.hqRip)) })
       items.push({ label: 'Go to Artist', icon: 'artists', onClick: () => navigate({ view: 'artist', artist: r.albumArtist || r.artist }) })
       items.push({ label: revealLabel, icon: 'folder', onClick: () => void invoke(LIB.reveal, r.id) })
     }
@@ -438,7 +442,7 @@ function Cell({ col, r, index, isCur, playing, showArt, onRate }: { col: Column;
             className="ellipsis link-muted"
             onClick={(e) => {
               e.stopPropagation()
-              if (r.albumId != null) navigate({ view: 'album', id: r.albumId })
+              if (r.albumId != null) navigate(albumRoute(r.albumId, r.hqRip))
             }}
           >
             {r.album}
@@ -451,6 +455,10 @@ function Cell({ col, r, index, isCur, playing, showArt, onRate }: { col: Column;
       return <span className={cx(cls, 'tnum')}>{duration(r.durationMs)}</span>
     case 'genre':
       return <span className={cx(cls, 'ellipsis')}>{r.genre}</span>
+    case 'game':
+      return <span className={cx(cls, 'ellipsis')}>{r.ripGame ?? ''}</span>
+    case 'composer':
+      return <span className={cx(cls, 'ellipsis')}>{r.composer ?? ''}</span>
     case 'year':
       return <span className={cx(cls, 'tnum')}>{r.year ?? ''}</span>
     case 'rating':

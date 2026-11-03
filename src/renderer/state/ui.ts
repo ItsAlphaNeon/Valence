@@ -5,7 +5,10 @@ import { create } from 'zustand'
 export type Route =
   | { view: 'songs' }
   | { view: 'albums' }
-  | { view: 'album'; id: number }
+  /** `rip` remembers which SiIvaGunner list the album belongs to, so the sidebar highlights it. */
+  | { view: 'album'; id: number; rip?: RipTab }
+  | { view: 'rips'; tab?: RipTab }
+  | { view: 'hqrip'; tab?: 'albums' | 'sgfr' | 'youtube' }
   | { view: 'artists' }
   | { view: 'artist'; artist: string }
   | { view: 'genres' }
@@ -19,6 +22,13 @@ export type Route =
   | { view: 'import'; tab?: 'queue' | 'review' | 'reports'; reportId?: string }
   | { view: 'tidal'; tab?: string; id?: string }
   | { view: 'bandcamp'; id?: string }
+
+export type RipTab = 'seasons' | 'albums' | 'songs'
+
+/** Route to an album page; rip albums keep the SiIvaGunner section highlighted. */
+export function albumRoute(id: number, hqRip?: string | null): Route {
+  return hqRip ? { view: 'album', id, rip: hqRip === 'YouTube' ? 'seasons' : 'albums' } : { view: 'album', id }
+}
 
 export interface Toast {
   id: number

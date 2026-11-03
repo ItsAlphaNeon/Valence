@@ -110,6 +110,14 @@ export function trackRecord(relPath: string, st: FileStat, probe: ProbeResult, n
     art_hash: probe.picture ? artHashOf(probe.picture.data) : null,
     match_title: matchKey(t.title || stemOf(relPath)),
     match_artist: matchKey(t.artist || t.albumartist || ''),
+    hq_rip: t.hq_rip ?? '',
+    composer: t.composer ?? null,
+    youtube_video_id: t.youtube_video_id ?? null,
+    youtube_uploaded: t.youtube_uploaded ?? null,
+    gdrive_file_id: t.gdrive_file_id ?? null,
+    hqr_release: t.hqr_release ?? null,
+    rip_game: t.rip_game ?? null,
+    rip_platform: t.rip_platform ?? null,
     scanned_at: now,
   }
 }
@@ -128,7 +136,8 @@ const COLS = [
   'music_key', 'comment', 'mb_recording_id', 'mb_track_id', 'mb_release_id', 'mb_release_group_id', 'mb_artist_id',
   'mb_albumartist_id', 'acoustid_id', 'tidal_track_id', 'tidal_album_id', 'bandcamp_item_id', 'bandcamp_track_id',
   'bandcamp_url', 'source', 'source_quality', 'owner_device', 'rating', 'rg_track_gain', 'rg_track_peak', 'rg_album_gain',
-  'rg_album_peak', 'lyrics_kind', 'art_hash', 'match_title', 'match_artist', 'scanned_at',
+  'rg_album_peak', 'lyrics_kind', 'art_hash', 'match_title', 'match_artist', 'hq_rip', 'composer', 'youtube_video_id',
+  'youtube_uploaded', 'gdrive_file_id', 'hqr_release', 'rip_game', 'rip_platform', 'scanned_at',
 ] as const
 
 export class Indexer {
@@ -162,6 +171,7 @@ export class Indexer {
         track_total = (SELECT max(track_total) FROM tracks WHERE album_id = @id),
         disc_total = (SELECT max(coalesce(disc_total, disc_no)) FROM tracks WHERE album_id = @id),
         compilation = (SELECT max(compilation) FROM tracks WHERE album_id = @id),
+        hq_rip = (SELECT max(hq_rip) FROM tracks WHERE album_id = @id),
         art_hash = (SELECT art_hash FROM tracks WHERE album_id = @id AND art_hash IS NOT NULL
                     ORDER BY coalesce(disc_no, 1), coalesce(track_no, 999) LIMIT 1),
         mb_release_id = (SELECT max(mb_release_id) FROM tracks WHERE album_id = @id),

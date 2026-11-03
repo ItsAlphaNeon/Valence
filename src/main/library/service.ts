@@ -21,10 +21,11 @@ import { DeviceLog, ensureValenceDir } from '@main/sync/device-log'
 import { PlayLog, type PlayEvent } from '@main/sync/plays'
 import { ensureStignore } from '@main/sync/stignore'
 import { Claims } from '@main/sync/claims'
-import { DEFAULT_TEMPLATE } from '@shared/path-template'
+import { DEFAULT_TEMPLATE, RIP_TEMPLATE } from '@shared/path-template'
+import { kvGet } from '@main/db/db'
 import { SETTINGS } from '@shared/ipc/settings'
 import { LIB, type EditTagsRequest, type EditTagsResult, type LibraryPlayItem } from '@shared/ipc/library'
-import type { TrackQuery, TrackRow, TrackTags } from '@shared/types'
+import type { LibraryCollection, TrackQuery, TrackRow, TrackTags } from '@shared/types'
 
 export class LibraryService {
   readonly db: DB
@@ -62,6 +63,11 @@ export class LibraryService {
     return this.ctx.settings.get('library.template', DEFAULT_TEMPLATE)
   }
 
+  /** Path template for one track: rips live under their own top folder, everything else uses the library template. */
+  templateFor(tags: TrackTags): string {
+    return tags.hq_rip ? RIP_TEMPLATE : this.template()
+  }
+
   async start(): Promise<void> {
     const { env, log } = this.ctx
     try {
@@ -74,7 +80,12 @@ export class LibraryService {
     this.playlists.indexAll()
     this.plays.ingest()
     this.registerIpc()
-    void this.rescan()
+    // A schema upgrade added columns existing rows don't have yet: re-read every file once.
+    const full = !!kvGet(this.db, 'library.fullRescanPending', 0)
+    void this.rescan(full).then(
+      () => full && this.db.prepare("DELETE FROM kv WHERE key = 'library.fullRescanPending'").run(),
+      (e) => log.warn('library: initial scan failed', e),
+    )
     this.watcher = watchLibrary(
       env.libraryRoot,
       (kind, rels) => {
@@ -236,7 +247,7 @@ export class LibraryService {
         await writeTags(abs, tags, { artwork: artwork === undefined ? p.picture : artwork })
         res.updated++
         const ext = t.relPath.slice(t.relPath.lastIndexOf('.') + 1)
-        const target = await chooseRelPath(this.root, tags, ext, { template: this.template(), isSelf: (r) => r.toLowerCase() === t.relPath.toLowerCase(), taken })
+        const target = await chooseRelPath(this.root, tags, ext, { template: this.templateFor(tags), isSelf: (r) => r.toLowerCase() === t.relPath.toLowerCase(), taken })
         taken.add(target.toLowerCase())
         if (target !== t.relPath) {
           await moveWithinLibrary(this.root, t.relPath, target)
@@ -268,12 +279,12 @@ export class LibraryService {
       return album ? { album, tracks: queryTracks(db, { albumId: id }).rows } : null
     })
     handle(LIB.artists, (q) => queryArtists(db, q ?? {}))
-    handle(LIB.genres, () => queryGenres(db))
+    handle(LIB.genres, (q) => queryGenres(db, q ?? {}))
     handle(LIB.artColor, (hash: string) => (hash ? this.art.color(String(hash)) : null))
-    handle(LIB.search, (text: string) => ({
-      tracks: queryTracks(db, { search: text, limit: 50 }).rows,
-      albums: queryAlbums(db, { search: text, limit: 24 }),
-      artists: queryArtists(db, { search: text }).slice(0, 12),
+    handle(LIB.search, (text: string, collection: LibraryCollection = 'main') => ({
+      tracks: queryTracks(db, { search: text, limit: 50, collection }).rows,
+      albums: queryAlbums(db, { search: text, limit: 24, collection }),
+      artists: collection === 'rips' ? [] : queryArtists(db, { search: text, collection }).slice(0, 12),
     }))
     handle(LIB.rescan, (force?: boolean) => this.rescan(!!force).then((r) => ({ ...r, conflicts: r.conflicts.length, playlists: r.playlists.length })))
     handle(LIB.setRating, (ids: number[], stars: number) => this.setRating(ids, stars))

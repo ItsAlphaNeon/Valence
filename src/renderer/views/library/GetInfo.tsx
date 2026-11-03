@@ -2,7 +2,7 @@
 // re-pathed by main when artist/album/title/year change.
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { TrackRow, TrackTags } from '@shared/types'
+import { RIP_GENRE, type TrackRow, type TrackTags } from '@shared/types'
 import { LIB, type EditTagsResult } from '@shared/ipc/library'
 import { errorMessage, invoke, revealLabel } from '../../lib/ipc'
 import { duration, plural, quality, relativeTime } from '../../lib/format'
@@ -11,7 +11,7 @@ import { Artwork, Button, Modal, Segmented, Spinner, Stars } from '../../compone
 import { cx } from '../../lib/format'
 import { MusicBrainzLookup } from './GetInfoLookup'
 
-type Kind = 'text' | 'int' | 'bool' | 'area'
+type Kind = 'text' | 'int' | 'bool' | 'area' | 'rip'
 interface FieldDef {
   key: keyof TrackTags
   label: string
@@ -33,6 +33,8 @@ const DETAILS: FieldDef[] = [
   { key: 'discnumber', label: 'Disc', kind: 'int' },
   { key: 'totaldiscs', label: 'of', kind: 'int' },
   { key: 'compilation', label: 'Compilation (Various Artists)', kind: 'bool' },
+  { key: 'hq_rip', label: 'High Quality Rip (SiIvaGunner section, kept out of the main library)', kind: 'rip' },
+  { key: 'composer', label: 'Composer', kind: 'text', wide: true },
   { key: 'bpm', label: 'BPM', kind: 'int', single: true },
   { key: 'comment', label: 'Comment', kind: 'text', wide: true },
 ]
@@ -46,6 +48,8 @@ const SORTING: FieldDef[] = [
   { key: 'isrc', label: 'ISRC', kind: 'text', single: true },
   { key: 'barcode', label: 'Barcode', kind: 'text' },
   { key: 'copyright', label: 'Copyright', kind: 'text', wide: true },
+  { key: 'rip_game', label: 'Rip: Game', kind: 'text' },
+  { key: 'rip_platform', label: 'Rip: Platform', kind: 'text' },
 ]
 const LYRICS: FieldDef[] = [{ key: 'lyrics', label: 'Lyrics (LRC timestamps make them synced)', kind: 'area', wide: true, single: true }]
 
@@ -142,6 +146,24 @@ function GetInfoModal({ ids, onClose }: { ids: number[]; onClose: () => void }) 
     const v = value(f.key)
     const mixed = v === MIXED
     const label = <span>{f.label}</span>
+    if (f.kind === 'rip') {
+      // On: keep a known collection or default to SiIvaGunner, and give it the rip genre. Off: clear both.
+      const genre = value('genre')
+      const toggle = (on: boolean) => {
+        const next: Values = { ...edits, hq_rip: on ? (typeof base.hq_rip === 'string' && base.hq_rip) || 'SiIvaGunner' : null }
+        if (on) next.genre = RIP_GENRE
+        else if (genre === RIP_GENRE) next.genre = null
+        setEdits(next)
+      }
+      return (
+        <label key={f.key} className="row" style={{ gridColumn: '1 / -1' }}>
+          <input type="checkbox" className="toggle" checked={!mixed && !!v} onChange={(e) => toggle(e.target.checked)} />
+          {f.label}
+          {mixed && <span className="faint">(mixed)</span>}
+          {!mixed && typeof v === 'string' && v && <span className="chip">{v}</span>}
+        </label>
+      )
+    }
     if (f.kind === 'bool')
       return (
         <label key={f.key} className={cx('row', f.wide && 'wide')} style={{ gridColumn: '1 / -1' }}>
@@ -291,6 +313,9 @@ function FileInfo({ row, tags }: { row: TrackRow; tags: TrackTags }) {
     ['AcoustID', tags.acoustid_id ?? '—'],
     ['TIDAL track', row.tidalTrackId ?? '—'],
     ['Bandcamp item', row.bandcampItemId ?? '—'],
+    ...(tags.youtube_video_id ? ([['YouTube video', tags.youtube_video_id], ['Uploaded', tags.youtube_uploaded ?? '—']] as Array<[string, string]>) : []),
+    ...(tags.gdrive_file_id ? ([['Google Drive file', tags.gdrive_file_id]] as Array<[string, string]>) : []),
+    ...(tags.hqr_release ? ([['Rip release', tags.hqr_release]] as Array<[string, string]>) : []),
   ]
   return (
     <div className="kv" style={{ userSelect: 'text' }}>

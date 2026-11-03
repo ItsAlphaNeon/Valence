@@ -117,6 +117,7 @@ function writeId3(tag: Id3v2Tag, t: TrackTags): void {
   id3Text(tag, 'TSRC', str(t.isrc))
   id3Text(tag, 'TPUB', str(t.label))
   id3Text(tag, 'TCOP', str(t.copyright))
+  id3Text(tag, 'TCOM', str(t.composer))
   id3Text(tag, 'TBPM', t.bpm ? String(Math.round(t.bpm)) : undefined)
   id3Text(tag, 'TKEY', str(t.key))
   id3Text(tag, 'TMED', str(t.media))
@@ -202,6 +203,7 @@ function writeVorbis(x: XiphComment, t: TrackTags): void {
   vSet(x, 'LABEL', str(t.label))
   vSet(x, 'CATALOGNUMBER', str(t.catalognumber))
   vSet(x, 'COPYRIGHT', str(t.copyright))
+  vSet(x, 'COMPOSER', str(t.composer))
   vSet(x, 'BPM', t.bpm ? String(Math.round(t.bpm)) : undefined)
   vSet(x, 'KEY', str(t.key))
   vSet(x, 'COMMENT', str(t.comment))
@@ -247,6 +249,7 @@ function writeMp4(a: Mpeg4AppleTag, t: TrackTags): void {
   a.genres = t.genre ? [t.genre] : []
   a.comment = str(t.comment) ?? ''
   a.copyright = str(t.copyright) ?? ''
+  a.composers = t.composer ? [t.composer] : []
   a.beatsPerMinute = t.bpm ? Math.round(t.bpm) : 0
   a.lyrics = str(t.lyrics) ?? ''
   a.isCompilation = !!t.compilation
