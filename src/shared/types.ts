@@ -55,6 +55,8 @@ export interface TrackTags {
   /** 0..5 stars, 0 = unrated */
   rating?: number
   valence_id?: string
+  /** Random id of the device that imported (owns) this file; only that device reorganizes it. */
+  valence_owner?: string
   tidal_track_id?: string
   tidal_album_id?: string
   /** Bandcamp tralbum id of the release (album id, or track id for a standalone track purchase) */

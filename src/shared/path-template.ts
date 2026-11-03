@@ -3,7 +3,7 @@
 // file stem (extension is appended by the caller).
 
 import type { TrackTags } from './types'
-import { MAX_REL_PATH, sanitizeComponent } from './sanitize'
+import { MAX_REL_PATH, safeTopLevel, sanitizeComponent } from './sanitize'
 import { VARIOUS_ARTISTS, isVariousArtists, primaryArtist } from './artist-credit'
 
 export const DEFAULT_TEMPLATE = '{albumartist_primary}/{album}[ ({year})]/{title}'
@@ -67,6 +67,7 @@ export function renderRelStem(template: string, tags: TrackTags): string {
   const segments = renderSegments(template, safeVars).map((s) => s.replace(/\u0001/g, '/'))
   let parts = segments.map((s) => sanitizeComponent(s)).filter((s) => s !== '')
   if (parts.length === 0) parts = ['_']
+  if (parts.length > 1) parts[0] = safeTopLevel(parts[0])
   return fitLength(parts).join('/')
 }
 

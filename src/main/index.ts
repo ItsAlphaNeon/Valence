@@ -1,8 +1,12 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, protocol } from 'electron'
 import { join } from 'node:path'
 import { configureDataDir, defaultInboxDir, defaultMusicDir } from './platform/paths'
 import { loadDeviceId } from './platform/device'
-import { createContext, createMemorySettings, ensureDirs } from './app-context'
+import { createContext, ensureDirs } from './app-context'
+import { createSettings } from './settings'
+import { HlcClock } from './sync/hlc'
+import { LibraryService } from './library/service'
+import { ART_SCHEME } from './library/art'
 import { initPortBroker } from './ipc'
 import { registerAudio, registerAudioSchemes } from './audio'
 import { registerTidal } from './sources/tidal'
@@ -61,6 +65,7 @@ function createMainWindow(): BrowserWindow {
 }
 
 let ctx: AppContext | null = null
+let library: LibraryService | null = null
 
 if (SMOKE) {
   void app.whenReady().then(async () => {
@@ -74,19 +79,31 @@ if (SMOKE) {
   })
 } else {
   if (!app.requestSingleInstanceLock()) app.quit()
-  void app.whenReady().then(() => {
+  void app.whenReady().then(async () => {
     const env = buildEnv()
     ensureDirs(env)
-    ctx = createContext(env, createMemorySettings())
+    const settings = createSettings(env.dataDir, env.libraryRoot, new HlcClock(env.deviceId))
+    env.archiveDir = process.env.VALENCE_ARCHIVE_DIR ?? settings.get<string | null>('archive.dir', null)
+    settings.onChange((k, v) => {
+      if (k === 'archive.dir' && !process.env.VALENCE_ARCHIVE_DIR) env.archiveDir = (v as string | null) ?? null
+    })
+    ctx = createContext(env, settings)
     initPortBroker()
+    library = new LibraryService(ctx)
+    ctx.library = library.lookup
+    ctx.playlists = library.playlists
+    const lib = library
+    protocol.handle(ART_SCHEME, (req) => lib.art.handle(req))
     registerAudio(ctx)
     registerTidal(ctx)
     registerBandcamp(ctx)
     createMainWindow()
+    await library.start()
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createMainWindow()
     })
   })
+  app.on('will-quit', () => library?.stop())
   app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit()
   })

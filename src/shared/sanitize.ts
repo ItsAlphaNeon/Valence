@@ -1,7 +1,8 @@
 // Filename sanitizing that keeps library paths valid and readable on Windows, macOS, Linux
 // and Android (FAT/exFAT SD cards included), and friendly to Syncthing.
 
-const ZERO_WIDTH = /[​-‏‪-‮⁠-⁤﻿­]/g
+// Zero-width, bidi embedding/isolate controls, BOM, soft hyphen, Mongolian vowel separator.
+const ZERO_WIDTH = /[​-‏‪-‮⁠-⁩﻿­᠎]/g
 // eslint-disable-next-line no-control-regex
 const CONTROL = /[\u0000-\u001F\u007F-\u009F]/g
 const WINDOWS_RESERVED = /^(con|prn|aux|nul|com[0-9¹²³]|lpt[0-9¹²³])(\..*)?$/i
@@ -69,4 +70,41 @@ export function matchKey(s: string | undefined | null): string {
     .replace(/[^\p{L}\p{N}]+/gu, ' ')
     .replace(/\s+/g, ' ')
     .trim()
+}
+
+/** Top-level library folder names reserved for Valence, the phone, or other music apps. */
+const RESERVED_TOP_LEVEL = new Set(
+  ['playlists', '.valence', 'music', 'itunes', 'garageband', 'audio music apps', 'logic', 'podcasts', 'android', 'lost.dir'].map(foldKey),
+)
+
+export function isReservedTopLevel(name: string): boolean {
+  return RESERVED_TOP_LEVEL.has(foldKey(name))
+}
+
+/** An artist folder that would collide with a reserved name gets a suffix: "Music (Artist)". */
+export function safeTopLevel(name: string): string {
+  return isReservedTopLevel(name) ? `${name} (Artist)` : name
+}
+
+/** Names Valence must never index or touch: Syncthing internals, conflict copies, our temp files. */
+export function isIgnoredName(name: string): boolean {
+  const n = name.toLowerCase()
+  return (
+    n.includes('.sync-conflict-') ||
+    n.endsWith('.valence-tmp') ||
+    n.startsWith('~syncthing~') ||
+    n.startsWith('.syncthing.') ||
+    n === '.stfolder' ||
+    n === '.stversions' ||
+    n === '.stignore' ||
+    n === '.trashed' ||
+    n.startsWith('._') ||
+    n === 'desktop.ini' ||
+    n === 'thumbs.db' ||
+    n === '.ds_store'
+  )
+}
+
+export function isSyncConflict(name: string): boolean {
+  return name.toLowerCase().includes('.sync-conflict-')
 }
