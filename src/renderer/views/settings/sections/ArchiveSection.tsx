@@ -6,7 +6,7 @@ import { IMPORT, type ArchiveStatusInfo } from '@shared/ipc/import'
 import { Button, Spinner } from '../../../components/ui'
 import { Icon } from '../../../components/Icon'
 import { archiveState, useArchiveStatus } from '../../import/useArchive'
-import { Card, PathLine, Row, SectionHead, openPath, useAppInfo } from '../controls'
+import { Card, PathLine, Row, SectionHead, Toggle, openPath, useAppInfo, useSettingValue } from '../controls'
 
 function sep(): string {
   return window.valence?.platform === 'win32' ? '\\' : '/'
@@ -16,6 +16,7 @@ export function ArchiveSection() {
   const { status, setStatus } = useArchiveStatus()
   const { info } = useAppInfo()
   const [busy, setBusy] = useState<null | 'choose' | 'flush'>(null)
+  const [waitForDrive, setWaitForDrive] = useSettingValue<boolean>('archive.waitForDrive', true)
   const state = archiveState(status)
   const pendingDir = info ? `${info.dataDir}${sep()}archive-pending` : null
 
@@ -74,11 +75,23 @@ export function ArchiveSection() {
         }
       >
         <PathLine path={status?.dir} empty="Not set — FLAC masters wait in pending" onOpen={state === 'online' ? undefined : () => toast('The archive folder isn’t reachable right now', 'error')} />
-        {state === 'offline' && <p className="set-callout warn">The folder can’t be reached — is the drive connected? New masters wait in pending and move over automatically once it’s back.</p>}
+        {state === 'offline' && (
+          <p className="set-callout warn">
+            {waitForDrive
+              ? 'The folder can’t be reached — is the drive connected? TIDAL, Bandcamp and lossless imports wait in the queue and continue on their own once it’s back.'
+              : 'The folder can’t be reached — is the drive connected? New masters wait in pending and move over automatically once it’s back.'}
+          </p>
+        )}
         <Row label={status?.dir ? 'Change folder' : 'Choose a folder'} desc="Pick a roomy local or external drive. Pending masters move there right away.">
           <Button icon="folder" onClick={() => void choose()} disabled={!!busy}>
             {busy === 'choose' ? 'Choosing…' : 'Choose…'}
           </Button>
+        </Row>
+        <Row
+          label="Wait for the drive when it’s offline"
+          desc="TIDAL, Bandcamp and lossless imports wait in the queue until the archive is back, so masters never pile up on this computer’s main drive. Off: imports continue and masters wait in pending."
+        >
+          <Toggle checked={waitForDrive} onChange={setWaitForDrive} label="Wait for the drive when it’s offline" />
         </Row>
       </Card>
 
@@ -88,7 +101,9 @@ export function ArchiveSection() {
           desc={
             status && status.pendingFiles
               ? `${bytes(status.pendingBytes)} in Valence’s data folder. They move automatically about once a minute while the archive is reachable.`
-              : 'Masters land here while the archive is unset or offline.'
+              : waitForDrive
+                ? 'Masters land here while no archive folder is chosen.'
+                : 'Masters land here while the archive is unset or offline.'
           }
         >
           <div className="row">

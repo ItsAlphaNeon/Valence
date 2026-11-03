@@ -10,7 +10,7 @@ import type { AudioFormat, TrackTags } from '@shared/types'
 import { encodeSourceQuality, decodeSourceQuality } from '@shared/quality'
 import { cleanText } from '@shared/sanitize'
 import type { Logger, SettingsStore, ValenceEnv } from '@main/context'
-import type { SourceRelease, Transport } from './source-types'
+import { SourceError, type SourceRelease, type Transport } from './source-types'
 import { probeFile, type ProbeResult } from '@main/tags/read'
 import { writeTags } from '@main/tags/write'
 import { encode, planFor, toFlacMaster, type ProfileId } from '@main/media/transcode'
@@ -226,6 +226,14 @@ export async function runPipeline(release: SourceRelease, deps: PipelineDeps, op
     return { status: 'done', reportId, summary }
   }
 
+  // Masters have nowhere to go while the archive drive is away: wait for it before writing anything.
+  const profile = settings.get<ProfileId>('transcode.profile', 'mp3-320')
+  const needsMaster = (p: Prepared) => {
+    const plan = planFor(p.probe.format, profile, extname(p.src).slice(1))
+    return p.probe.format.lossless && (plan.kind !== 'encode' || !plan.profile.lossless)
+  }
+  if (!deps.archive.accepting() && todo.some(needsMaster)) throw new SourceError('Waiting for the archive drive', 'archive-offline')
+
   // 6. Artwork.
   progress(0.2, 'Artwork')
   const maxArt = settings.get('art.maxSize', 2000)
@@ -265,7 +273,6 @@ export async function runPipeline(release: SourceRelease, deps: PipelineDeps, op
   }
 
   // 8. Transcode/copy, tag, archive, place.
-  const profile = settings.get<ProfileId>('transcode.profile', 'mp3-320')
   const template = library.template()
   const taken = new Set<string>()
   const placed: string[] = []
@@ -292,7 +299,7 @@ export async function runPipeline(release: SourceRelease, deps: PipelineDeps, op
         isSelf: p.decision.kind === 'upgrade' ? (r) => r.toLowerCase() === (p.decision as { existing: { rel_path: string } }).existing.rel_path.toLowerCase() : undefined,
       })
       taken.add(libRel.toLowerCase())
-      if (fmt.lossless && (plan.kind !== 'encode' || !plan.profile.lossless)) {
+      if (needsMaster(p)) {
         const master = join(workDir, `${n}.master.flac`)
         if (fmt.codec === 'flac') await copyFile(p.src, master)
         else await toFlacMaster(p.src, master, signal)

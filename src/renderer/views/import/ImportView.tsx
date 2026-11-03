@@ -7,6 +7,7 @@ import { Button, IconButton, Segmented, showMenu } from '../../components/ui'
 import { Icon } from '../../components/Icon'
 import { archiveState, useArchiveStatus } from './useArchive'
 import { chooseAndImport, goTab, openInboxFolder, type ImportTab } from './common'
+import { useSettingValue } from '../settings/controls'
 import { QueueTab } from './QueueTab'
 import { ReviewTab } from './ReviewTab'
 import { ReportsTab } from './ReportsTab'
@@ -14,6 +15,7 @@ import './import.css'
 
 function ArchiveChip() {
   const { status } = useArchiveStatus()
+  const [waitForDrive] = useSettingValue<boolean>('archive.waitForDrive', true)
   const st = archiveState(status)
   if (!status || !st) return null
   const pending = status.pendingFiles ? ` · ${plural(status.pendingFiles, 'file')} pending` : ''
@@ -23,7 +25,9 @@ function ArchiveChip() {
     st === 'online'
       ? `Lossless masters go to ${status.dir}`
       : st === 'offline'
-        ? `${status.dir} isn’t reachable. Masters wait in pending (${bytes(status.pendingBytes)}) until it is.`
+        ? waitForDrive
+          ? `${status.dir} isn’t reachable. TIDAL, Bandcamp and lossless imports wait until it is.`
+          : `${status.dir} isn’t reachable. Masters wait in pending (${bytes(status.pendingBytes)}) until it is.`
         : `Choose an archive folder for lossless masters. ${status.pendingFiles ? `${bytes(status.pendingBytes)} waiting.` : ''}`
   return (
     <button className={cx('chip imp-chip-btn', kind)} title={tip} onClick={() => navigate({ view: 'settings', section: 'archive' })}>

@@ -33,7 +33,9 @@ export class ImportService {
     private library: LibraryService,
   ) {
     const { env, settings, log } = ctx
-    this.archive = new Archive(env, log, (s) => ctx.broadcast(IMPORT.archiveChanged, s))
+    this.archive = new Archive(env, log, (s) => ctx.broadcast(IMPORT.archiveChanged, s), {
+      waitForDrive: () => settings.get('archive.waitForDrive', true),
+    })
     this.reports = new Reports(library.db, join(env.dataDir, 'undo-vault'))
     this.metadata = createMetadataService({
       transport: this.transport,
@@ -51,6 +53,8 @@ export class ImportService {
       claims: library.claims,
       broadcast: ctx.broadcast,
       maxPipelines: 2,
+      // TIDAL and Bandcamp always download lossless; loose imports are checked once probed.
+      archive: { accepting: () => this.archive.accepting(), losslessSources: ['tidal', 'bandcamp'] },
       process: (release, opts) =>
         runPipeline(
           release,

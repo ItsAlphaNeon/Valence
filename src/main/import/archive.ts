@@ -1,6 +1,7 @@
 // Unsynced lossless archive at a user-chosen folder (e.g. on a data HDD). When it is not chosen
-// yet or the drive is offline, files wait in <dataDir>/archive-pending/ (same relative layout) and
-// are flushed automatically once the archive is reachable.
+// yet, files wait in <dataDir>/archive-pending/ (same relative layout) and are flushed
+// automatically once the archive is reachable. While a chosen drive is offline, lossless imports
+// wait for it (archive.waitForDrive, the default) or also go to pending.
 
 import { existsSync, mkdirSync } from 'node:fs'
 import { opendir, stat, unlink, writeFile } from 'node:fs/promises'
@@ -8,6 +9,7 @@ import { join } from 'node:path'
 import type { ValenceEnv, Logger } from '@main/context'
 import { placeFile, pruneEmptyDirs, toAbs } from '@main/library/organizer'
 import { foldKey } from '@shared/sanitize'
+import { SourceError } from './source-types'
 
 export interface ArchiveStatus {
   dir: string | null
@@ -43,12 +45,21 @@ export class Archive {
   private timer: NodeJS.Timeout | null = null
   private flushing: Promise<number> | null = null
 
+  private waitForDrive: () => boolean
+
   constructor(
     private env: ValenceEnv,
     private log: Logger,
     private onStatus: (s: ArchiveStatus) => void = () => {},
+    opts: { waitForDrive?: () => boolean } = {},
   ) {
+    this.waitForDrive = opts.waitForDrive ?? (() => false)
     mkdirSync(env.archivePendingDir, { recursive: true })
+  }
+
+  /** False while masters have nowhere to go: the archive folder is set, unreachable, and we wait for it. */
+  accepting(): boolean {
+    return !this.env.archiveDir || !this.waitForDrive() || this.online()
   }
 
   online(): boolean {
@@ -75,6 +86,7 @@ export class Archive {
   /** Stores `src` (moved) at `rel` in the archive, or in pending when offline. Never overwrites. */
   async put(src: string, rel: string): Promise<{ where: 'archive' | 'pending'; rel: string }> {
     const online = this.online()
+    if (!online && this.env.archiveDir && this.waitForDrive()) throw new SourceError('The archive drive is offline', 'archive-offline')
     const root = online ? this.env.archiveDir! : this.env.archivePendingDir
     let n = 1
     const r = await placeFile(src, root, rel, { move: true, rechoose: async () => withSuffix(rel, ++n) })

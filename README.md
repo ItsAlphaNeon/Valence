@@ -20,7 +20,7 @@ The morning-after checklist is in [MORNING.md](MORNING.md).
 
 **Library**
 - **Layout:** `Album Artist/Album (Year)/Title.mp3`, with no track numbers in filenames (they live in the tags). Singles get their own folder, collaborations go under the primary artist, and compilations go under `Various Artists/`.
-- **Lossless sources:** transcoded to MP3 320 CBR for the library. The FLAC master goes to an archive folder you choose, which isn't synced and can be on another drive. While that drive is offline, masters wait in a pending queue and flush when it returns.
+- **Lossless sources:** transcoded to MP3 320 CBR for the library. The FLAC master goes to an archive folder you choose, which isn't synced and can be on another drive (exFAT/FAT32 external drives work). While that drive is offline, TIDAL, Bandcamp and lossless imports wait in the queue and continue when it returns, so masters never pile up on the main drive. Turn off Settings → Lossless Archive → "Wait for the drive" to keep importing instead, with masters waiting in a pending folder until the drive is back.
 - **Lossy sources:** kept as they are (no lossy→lossy), except WMA/RealAudio-type formats, which become MP3 320.
 - **Tags:**
   - MP3 is ID3v2.3 with Picard-compatible frames: MusicBrainz IDs, ISRC, barcode, label, catalog number, ReplayGain.

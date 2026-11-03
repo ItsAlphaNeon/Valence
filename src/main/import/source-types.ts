@@ -65,7 +65,8 @@ export class SourceError extends Error {
       | 'abuse' // provider signalled abuse/suspension: stop the whole queue
       | 'network'
       | 'parse'
-      | 'cancelled',
+      | 'cancelled'
+      | 'archive-offline', // lossless masters have nowhere to go yet; wait for the archive drive
     public readonly retryAfterMs?: number,
   ) {
     super(message)

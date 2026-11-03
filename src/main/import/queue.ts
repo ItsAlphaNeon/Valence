@@ -24,6 +24,11 @@ export interface QueueDeps {
   afterDone?: (job: JobInfo, payload: unknown, release: SourceRelease) => Promise<void>
   /** Concurrent pipeline runs across all sources (transcoding is CPU-bound). */
   maxPipelines?: number
+  /**
+   * While `accepting()` is false (archive drive offline), jobs from `losslessSources` don't start, so
+   * nothing lossless is downloaded, and jobs that hit an 'archive-offline' error wait too.
+   */
+  archive?: { accepting: () => boolean; losslessSources: readonly string[] }
 }
 
 interface Registered {
@@ -38,6 +43,8 @@ interface Running {
 
 const ACTIVE: JobStatus[] = ['queued', 'running', 'review']
 const RETRYABLE: JobStatus[] = ['failed', 'cancelled', 'done']
+const ARCHIVE_WAIT = 'Waiting for the archive drive'
+const ARCHIVE_POLL_MS = 30_000
 const NETWORK_RETRIES = 3
 
 function rowToJob(r: Record<string, any>): JobInfo {
@@ -63,6 +70,8 @@ export class ImportQueueImpl implements ImportQueue {
   private acquirers = new Map<string, Registered>()
   private running = new Map<string, Running>()
   private notBefore = new Map<string, number>()
+  /** Jobs re-queued because their release needs the archive drive. */
+  private archiveHeld = new Set<string>()
   private paused: Record<string, string>
   private pipelines = 0
   private pipelineWaiters: Array<() => void> = []
@@ -271,10 +280,21 @@ export class ImportQueueImpl implements ImportQueue {
       const j = this.get(id)
       if (j) runningBySource.set(j.source, (runningBySource.get(j.source) ?? 0) + 1)
     }
+    const archive = this.deps.archive
+    const accepting = archive?.accepting() ?? true
+    let heldForArchive = false
     for (const r of queued) {
       if (this.running.has(r.id)) continue
       const reg = this.acquirers.get(r.source)
       if (!reg || r.source in this.paused) continue
+      if (archive && (archive.losslessSources.includes(r.source) || this.archiveHeld.has(r.id))) {
+        if (!accepting) {
+          heldForArchive = true
+          if (r.message !== ARCHIVE_WAIT) this.update(r.id, { message: ARCHIVE_WAIT })
+          continue
+        }
+        if (r.message === ARCHIVE_WAIT) this.update(r.id, { message: null })
+      }
       const nb = this.notBefore.get(r.id) ?? 0
       if (nb > now) {
         nextWake = Math.min(nextWake, nb)
@@ -285,6 +305,8 @@ export class ImportQueueImpl implements ImportQueue {
       runningBySource.set(r.source, n + 1)
       void this.run(rowToJob(r), JSON.parse(r.payload_json), reg)
     }
+    // Check again for the archive drive.
+    if (heldForArchive) nextWake = Math.min(nextWake, now + ARCHIVE_POLL_MS)
     if (nextWake < Infinity) this.schedule(Math.max(50, nextWake - now))
   }
 
@@ -304,6 +326,7 @@ export class ImportQueueImpl implements ImportQueue {
     const ctrl = new AbortController()
     const state: Running = { ctrl, lastBroadcast: 0 }
     this.running.set(job.id, state)
+    this.archiveHeld.delete(job.id)
     const claimKeys = job.releaseKeys.filter((k) => !k.startsWith('import:'))
     const { claims } = this.deps
     if (claims && claimKeys.length && !claims.claim(claimKeys)) {
@@ -371,6 +394,12 @@ export class ImportQueueImpl implements ImportQueue {
         case 'abuse':
           this.pauseSource(job.source, e.message)
           this.update(job.id, { status: 'queued', stage: null, progress: 0, attempts, message: `Paused: ${e.message}` })
+          return
+        case 'archive-offline':
+          // Nothing was written; drop the staged download so it doesn't sit on the main drive.
+          this.archiveHeld.add(job.id)
+          this.update(job.id, { status: 'queued', stage: null, progress: 0, message: ARCHIVE_WAIT })
+          await this.cleanup(job.id)
           return
         case 'auth':
           this.pauseSource(job.source, LOGIN_REQUIRED)
