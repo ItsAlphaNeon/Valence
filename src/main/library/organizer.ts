@@ -97,6 +97,10 @@ async function fsyncFile(path: string): Promise<void> {
   }
 }
 
+// link() errors from filesystems without hard links (exFAT, FAT32, some network shares). Windows
+// reports exFAT's ERROR_INVALID_FUNCTION as EISDIR.
+const NO_HARDLINKS = new Set(['EPERM', 'ENOTSUP', 'EXDEV', 'EOPNOTSUPP', 'ENOSYS', 'EISDIR'])
+
 /** Atomically links `tmp` to `final`; never replaces an existing file. Returns false if `final` exists. */
 async function linkNoClobber(tmp: string, final: string): Promise<boolean> {
   try {
@@ -106,7 +110,7 @@ async function linkNoClobber(tmp: string, final: string): Promise<boolean> {
   } catch (e) {
     const code = (e as NodeJS.ErrnoException).code
     if (code === 'EEXIST') return false
-    if (code === 'EPERM' || code === 'ENOTSUP' || code === 'EXDEV' || code === 'EOPNOTSUPP' || code === 'ENOSYS') {
+    if (code && NO_HARDLINKS.has(code)) {
       // Filesystem without hard links (exFAT, some network shares): exclusive copy instead.
       try {
         await copyFile(tmp, final, constants.COPYFILE_EXCL)
@@ -118,6 +122,16 @@ async function linkNoClobber(tmp: string, final: string): Promise<boolean> {
       return true
     }
     throw e
+  }
+}
+
+async function moveBack(from: string, to: string): Promise<void> {
+  try {
+    await rename(from, to)
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== 'EXDEV') throw e
+    await copyFile(from, to, constants.COPYFILE_EXCL)
+    await unlink(from)
   }
 }
 
@@ -155,7 +169,16 @@ export async function placeFile(
       await copyFile(src, tmp)
       await fsyncFile(tmp)
     }
-    if (await linkNoClobber(tmp, final)) return { relPath: rel, absPath: final }
+    let placed: boolean
+    try {
+      placed = await linkNoClobber(tmp, final)
+    } catch (e) {
+      // Leave no temp file behind: a moved source goes back where it came from.
+      if (opts.move) await moveBack(tmp, src).catch(() => {})
+      else await unlink(tmp).catch(() => {})
+      throw e
+    }
+    if (placed) return { relPath: rel, absPath: final }
     if (opts.move) src = tmp
     else await unlink(tmp).catch(() => {})
     if (!opts.rechoose) throw new Error(`Target exists: ${rel}`)
