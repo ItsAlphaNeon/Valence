@@ -1,0 +1,45 @@
+appId: local.valence.app
+productName: Valence
+directories:
+  output: release
+  buildResources: resources/icons
+files:
+  - out/**/*
+  - package.json
+asarUnpack:
+  - "**/node_modules/sharp/**/*"
+  - "**/node_modules/@img/**/*"
+  - "**/node_modules/better-sqlite3/**/*"
+  - "**/node_modules/ffmpeg-static/**/*"
+extraResources:
+  - from: resources/bin/${platform}-${arch}
+    to: bin
+    filter: ["**/*"]
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+  icon: resources/icons/icon.png
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  artifactName: ${productName}-Setup-${version}.${ext}
+portable:
+  artifactName: ${productName}-Portable-${version}.${ext}
+mac:
+  target:
+    - target: dmg
+      arch: [arm64]
+  category: public.app-category.music
+  icon: resources/icons/icon.png
+  identity: null
+linux:
+  target:
+    - AppImage
+    - rpm
+    - pacman
+  category: Audio
+  icon: resources/icons/icon.png
+  maintainer: Valence

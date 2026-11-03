@@ -1,0 +1,11 @@
+node_modules/
+out/
+dist/
+release/
+test-data/
+.sandbox/
+*.log
+resources/bin/*/
+!resources/bin/.gitkeep
+.DS_Store
+Thumbs.db
