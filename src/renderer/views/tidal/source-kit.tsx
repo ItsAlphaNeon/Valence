@@ -13,7 +13,7 @@ import { cx, duration } from '../../lib/format'
 import { useLib } from '../../state/library'
 import { navigate, toast } from '../../state/ui'
 import { Artwork, Button, Empty, IconButton, LibraryBadge, ProgressBar, Spinner } from '../../components/ui'
-import { Icon } from '../../components/Icon'
+import { Icon, type IconName } from '../../components/Icon'
 import { ScrollParent } from '../../components/TrackTable'
 import {
   activeJobsByKey,
@@ -321,6 +321,7 @@ export function DownloadControl({
   compact,
   big,
   label = 'Download',
+  icon = 'download',
   className,
   kind,
 }: {
@@ -331,6 +332,8 @@ export function DownloadControl({
   /** Render a full text button (without the badge, which heroes show separately) instead of an icon button. */
   big?: boolean
   label?: string
+  /** Icon of the icon button (and the big button). */
+  icon?: IconName
   className?: string
   kind?: 'primary' | 'default'
 }) {
@@ -362,7 +365,7 @@ export function DownloadControl({
   const title = have ? `${label} again — files already in your library are kept unless this copy is better` : label
   if (big)
     return (
-      <Button kind={kind ?? (have ? 'default' : 'primary')} icon={busy ? undefined : 'download'} disabled={busy} onClick={(e) => void click(e)} title={title} className={className}>
+      <Button kind={kind ?? (have ? 'default' : 'primary')} icon={busy ? undefined : icon} disabled={busy} onClick={(e) => void click(e)} title={title} className={className}>
         {busy ? <Spinner size={12} /> : null}
         {have ? `${label} Again` : label}
       </Button>
@@ -375,7 +378,7 @@ export function DownloadControl({
           <Spinner size={14} />
         </span>
       ) : (
-        <IconButton icon="download" size={16} className={cx('src-dl-btn', have && 'again')} title={title} onClick={(e) => void click(e)} />
+        <IconButton icon={icon} size={16} className={cx('src-dl-btn', have && 'again')} title={title} onClick={(e) => void click(e)} />
       )}
     </span>
   )

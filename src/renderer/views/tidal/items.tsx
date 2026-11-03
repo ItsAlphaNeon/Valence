@@ -115,11 +115,17 @@ export function AlbumGrid({ albums }: { albums: TidalAlbumSummary[] }) {
 
 // ---- Tracks ----
 
+/** The whole album a track is on (tracks carry no UPC, so the album id is the only key). */
+const downloadTrackAlbum = (album: NonNullable<TidalTrackSummary['album']>) => downloadAlbum({ id: album.id, upc: null, title: album.title })
+
 function trackMenu(e: React.MouseEvent, t: TidalTrackSummary): void {
   const items: MenuItem[] = [{ label: t.inLibrary ? 'Download Again' : 'Download Track', icon: 'download', disabled: !t.streamable, onClick: () => void downloadTrack(t) }]
   if (t.album) {
     const album = t.album
-    items.push({ label: 'Go to Album', icon: 'albums', onClick: () => openAlbum(album.id) })
+    items.push(
+      { label: 'Download Album', icon: 'download', onClick: () => void downloadTrackAlbum(album) },
+      { label: 'Go to Album', icon: 'albums', onClick: () => openAlbum(album.id) },
+    )
   }
   if (t.artists[0]) items.push({ label: 'Go to Artist', icon: 'artists', onClick: () => openArtist(t.artists[0].id) })
   items.push({ separator: true }, { label: 'Open on TIDAL', icon: 'link', onClick: () => openLink(t.url) }, { label: 'Copy TIDAL Link', icon: 'link', onClick: () => copyLink(t.url) })
@@ -141,6 +147,8 @@ const TidalTrackRow = memo(function TidalTrackRow({
 }) {
   const queue = useQueueState(tidalTrackKeys(t), t.queue)
   const album = t.album
+  // While the album is queued the track's own control already shows it (its keys include the album).
+  const albumQueue = useQueueState(album ? tidalAlbumKeys(album) : [])
   return (
     <TrackRow
       lead={index}
@@ -165,7 +173,12 @@ const TidalTrackRow = memo(function TidalTrackRow({
       onContextMenu={(e) => trackMenu(e, t)}
       right={
         t.streamable ? (
-          <DownloadControl badge={trackBadge(t.inLibrary)} queue={queue} compact onDownload={() => downloadTrack(t)} label="Download Track" />
+          <>
+            <DownloadControl badge={trackBadge(t.inLibrary)} queue={queue} compact onDownload={() => downloadTrack(t)} label="Download Track" />
+            {showAlbum && album && !albumQueue && (
+              <DownloadControl badge={null} queue={null} compact icon="albums" onDownload={() => downloadTrackAlbum(album)} label={`Download Album “${album.title}”`} />
+            )}
+          </>
         ) : (
           <span className="chip" title="TIDAL doesn’t offer this track for streaming in your region">
             Unavailable
