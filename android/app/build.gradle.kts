@@ -13,6 +13,11 @@ android {
         targetSdk = 37
         versionCode = 1
         versionName = "0.1.0"
+        // CI builds one APK per CPU family (-Pabis=arm64-v8a,armeabi-v7a or -Pabis=x86,x86_64);
+        // without it the APK carries all four, as local builds always have.
+        providers.gradleProperty("abis").orNull?.let { abis ->
+            ndk { abiFilters += abis.split(',').map { it.trim() }.filter { it.isNotEmpty() } }
+        }
     }
 
     buildTypes {

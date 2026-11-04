@@ -122,9 +122,22 @@ Useful environment overrides:
 
 ```bash
 npm run dist:win     # NSIS installer + portable exe → release/
-npm run dist:mac     # arm64 dmg (run on the Mac; unsigned)
+npm run dist:mac     # arm64 dmg (run on the Mac; ad-hoc signed, no Developer ID)
 npm run dist:linux   # AppImage, rpm, pacman (run on Linux)
 ```
+
+### CI builds
+
+`.github/workflows/build.yml` builds everything on GitHub Actions: the Windows setup `.exe` and `.msi`, `Valence.app` zipped for Apple Silicon and Intel, a Linux AppImage, and Android APKs for ARM and x86. Start it from the Actions tab (**Build → Run workflow**), or push a version tag (`git tag v0.2.0 && git push origin v0.2.0`), which also collects the files into a draft release. Each run's files are under **Artifacts** on its summary page.
+
+- **macOS:** the app is ad-hoc signed, not notarized. The first time, right-click it and choose **Open**, or run `xattr -dr com.apple.quarantine Valence.app`.
+- **Android signing:** release APKs are signed with the debug key. To make CI's APKs install over the copy already on your phone, add this PC's debug keystore as a repository secret named `ANDROID_DEBUG_KEYSTORE`:
+
+  ```bash
+  base64 -w0 ~/.android/debug.keystore | gh secret set ANDROID_DEBUG_KEYSTORE
+  ```
+
+  Without it, each run signs with a throwaway key, and Android won't install that over an existing copy.
 
 ## Code map
 

@@ -29,13 +29,22 @@ nsis:
   artifactName: ${productName}-Setup-${version}.${ext}
 portable:
   artifactName: ${productName}-Portable-${version}.${ext}
+# Built by CI (`--win nsis msi`); local `npm run dist:win` keeps to the setup and portable exes.
+msi:
+  oneClick: false
+  perMachine: false
+  artifactName: ${productName}-${version}.${ext}
 mac:
   target:
     - target: dmg
       arch: [arm64]
   category: public.app-category.music
   icon: resources/icons/icon.png
-  identity: null
+  # No Developer ID: ad-hoc signed, which Apple Silicon needs to run the app at all. Hardened
+  # runtime would reject Electron's own frameworks under an ad-hoc signature, so it's off.
+  identity: '-'
+  hardenedRuntime: false
+  artifactName: ${productName}-${version}-mac-${arch}.${ext}
 linux:
   target:
     - AppImage

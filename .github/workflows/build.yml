@@ -1,0 +1,159 @@
+# Builds every Valence package:
+#   Windows  setup .exe (NSIS) and .msi
+#   macOS    Valence.app, zipped, for Apple Silicon and Intel (ad-hoc signed, no Developer ID)
+#   Linux    AppImage
+#   Android  ARM and x86 APKs
+#
+# Runs when you start it from the Actions tab, and for version tags (v*). A tag also gathers
+# everything into a draft GitHub release to look over before publishing.
+#
+# The repo is private, so runs use the account's Actions minutes, and macOS minutes count 10x and
+# Windows 2x. That's why this doesn't run on every push.
+
+name: Build
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  desktop:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows (EXE, MSI)
+            os: windows-latest
+            artifact: valence-windows
+            # electron-builder rebuilds the native modules (better-sqlite3, sharp, ffmpeg-static) for
+            # the machine it runs on, so every platform and Mac architecture builds on its own runner.
+            targets: --win nsis msi --x64
+            files: |
+              release/*-Setup-*.exe
+              release/*.msi
+          - name: macOS Apple Silicon (.app)
+            os: macos-latest
+            artifact: valence-macos-arm64
+            targets: --mac zip --arm64
+            files: release/*.zip
+          - name: macOS Intel (.app)
+            os: macos-15-intel
+            artifact: valence-macos-x64
+            targets: --mac zip --x64
+            files: release/*.zip
+          - name: Linux (AppImage)
+            os: ubuntu-latest
+            artifact: valence-linux
+            targets: --linux AppImage --x64
+            files: release/*.AppImage
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Fetch fpcalc for this platform
+        run: npm run fetch-binaries
+
+      - name: Build the app
+        run: npm run build
+
+      - name: Package
+        run: npx electron-builder ${{ matrix.targets }} --publish never
+
+      - name: Check the app's signature
+        if: runner.os == 'macOS'
+        run: |
+          app=$(find release -maxdepth 2 -name 'Valence.app' -type d | head -1)
+          codesign --verify --deep --strict --verbose=2 "$app"
+          codesign -dv "$app" 2>&1 | grep -E 'Signature|Identifier|Format'
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.files }}
+          if-no-files-found: error
+          compression-level: 0
+
+  android:
+    name: Android (ARM, x86)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: android
+    env:
+      # Optional: this PC's debug keystore, base64-encoded. Release builds are signed with the debug
+      # key, so with it the APKs update the copy already on your phone; without it each run signs
+      # with a throwaway key and Android will refuse to install over an existing copy.
+      ANDROID_DEBUG_KEYSTORE: ${{ secrets.ANDROID_DEBUG_KEYSTORE }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Use your signing key
+        if: env.ANDROID_DEBUG_KEYSTORE != ''
+        run: |
+          mkdir -p ~/.android
+          echo "$ANDROID_DEBUG_KEYSTORE" | base64 --decode > ~/.android/debug.keystore
+
+      - name: Test the shared core
+        run: ./gradlew :core:test
+
+      - name: Build the APKs
+        run: |
+          version=$(sed -n 's/.*versionName = "\(.*\)".*/\1/p' app/build.gradle.kts)
+          mkdir -p dist
+          ./gradlew :app:assembleRelease -Pabis=arm64-v8a,armeabi-v7a
+          cp app/build/outputs/apk/release/app-release.apk "dist/Valence-$version-arm.apk"
+          ./gradlew :app:assembleRelease -Pabis=x86,x86_64
+          cp app/build/outputs/apk/release/app-release.apk "dist/Valence-$version-x86.apk"
+          ls -l dist
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: valence-android
+          path: android/dist/*.apk
+          if-no-files-found: error
+          compression-level: 0
+
+  release:
+    name: Draft release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [desktop, android]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v3
+        with:
+          draft: true
+          generate_release_notes: true
+          files: dist/*
