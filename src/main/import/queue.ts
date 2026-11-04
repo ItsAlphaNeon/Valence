@@ -22,6 +22,8 @@ export interface QueueDeps {
   process: (release: SourceRelease, opts: PipelineOptions) => Promise<PipelineOutcome>
   /** Called after a job finished successfully (e.g. the Inbox moves originals away). */
   afterDone?: (job: JobInfo, payload: unknown, release: SourceRelease) => Promise<void>
+  /** Called once a job is cancelled or removed, after it has stopped running (e.g. zip temp folders go). */
+  released?: (job: JobInfo, payload: unknown) => Promise<void>
   /** Concurrent pipeline runs across all sources (transcoding is CPU-bound). */
   maxPipelines?: number
   /**
@@ -167,6 +169,8 @@ export class ImportQueueImpl implements ImportQueue {
     const job = this.get(id)
     if (job && ACTIVE.includes(job.status)) this.update(id, { status: 'cancelled', message: 'Cancelled' })
     void this.cleanup(id)
+    // A running job is released when its run ends.
+    if (job && !run) void this.released(job, this.payloadOf(id))
     this.changed()
   }
 
@@ -198,9 +202,12 @@ export class ImportQueueImpl implements ImportQueue {
   remove(id: string): void {
     const job = this.get(id)
     if (!job) return
-    if (job.status === 'running') this.cancel(id)
+    const payload = this.payloadOf(id)
+    const running = this.running.has(id)
+    if (running) this.cancel(id)
     this.deps.db.prepare('DELETE FROM jobs WHERE id = ?').run(id)
     void this.cleanup(id)
+    if (!running) void this.released(job, payload)
     this.changed()
   }
 
@@ -258,6 +265,19 @@ export class ImportQueueImpl implements ImportQueue {
   }
 
   // ---- internals ----
+
+  private payloadOf(id: string): unknown {
+    const r = this.deps.db.prepare('SELECT payload_json FROM jobs WHERE id = ?').get(id) as { payload_json: string | null } | undefined
+    try {
+      return r?.payload_json ? JSON.parse(r.payload_json) : null
+    } catch {
+      return null
+    }
+  }
+
+  private async released(job: JobInfo, payload: unknown): Promise<void> {
+    await this.deps.released?.(job, payload).catch((e) => this.deps.log.warn('import: release hook failed', (e as Error).message))
+  }
 
   private findActive(keys: string[]): JobInfo | null {
     if (!keys.length) return null
@@ -446,6 +466,8 @@ export class ImportQueueImpl implements ImportQueue {
       this.dropPendingProgress(job.id)
       this.running.delete(job.id)
       if (claims && claimKeys.length) claims.release(claimKeys)
+      const after = this.get(job.id)
+      if (!after || after.status === 'cancelled') await this.released(job, payload)
       this.changed()
       this.schedule()
     }

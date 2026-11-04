@@ -1,5 +1,6 @@
 // Per-machine Inbox (~/Valence Inbox, never synced). Anything dropped in is imported once it has
-// stopped changing; afterwards the originals move to Inbox/Imported/ (same relative layout).
+// stopped changing; afterwards the originals move to Inbox/Imported/ (same relative layout). Zips
+// unpack to a temp folder; the zip moves to Imported once everything in it has been imported.
 
 import { existsSync, mkdirSync, watch, type FSWatcher } from 'node:fs'
 import { readdir, rmdir, stat } from 'node:fs/promises'
@@ -7,9 +8,10 @@ import { dirname, join, relative, sep } from 'node:path'
 import type { ImportQueue, Logger } from '@main/context'
 import { placeFile } from '@main/library/organizer'
 import { enqueueLoose, looseKey, planLooseImport, type LoosePayload } from './loose'
+import type { ZipStaging } from './zip'
 
 export const IMPORTED_DIR = 'Imported'
-const README = 'Drop music here to add it to Valence. Imported originals move to the Imported folder.\n'
+const README = 'Drop music (files, folders or zips) here to add it to Valence. Imported originals move to the Imported folder.\n'
 
 export class Inbox {
   private watcher: FSWatcher | null = null
@@ -17,6 +19,8 @@ export class Inbox {
   private poll: NodeJS.Timeout | null = null
   private busy = false
   private again = false
+  /** Zips (by unpack folder, so a changed file is tried again) that failed or had no music. */
+  private badZips = new Set<string>()
 
   constructor(
     private dir: string,
@@ -25,6 +29,7 @@ export class Inbox {
     private settleMs = 4000,
     /** Skips clusters that already have a job (e.g. failed ones waiting for Retry). */
     private seen: (key: string) => boolean = () => false,
+    private extra: { zips?: ZipStaging | null; problem?: (message: string) => void } = {},
   ) {}
 
   start(): void {
@@ -81,7 +86,21 @@ export class Inbox {
         this.poke()
         return ids
       }
-      const payloads = (await planLooseImport(abs, { inbox: true, skip: (p) => this.isImported(p) })).filter((p) => !this.seen(looseKey(p.files)))
+      const { zips, problem } = this.extra
+      const payloads = (
+        await planLooseImport(abs, {
+          inbox: true,
+          skip: (p) => this.isImported(p),
+          zips,
+          // A zip whose jobs are still going (or failed, waiting for Retry) isn't planned again.
+          skipZip: (loc) => this.badZips.has(loc.dir) || !!zips?.inUse(loc.dir),
+          onZipError: (_zip, msg, loc) => {
+            if (loc) this.badZips.add(loc.dir)
+            this.log.warn(`inbox: ${msg}`)
+            problem?.(`Inbox: ${msg}`)
+          },
+        })
+      ).filter((p) => !this.seen(looseKey(p.files)))
       ids.push(...enqueueLoose(this.queue, payloads))
       if (ids.length) this.log.info(`inbox: queued ${ids.length} import job(s)`)
     } catch (e) {
@@ -115,6 +134,11 @@ export class Inbox {
     const a = await snap()
     await new Promise((r) => setTimeout(r, Math.min(3000, this.settleMs)))
     return a === (await snap())
+  }
+
+  /** Moves a zip from the Inbox to Inbox/Imported (once every job from it has finished). */
+  async archiveZip(zip: string): Promise<void> {
+    await this.archiveOriginals({ files: [zip], base: this.dir, inbox: true, title: '' })
   }
 
   /** Moves a finished job's originals (and sidecars in the same folders) to Inbox/Imported. */

@@ -2,7 +2,7 @@
 
 export const IMPORT = {
   jobs: 'import:jobs',
-  /** (paths: string[]) → job ids. Files and folders; folders are expanded and clustered by album. */
+  /** (paths: string[]) → job ids. Files, folders and zips; folders are expanded and clustered by album, zips unpacked to a temp folder first. */
   importPaths: 'import:importPaths',
   /** ('folder' | 'files') → job ids, after a native picker. */
   chooseAndImport: 'import:chooseAndImport',
@@ -40,6 +40,8 @@ export const IMPORT = {
   archiveChanged: 'import:archiveChanged',
   /** broadcast: a report was saved ({ id, title, summary }) */
   reportAdded: 'import:reportAdded',
+  /** broadcast: something dropped or put in the Inbox couldn't be imported (message), e.g. a broken zip */
+  problem: 'import:problem',
 } as const
 
 export type JobStatus = 'queued' | 'running' | 'review' | 'done' | 'failed' | 'cancelled'

@@ -37,7 +37,7 @@ export function InboxSection() {
 
       <Card title="How it works">
         <ol className="set-steps">
-          <li>Drop files or whole album folders into the Inbox — from a download, a CD rip, another computer.</li>
+          <li>Drop files, whole album folders or zips into the Inbox — from a download, a CD rip, another computer. Zips are unpacked for you.</li>
           <li>Valence waits until copying finishes, then groups files by album and queues them in Import.</li>
           <li>
             Once imported, originals move to <span className="mono">Inbox/Imported</span> so nothing is lost. Lossless masters also go to the Archive.

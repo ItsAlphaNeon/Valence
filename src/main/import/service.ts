@@ -12,13 +12,16 @@ import { Archive } from './archive'
 import { Reports } from './report'
 import { runPipeline } from './pipeline'
 import { ImportQueueImpl } from './queue'
-import { enqueueLoose, looseAcquirer, planLooseImport, type LoosePayload } from './loose'
+import { createLooseAcquirer, enqueueLoose, planLooseImport, type LoosePayload } from './loose'
 import { Inbox } from './inbox'
 import { lookupTracks } from './lookup'
 import { tracksByIds } from '@main/library/queries'
 import { toAbs } from '@main/library/organizer'
 import { probeFile } from '@main/tags/read'
 import type { Transport } from './source-types'
+import { ZipStaging } from './zip'
+
+const AUDIO_PICKER_EXT = ['mp3', 'flac', 'm4a', 'aac', 'ogg', 'opus', 'wav', 'aiff', 'aif', 'wma', 'ape', 'wv', 'alac']
 
 export class ImportService {
   readonly archive: Archive
@@ -26,6 +29,8 @@ export class ImportService {
   readonly queue: ImportQueueImpl
   readonly metadata: MetadataService
   readonly inbox: Inbox
+  /** Temp folders zips unpack into while their jobs run. */
+  readonly zips: ZipStaging
   private transport: Transport = (url, init) => fetch(url, init)
 
   constructor(
@@ -46,6 +51,7 @@ export class ImportService {
       log,
     })
     const trash = (abs: string) => shell.trashItem(abs)
+    this.zips = new ZipStaging(join(env.stagingDir, 'zips'), library.db, log)
     this.queue = new ImportQueueImpl({
       db: library.db,
       env,
@@ -62,15 +68,26 @@ export class ImportService {
           opts,
         ),
       afterDone: async (_job, payload) => {
-        if ((payload as LoosePayload | null)?.inbox) await this.inbox.archiveOriginals(payload as LoosePayload)
+        const p = payload as LoosePayload | null
+        if (p?.inbox) await this.inbox.archiveOriginals(p)
+        // The last job from a zip deletes its temp folder; an Inbox zip then moves to Inbox/Imported.
+        if (p?.zip && (await this.zips.release(p.zip.dir)) && p.zip.inbox) await this.inbox.archiveZip(p.zip.path)
+      },
+      released: async (_job, payload) => {
+        const p = payload as LoosePayload | null
+        if (p?.zip) await this.zips.release(p.zip.dir)
       },
     })
-    this.queue.registerAcquirer('import', looseAcquirer, { concurrency: 2 })
-    this.inbox = new Inbox(env.inboxDir, this.queue, log, 4000, (k) => this.queue.hasJobFor([k]))
+    this.queue.registerAcquirer('import', createLooseAcquirer(this.zips), { concurrency: 2 })
+    this.inbox = new Inbox(env.inboxDir, this.queue, log, 4000, (k) => this.queue.hasJobFor([k]), {
+      zips: this.zips,
+      problem: (m) => ctx.broadcast(IMPORT.problem, m),
+    })
   }
 
   start(): void {
     this.archive.start()
+    void this.zips.sweep()
     if (this.ctx.settings.get('import.inbox', true)) this.inbox.start()
     this.ctx.settings.onChange((k, v) => {
       if (k !== 'import.inbox') return
@@ -87,8 +104,16 @@ export class ImportService {
     this.queue.stop()
   }
 
+  /** Files, folders and zips → job ids. Throws when nothing could be imported because of zip problems. */
   async importPaths(paths: string[]): Promise<string[]> {
-    return enqueueLoose(this.queue, await planLooseImport(paths))
+    const problems: string[] = []
+    const payloads = await planLooseImport(paths, { zips: this.zips, onZipError: (_zip, msg) => problems.push(msg) })
+    if (!payloads.length && problems.length) throw new Error(problems.join('\n'))
+    for (const m of problems) {
+      this.ctx.log.warn(`import: ${m}`)
+      this.ctx.broadcast(IMPORT.problem, m)
+    }
+    return enqueueLoose(this.queue, payloads)
   }
 
   private registerIpc(): void {
@@ -101,7 +126,14 @@ export class ImportService {
       const opts: Electron.OpenDialogOptions = {
         title: kind === 'folder' ? 'Import folder' : 'Import files',
         properties: kind === 'folder' ? ['openDirectory', 'multiSelections'] : ['openFile', 'multiSelections'],
-        filters: kind === 'files' ? [{ name: 'Audio', extensions: ['mp3', 'flac', 'm4a', 'aac', 'ogg', 'opus', 'wav', 'aiff', 'aif', 'wma', 'ape', 'wv', 'alac'] }] : undefined,
+        filters:
+          kind === 'files'
+            ? [
+                { name: 'Audio and zip files', extensions: [...AUDIO_PICKER_EXT, 'zip'] },
+                { name: 'Audio', extensions: AUDIO_PICKER_EXT },
+                { name: 'Zip files', extensions: ['zip'] },
+              ]
+            : undefined,
       }
       const r = win ? await dialog.showOpenDialog(win, opts) : await dialog.showOpenDialog(opts)
       return r.canceled ? [] : this.importPaths(r.filePaths)

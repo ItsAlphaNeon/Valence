@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { IMPORT } from '@shared/ipc/import'
 import { SETTINGS } from '@shared/ipc/settings'
-import { errorMessage, invoke, platform } from '../lib/ipc'
+import { errorMessage, invoke, on, platform } from '../lib/ipc'
 import { cx, plural } from '../lib/format'
 import { navigate, toast, useUi, type Route } from '../state/ui'
 import { cmd, usePlayer } from '../state/player'
@@ -245,7 +245,7 @@ function useShortcuts(): void {
   }, [])
 }
 
-/** Dropping files or folders anywhere imports them (copies; originals stay put). */
+/** Dropping files, folders or zips anywhere imports them (copies; originals stay put). */
 function useFileDrop(): boolean {
   const [over, setOver] = useState(false)
   useEffect(() => {
@@ -273,10 +273,12 @@ function useFileDrop(): boolean {
       setOver(false)
       const paths = [...(e.dataTransfer?.files ?? [])].map((f) => window.valence.pathForFile(f)).filter(Boolean)
       if (!paths.length) return
-      invoke<{ jobs?: number; files?: number } | number>(IMPORT.importPaths, paths).then(
-        (r) => {
-          const n = typeof r === 'number' ? r : (r?.jobs ?? r?.files ?? paths.length)
-          toast(`Importing ${plural(n, typeof r === 'object' && r?.jobs != null ? 'release' : 'item')}`, 'ok', { label: 'View', run: () => navigate({ view: 'import' }) })
+      const zips = paths.filter((p) => /\.zip$/i.test(p))
+      if (zips.length) toast(zips.length === 1 ? `Unpacking ${zips[0].split(/[\\/]/).pop()}…` : `Unpacking ${zips.length} zip files…`)
+      invoke<string[]>(IMPORT.importPaths, paths).then(
+        (ids) => {
+          if (!ids?.length) return toast('No music found in what you dropped', 'error')
+          toast(`Importing ${plural(ids.length, 'release')}`, 'ok', { label: 'View', run: () => navigate({ view: 'import' }) })
         },
         (err) => toast(errorMessage(err), 'error'),
       )
@@ -285,7 +287,10 @@ function useFileDrop(): boolean {
     window.addEventListener('dragleave', leave)
     window.addEventListener('dragover', overH)
     window.addEventListener('drop', drop)
+    // Zips that couldn't be unpacked (dropped alongside others, or put in the Inbox).
+    const offProblem = on<[string]>(IMPORT.problem, (m) => toast(m, 'error'))
     return () => {
+      offProblem()
       window.removeEventListener('dragenter', enter)
       window.removeEventListener('dragleave', leave)
       window.removeEventListener('dragover', overH)

@@ -146,7 +146,7 @@ function LibraryStep() {
             <div className="faint mono ellipsis" title={info?.inboxDir}>
               {info?.inboxDir ?? '…'}
             </div>
-            <div className="muted small">Drop files here (or anywhere on the window) and they're tagged, organized and added.</div>
+            <div className="muted small">Drop files, folders or zips here (or anywhere on the window) and they're tagged, organized and added.</div>
           </div>
           {info && (
             <button className="btn btn-sm" onClick={() => void invoke(SETTINGS.openPath, info.inboxDir)}>
@@ -250,7 +250,7 @@ function PlaybackStep() {
 
 function SourcesStep({ finish }: { finish: (then?: () => void) => void }) {
   const items: Array<[IconName, string, string, () => void]> = [
-    ['inbox', 'Import files', 'Drag in folders or files. Valence tags them, finds artwork and lyrics, and files them neatly.', () => navigate({ view: 'import' })],
+    ['inbox', 'Import files', 'Drag in folders, files or zips. Valence tags them, finds artwork and lyrics, and files them neatly.', () => navigate({ view: 'import' })],
     ['wave', 'TIDAL', 'Sign in to browse your favorites and save albums to your library.', () => navigate({ view: 'tidal' })],
     ['disc', 'Bandcamp', 'Sign in to bring in your purchases in lossless.', () => navigate({ view: 'bandcamp' })],
     ['download', 'SiIvaGunner rips', 'High Quality Rips, kept in their own section.', () => navigate({ view: 'hqrip' })],

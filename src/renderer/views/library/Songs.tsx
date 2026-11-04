@@ -65,7 +65,7 @@ export function LibraryEmpty() {
   return (
     <div className="view">
       <Empty icon="songs" title="Your library is empty">
-        <span>Drop music files or folders anywhere on this window, put them in your Valence Inbox, or download from TIDAL and Bandcamp.</span>
+        <span>Drop music files, folders or zips anywhere on this window, put them in your Valence Inbox, or download from TIDAL and Bandcamp.</span>
         <span className="row">
           <Button kind="primary" icon="inbox" onClick={() => navigate({ view: 'import' })}>
             Import

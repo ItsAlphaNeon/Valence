@@ -142,7 +142,7 @@ export function QueueTab() {
       <>
         <PausedBanner />
         <Empty icon="inbox" title="Nothing in the queue">
-          <span>Import a folder, drop music onto the window, or put files in the Inbox. Downloads from TIDAL and Bandcamp show up here too.</span>
+          <span>Import a folder, drop music or zips onto the window, or put files in the Inbox. Downloads from TIDAL and Bandcamp show up here too.</span>
           <div className="row">
             <Button kind="primary" icon="folder" onClick={() => void chooseAndImport('folder')}>
               Import Folder…

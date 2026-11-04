@@ -3,11 +3,11 @@
 
 import { createWriteStream } from 'node:fs'
 import { mkdir, open, rename, rm } from 'node:fs/promises'
-import { basename, dirname, extname, join, resolve, sep } from 'node:path'
+import { basename, extname, join } from 'node:path'
 import { Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 import type { ReadableStream as NodeReadableStream } from 'node:stream/web'
-import yauzl, { type Entry, type ZipFile } from 'yauzl'
+import { unzip, ZipError } from '@main/import/zip'
 import { SourceError, type ProgressFn } from '@main/import/source-types'
 import { isAudioPath, probeFile, type ProbeResult } from '@main/tags/read'
 import { isIgnoredName, matchKey, sanitizeComponent } from '@shared/sanitize'
@@ -54,61 +54,15 @@ export function safeEntryPath(fileName: string): string | null {
   return parts.map(asciiName).join('/')
 }
 
-function uniquePath(path: string, used: Set<string>): string {
-  const ext = extname(path)
-  const stem = path.slice(0, path.length - ext.length)
-  let p = path
-  for (let i = 2; used.has(p.toLowerCase()); i++) p = `${stem} (${i})${ext}`
-  used.add(p.toLowerCase())
-  return p
-}
-
 /** Extracts every file entry into destDir; resolves with the written paths. */
-export function extractZip(zipPath: string, destDir: string, signal?: AbortSignal): Promise<string[]> {
-  const root = resolve(destDir)
-  return new Promise((resolvePromise, reject) => {
-    yauzl.open(zipPath, { lazyEntries: true, decodeStrings: true, validateEntrySizes: true, autoClose: true }, (err, zip?: ZipFile) => {
-      if (err || !zip) return reject(new SourceError(`Bandcamp zip is unreadable: ${err?.message ?? 'unknown'}`, 'parse'))
-      const out: string[] = []
-      const used = new Set<string>()
-      let failed = false
-      const fail = (e: unknown) => {
-        if (failed) return
-        failed = true
-        zip.close()
-        const msg = (e as Error)?.message ?? String(e)
-        if (e instanceof SourceError) reject(e)
-        else if (/relative path|absolute path|invalid characters/i.test(msg)) reject(unsafe(msg))
-        else reject(new SourceError(`Bandcamp zip extraction failed: ${msg}`, 'parse'))
-      }
-      zip.on('error', fail)
-      zip.on('end', () => !failed && resolvePromise(out))
-      zip.on('entry', (entry: Entry) => {
-        if (signal?.aborted) return fail(cancelled())
-        let rel: string | null
-        try {
-          rel = safeEntryPath(entry.fileName)
-        } catch (e) {
-          return fail(e)
-        }
-        if (rel === null) return zip.readEntry()
-        const target = uniquePath(resolve(root, rel), used)
-        if (!target.startsWith(root + sep)) return fail(unsafe(entry.fileName))
-        mkdir(dirname(target), { recursive: true }).then(
-          () =>
-            zip.openReadStream(entry, (e, rs) => {
-              if (e || !rs) return fail(e ?? new Error('no stream'))
-              pipeline(rs, createWriteStream(target), signal ? { signal } : {}).then(() => {
-                out.push(target)
-                zip.readEntry()
-              }, fail)
-            }),
-          fail,
-        )
-      })
-      zip.readEntry()
-    })
-  })
+export async function extractZip(zipPath: string, destDir: string, signal?: AbortSignal): Promise<string[]> {
+  try {
+    return await unzip(zipPath, destDir, { mapPath: safeEntryPath, signal, label: 'Bandcamp zip' })
+  } catch (e) {
+    if (e instanceof SourceError) throw e
+    if (e instanceof ZipError) throw e.kind === 'cancelled' ? cancelled() : new SourceError(e.kind === 'unreadable' ? `Bandcamp zip extraction failed: ${e.message}` : e.message, 'parse')
+    throw new SourceError(`Bandcamp zip extraction failed: ${(e as Error)?.message ?? String(e)}`, 'parse')
+  }
 }
 
 export async function readMagic(path: string, n = 4): Promise<Buffer> {

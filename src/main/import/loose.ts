@@ -1,6 +1,7 @@
 // Loose files: expand dropped/picked paths into audio files, cluster them by album folder, and
 // enqueue one import job per cluster. Originals are only read, never modified or moved (except
-// Inbox files, which move to Inbox/Imported afterwards).
+// Inbox files, which move to Inbox/Imported afterwards). Zips (dropped, picked, or inside a folder)
+// unpack to a temp folder first and are planned like folders; see zip.ts for the cleanup.
 
 import { createHash } from 'node:crypto'
 import { opendir, stat } from 'node:fs/promises'
@@ -11,6 +12,7 @@ import { clusterFiles } from '@main/metadata'
 import { isIgnoredName } from '@shared/sanitize'
 import type { TrackTags } from '@shared/types'
 import type { SourceRelease } from './source-types'
+import { isZipPath, type ZipLocation, type ZipStaging } from './zip'
 
 export interface LoosePayload {
   files: string[]
@@ -20,6 +22,19 @@ export interface LoosePayload {
   extras?: string[]
   inbox?: boolean
   title: string
+  /** Set when the files came out of a zip: the zip, and the temp folder its contents are in. */
+  zip?: { path: string; dir: string; inbox?: boolean }
+}
+
+export interface PlanOptions {
+  inbox?: boolean
+  skip?: (abs: string) => boolean
+  /** Unpacks zips (on their own or inside folders) and plans their contents too; without it zips are ignored. */
+  zips?: ZipStaging | null
+  /** Leaves a zip out (the Inbox skips zips that already have jobs or failed before). */
+  skipZip?: (loc: ZipLocation) => boolean
+  /** A zip that couldn't be unpacked, or had no music in it. */
+  onZipError?: (zip: string, message: string, loc: ZipLocation | null) => void
 }
 
 const COVER_NAMES = /^(cover|folder|front|albumart(?:_\{.*\}_large)?|albumartlarge|artwork)\.(jpe?g|png|webp)$/i
@@ -41,7 +56,7 @@ async function walk(dir: string, out: string[], others: string[], skip?: (abs: s
   }
 }
 
-/** Expands files/folders into audio files (sorted) plus sidecar files. */
+/** Expands files/folders into audio files (sorted) plus sidecar files (zips among them). */
 export async function expandPaths(paths: string[], skip?: (abs: string) => boolean): Promise<{ audio: string[]; others: string[] }> {
   const audio: string[] = []
   const others: string[] = []
@@ -74,9 +89,8 @@ export function looseKey(files: string[]): string {
   return 'import:' + createHash('sha1').update([...files].sort().join('\n')).digest('hex').slice(0, 20)
 }
 
-/** Probes tags (fast, no art) and groups files into album clusters → payloads. */
-export async function planLooseImport(paths: string[], opts: { inbox?: boolean; skip?: (abs: string) => boolean } = {}): Promise<LoosePayload[]> {
-  const { audio, others } = await expandPaths(paths, opts.skip)
+/** Probes tags (fast, no art) and groups audio files into album clusters → payloads. */
+async function planFiles(audio: string[], others: string[], inbox: boolean | undefined): Promise<LoosePayload[]> {
   if (!audio.length) return []
   // Base = parent of the common folder, so the album folder name itself is part of the relPath.
   const common = commonDir(audio)
@@ -106,20 +120,80 @@ export async function planLooseImport(paths: string[], opts: { inbox?: boolean; 
       base,
       artwork: cover,
       extras: nearby.filter((o) => EXTRA_EXT.test(o) && o !== cover && /\.(pdf|cue|log)$/i.test(o)),
-      inbox: opts.inbox,
+      inbox,
       title,
     }
   })
+}
+
+/** Plans an import of files, folders and zips → one payload per album cluster. */
+export async function planLooseImport(paths: string[], opts: PlanOptions = {}): Promise<LoosePayload[]> {
+  const { audio, others } = await expandPaths(paths, opts.skip)
+  const zips = opts.zips ? others.filter(isZipPath) : []
+  const payloads = await planFiles(
+    audio,
+    others.filter((o) => !isZipPath(o)),
+    opts.inbox,
+  )
+  for (const z of zips) payloads.push(...(await planZip(z, opts.zips!, opts)))
+  return payloads
+}
+
+async function planZip(zip: string, zips: ZipStaging, opts: PlanOptions): Promise<LoosePayload[]> {
+  let loc: ZipLocation | null = null
+  try {
+    loc = await zips.locate(zip)
+    if (opts.skipZip?.(loc)) return []
+    loc = await zips.unpack(zip)
+  } catch (e) {
+    opts.onZipError?.(zip, (e as Error)?.message ?? String(e), loc)
+    return []
+  }
+  const inner = await expandPaths([loc.content])
+  const planned = await planFiles(inner.audio, inner.others, undefined)
+  if (!planned.length) {
+    await zips.release(loc.dir)
+    opts.onZipError?.(zip, `No music found in ${basename(zip)}`, loc)
+    return []
+  }
+  const { zip: path, dir } = loc
+  return planned.map((p) => ({ ...p, zip: { path, dir, ...(opts.inbox ? { inbox: true } : {}) } }))
 }
 
 export function enqueueLoose(queue: ImportQueue, payloads: LoosePayload[]): string[] {
   return payloads.map((p) => queue.enqueue({ source: 'import', title: p.title, releaseKeys: [looseKey(p.files)], payload: p }))
 }
 
-export const looseAcquirer: Acquirer = async (payload: LoosePayload): Promise<SourceRelease> => {
-  // Re-check existence: the job may have waited (or been restarted) since it was planned.
-  const present = (await Promise.all(payload.files.map((f) => stat(f).then(() => f, () => null)))).filter((f): f is string => !!f)
-  if (!present.length) throw new Error('The files are no longer there')
+const existing = async (files: string[]) => (await Promise.all(files.map((f) => stat(f).then(() => f, () => null)))).filter((f): f is string => !!f)
+
+/** Acquirer for loose imports. With `zips`, a zip job whose temp copy was cleaned up (Retry, restart) unpacks the zip again. */
+export function createLooseAcquirer(zips: ZipStaging | null = null): Acquirer {
+  return async (payload: LoosePayload, opts): Promise<SourceRelease> => {
+    // Re-check existence: the job may have waited (or been restarted) since it was planned.
+    let present = await existing(payload.files)
+    if (present.length < payload.files.length && payload.zip && zips) {
+      const name = basename(payload.zip.path)
+      opts?.progress?.({ phase: 'processing', fraction: 0, message: `Unpacking ${name}` })
+      try {
+        const loc = await zips.unpack(payload.zip.path, opts?.signal)
+        if (loc.dir !== payload.zip.dir) {
+          // A different file now: its unpack isn't what this job planned, so don't leave it behind.
+          await zips.release(loc.dir)
+          if (!present.length) throw new Error(`${name} has changed since it was added; import it again`)
+        }
+      } catch (e) {
+        if (!present.length) throw e
+      }
+      present = await existing(payload.files)
+    }
+    if (!present.length) throw new Error(payload.zip ? `${basename(payload.zip.path)} is no longer there` : 'The files are no longer there')
+    return looseRelease(payload, present)
+  }
+}
+
+export const looseAcquirer: Acquirer = createLooseAcquirer()
+
+function looseRelease(payload: LoosePayload, present: string[]): SourceRelease {
   return {
     source: 'import',
     releaseKeys: [looseKey(payload.files)],
