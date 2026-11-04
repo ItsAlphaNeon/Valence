@@ -25,6 +25,7 @@ import {
 } from 'node-taglib-sharp'
 import type { TrackTags } from '@shared/types'
 import { CUSTOM_FIELDS, MULTI_SEP, POPM_EMAIL, RG_FIELDS, formatGain, formatPeak, starsToPopm } from '@shared/tag-schema'
+import './taglib-io'
 
 Id3v2Settings.defaultVersion = 3
 Id3v2Settings.forceDefaultVersion = true
