@@ -4,7 +4,6 @@ import { create } from 'zustand'
 import type { StatsRange } from '@shared/ipc/library'
 
 export type Route =
-  | { view: 'home' }
   | { view: 'songs' }
   | { view: 'albums' }
   /** `rip` remembers which SiIvaGunner list the album belongs to, so the sidebar highlights it. */
@@ -118,9 +117,10 @@ function write(key: string, v: unknown): void {
 }
 
 function loadRoute(): Route {
-  const r = read<Route | null>(KEY, null)
-  if (r && typeof r.view === 'string' && r.view !== 'search') return r
-  return { view: 'home' }
+  const r = read<{ view?: unknown } | null>(KEY, null)
+  // 'home' is a saved route from before the Home page was removed.
+  if (r && typeof r.view === 'string' && r.view !== 'search' && r.view !== 'home') return r as Route
+  return { view: 'albums' }
 }
 
 interface Layout {

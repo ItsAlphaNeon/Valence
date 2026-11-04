@@ -74,7 +74,7 @@ export function PlaylistView({ id }: { id: string }) {
     void invoke(LIB.deletePlaylist, id).then(() => {
       toast(`Deleted “${info.name}”`, 'ok')
       const next = playlists[i + 1] ?? playlists[i - 1]
-      navigate(next && next.id !== id ? { view: 'playlist', id: next.id } : { view: 'home' })
+      navigate(next && next.id !== id ? { view: 'playlist', id: next.id } : { view: 'albums' })
     })
   }
   const more = (e: React.MouseEvent) =>

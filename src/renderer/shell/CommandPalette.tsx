@@ -33,7 +33,6 @@ function baseCommands(): Cmd[] {
   const playing = !!st.state?.playing
   const ui = useUi.getState()
   const nav: Array<[string, IconName, Route, string?, string?]> = [
-    ['Home', 'home', { view: 'home' }],
     ['Liked Songs', 'heart', { view: 'liked' }, undefined, 'favorites favourites'],
     ['Albums', 'albums', { view: 'albums' }],
     ['Songs', 'songs', { view: 'songs' }, undefined, 'tracks'],

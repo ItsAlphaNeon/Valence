@@ -1,4 +1,4 @@
-// Top bar: back/forward, Home and the search pill in the middle, activity and settings on the
+// Top bar: back/forward, the search pill in the middle, activity and settings on the
 // right. The bar is the window's drag region; the native window controls sit at its right end.
 
 import { useEffect, useRef, useState } from 'react'
@@ -87,7 +87,7 @@ export function TopBar() {
 
   return (
     <header className="topbar drag">
-      <button className="tb-brand" onClick={() => navigate({ view: 'home' })} title="Home" style={{ border: 0, background: 'none' }}>
+      <button className="tb-brand" onClick={() => navigate({ view: 'albums' })} title="Albums" style={{ border: 0, background: 'none' }}>
         <span className="brand-mark" />
         <span>Valence</span>
       </button>
@@ -96,19 +96,12 @@ export function TopBar() {
         <IconButton icon="chevronRight" size={18} title="Forward (Alt+→)" disabled={!fwd} onClick={() => useUi.getState().goForward()} />
       </div>
       <div className="tb-center">
-        <IconButton
-          className={cx('tb-home', route.view === 'home' && 'active')}
-          icon={route.view === 'home' ? 'homeFilled' : 'home'}
-          size={22}
-          title="Home"
-          onClick={() => navigate({ view: 'home' })}
-        />
         <label className="tb-search">
           <Icon name="search" size={20} />
           <input
             ref={input}
             type="search"
-            placeholder="What do you want to listen to?"
+            placeholder="Search songs, albums and artists"
             value={q}
             spellCheck={false}
             onChange={(e) => search(e.target.value)}

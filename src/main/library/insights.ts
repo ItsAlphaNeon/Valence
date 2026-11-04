@@ -1,16 +1,14 @@
-// Derived views over plays and favorites: the Home screen shelves, listening stats, and "similar
-// tracks" for autoplay. Plays are keyed like tracks (valence id or 'path:<rel>') and joined back
+// Derived views over plays and favorites: listening stats and "similar tracks" for autoplay. Plays are keyed like tracks (valence id or 'path:<rel>') and joined back
 // through the tracks_item_key index.
 
 import type { DB } from '@main/db/db'
-import type { HomeData, ListeningStats, StatsRange } from '@shared/ipc/library'
-import type { AlbumRow, ArtistRow, LibraryStats, TrackRow } from '@shared/types'
+import type { ListeningStats, StatsRange } from '@shared/ipc/library'
+import type { LibraryStats, TrackRow } from '@shared/types'
 import { VARIOUS_ARTISTS, primaryArtist, splitCredit } from '@shared/artist-credit'
 import { matchKey } from '@shared/sanitize'
 import { artistFavoriteKey, trackKeySql } from '@main/sync/favorites'
-import { albumsByIds, favoriteCounts, queryAlbums, queryArtists, tracksByIds } from './queries'
+import { albumsByIds, tracksByIds } from './queries'
 
-const DAY = 86_400_000
 const KEY = trackKeySql('t')
 // Joins compare KEY with `+column`: a plain TEXT column would give the comparison TEXT affinity,
 // which keeps SQLite from looking tracks up through the tracks_item_key expression index.
@@ -133,71 +131,6 @@ function artistTotals(played: PlayedTrack[], opts: { skipVarious: boolean }): Ar
     out.set(key, a)
   }
   return [...out.values()].sort(byPlays)
-}
-
-// ---- Home ----
-
-export function homeData(db: DB, now = Date.now()): HomeData {
-  const all = playedTracks(db, 0, true)
-  const albums = albumTotals(all)
-  const recentlyPlayed = albumsByIds(
-    db,
-    [...albums]
-      .filter(([, a]) => a.last > 0)
-      .sort((a, b) => b[1].last - a[1].last)
-      .slice(0, 12)
-      .map(([id]) => id),
-  )
-
-  const recent = playedTracks(db, now - 90 * DAY, true)
-  const mostPlayed = topTracks(db, recent, 10)
-  const artistTop = artistTotals(recent, { skipVarious: true }).slice(0, 10)
-  const artistRows = new Map(queryArtists(db, { names: artistTop.map((a) => a.name), collection: 'main' }).map((r) => [artistFavoriteKey(r.name), r]))
-  const topArtists: Array<ArtistRow & { plays: number }> = []
-  for (const a of artistTop) {
-    const row = artistRows.get(artistFavoriteKey(a.name))
-    if (row) topArtists.push({ ...row, plays: a.plays })
-  }
-
-  return {
-    recentlyPlayed,
-    recentlyAdded: queryAlbums(db, { sort: 'added', limit: 12, collection: 'main' }),
-    favoriteAlbums: queryAlbums(db, { liked: true, collection: 'main', limit: 12 }),
-    mostPlayed,
-    topArtists,
-    rediscover: rediscover(db, albums, now, 12),
-    likedCount: favoriteCounts(db).tracks,
-  }
-}
-
-/**
- * Albums last played more than 60 days ago (weighted toward ones played a lot), topped up with
- * never-played albums. The pick is random but the same all day.
- */
-function rediscover(db: DB, albums: Map<number, { plays: number; last: number }>, now: number, n: number): AlbumRow[] {
-  const day = localDayKey(now)
-  const rand = seededRandom(`rediscover:${day}`)
-  const cutoff = now - 60 * DAY
-  const old = [...albums].filter(([, a]) => a.last > 0 && a.last < cutoff).sort((a, b) => a[0] - b[0])
-  // Weighted sampling without replacement (Efraimidis-Spirakis): key = u^(1/w).
-  const picked = old
-    .map(([id, a]) => ({ id, k: Math.pow(rand(), 1 / (1 + Math.log2(1 + a.plays))) }))
-    .sort((a, b) => b.k - a.k)
-    .slice(0, n)
-    .map((x) => x.id)
-  if (picked.length < n) {
-    const seed = Math.floor(seededRandom(`never:${day}`)() * 2147483647)
-    const fill = db
-      .prepare(
-        `SELECT a.id FROM albums a
-         WHERE a.hq_rip = '' AND EXISTS (SELECT 1 FROM tracks t WHERE t.album_id = a.id)
-           AND a.id NOT IN (SELECT value FROM json_each(?))
-         ORDER BY (a.id * 2654435761 + ?) % 4294967291 LIMIT ?`,
-      )
-      .all(JSON.stringify([...albums.keys()]), seed, n - picked.length) as Array<{ id: number }>
-    picked.push(...fill.map((r) => r.id))
-  }
-  return albumsByIds(db, picked)
 }
 
 // ---- Listening stats ----

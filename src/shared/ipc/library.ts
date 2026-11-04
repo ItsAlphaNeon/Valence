@@ -38,8 +38,6 @@ export const LIB = {
   favoriteCounts: 'library:favoriteCounts',
   /** (AlbumQuery with offset/limit) → AlbumsPage */
   albumsPage: 'library:albumsPage',
-  /** () → HomeData */
-  home: 'library:home',
   /** (StatsRange) → ListeningStats */
   listeningStats: 'library:listeningStats',
   /** (seedTrackIds: number[], excludeIds: number[], n: number) → number[] track ids (main library), for autoplay. */
@@ -118,24 +116,6 @@ export interface AlbumsPage {
   rows: AlbumRow[]
   /** Albums matching the query, ignoring offset/limit. */
   total: number
-}
-
-/** Home screen shelves. Main library only (no rips). */
-export interface HomeData {
-  /** Albums by most recent play (≤ 12). */
-  recentlyPlayed: AlbumRow[]
-  /** Newest albums (≤ 12). */
-  recentlyAdded: AlbumRow[]
-  /** Most recently liked albums (≤ 12). */
-  favoriteAlbums: AlbumRow[]
-  /** Most played tracks of the last 90 days (≤ 10). */
-  mostPlayed: Array<TrackRow & { plays: number }>
-  /** Most played album artists of the last 90 days (≤ 10; Various Artists left out). */
-  topArtists: Array<ArtistRow & { plays: number }>
-  /** Albums played before but not in the last 60 days (topped up with never-played ones); changes daily (≤ 12). */
-  rediscover: AlbumRow[]
-  /** Liked tracks in the library. */
-  likedCount: number
 }
 
 /** '7d' / '30d' / '90d' are calendar days including today; 'year' is the last 365 days. */

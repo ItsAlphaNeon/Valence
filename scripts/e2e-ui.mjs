@@ -128,7 +128,6 @@ try {
   const multi = albumList.find((a) => a.title === 'Night Signals')
 
   const ROUTES = [
-    ['home', { view: 'home' }],
     ['albums', { view: 'albums' }],
     ['songs', { view: 'songs' }],
     ['artists', { view: 'artists' }],
@@ -173,13 +172,23 @@ try {
     }
   }
 
-  // Palettes (home view), then the density and album-art color options.
+  // A saved route to the Home page (removed) opens Albums after a reload.
+  {
+    await win.evaluate(() => localStorage.setItem('valence.ui.route', JSON.stringify({ view: 'home' })))
+    await win.reload()
+    await win.waitForSelector('.app', { timeout: 20000 })
+    await sleep(800)
+    const landed = await win.evaluate(() => window.__valence?.ui.getState().route.view)
+    check('saved Home route opens Albums', landed === 'albums', String(landed))
+  }
+
+  // Palettes (albums view), then the density and album-art color options.
   const setting = (k, v) => win.evaluate(([k, v]) => window.valence.invoke('settings:set', k, v), [k, v])
   const dataset = () => win.evaluate(() => ({ ...document.documentElement.dataset }))
   await scheme('system')
   for (const id of ['midnight', 'ember', 'oled', 'paper']) {
     await setting('ui.theme', id)
-    await go({ view: 'home' })
+    await go({ view: 'albums' })
     await sleep(500)
     const d = await dataset()
     await win.screenshot({ path: join(shots, `palette-${id}.png`) })

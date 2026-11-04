@@ -17,8 +17,6 @@ import { ArtistTile } from './Artists'
 
 type Tab = 'songs' | 'albums' | 'artists'
 const LIKED_SRC = { kind: 'other' as const, id: 'liked', title: 'Liked Songs' }
-/** Liked Songs' header color: a deep violet like the tile. */
-const LIKED_COLOR = '80 56 160'
 
 export function LikedView({ tab = 'songs' }: { tab?: Tab }) {
   const counts = useFavorites((s) => s.counts)
@@ -28,7 +26,8 @@ export function LikedView({ tab = 'songs' }: { tab?: Tab }) {
   const now = useSourcePlaying((s) => s?.kind === 'other' && s.id === 'liked')
   const play = () => void playQuery({ liked: true, sort }, undefined, LIKED_SRC)
   const title = tab === 'songs' ? 'Liked Songs' : tab === 'albums' ? 'Your albums' : 'Your artists'
-  useViewHeader({ color: LIKED_COLOR, strong: true, title, play: tab === 'songs' ? play : undefined })
+  // No color of its own: the header follows the accent, like the tile.
+  useViewHeader({ color: null, strong: true, title, play: tab === 'songs' ? play : undefined })
   const info = tab === 'songs' ? plural(counts.tracks, 'song') : tab === 'albums' ? plural(counts.albums, 'album') : plural(counts.artists, 'artist')
 
   return (

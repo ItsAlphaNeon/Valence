@@ -11,7 +11,7 @@ import { watchLibrary, type WatchHandle } from './watcher'
 import { createLibraryLookup, type LibraryLookupEx } from './lookup'
 import { PlaylistStore, type SmartRules } from './playlists'
 import { albumById, favoriteCounts, libraryStats, queryAlbums, queryAlbumsPage, queryArtists, queryGenres, queryTracks, trackById, tracksByIds } from './queries'
-import { homeData, listeningStats, similarTracks } from './insights'
+import { listeningStats, similarTracks } from './insights'
 import { ArtCache, artUrl } from './art'
 import { chooseRelPath, moveWithinLibrary, toAbs } from './organizer'
 import { probeFile, type ProbeResult } from '@main/tags/read'
@@ -397,7 +397,6 @@ export class LibraryService {
     handle(LIB.playItems, (ids: number[]) => tracksByIds(db, ids).map((t) => this.playItem(t)))
     handle(LIB.setLiked, (req: SetLikedRequest, liked: boolean) => this.setLiked(req, liked))
     handle(LIB.favoriteCounts, () => favoriteCounts(db))
-    handle(LIB.home, () => homeData(db))
     handle(LIB.listeningStats, (range: StatsRange) => listeningStats(db, range ?? '30d', libraryStats(db, this.root, this.scanning)))
     handle(LIB.similar, (seedTrackIds: number[], excludeIds: number[], n: number) =>
       similarTracks(db, Array.isArray(seedTrackIds) ? seedTrackIds : [], Array.isArray(excludeIds) ? excludeIds : [], n ?? 20),

@@ -141,7 +141,6 @@ export function AppearanceSection() {
           label="Open Valence to"
           options={[
             { value: 'last', label: 'Where I left off' },
-            { value: 'home', label: 'Home' },
             { value: 'albums', label: 'Albums' },
             { value: 'songs', label: 'Songs' },
             { value: 'liked', label: 'Liked Songs' },

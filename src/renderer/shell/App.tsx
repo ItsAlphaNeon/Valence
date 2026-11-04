@@ -22,7 +22,6 @@ import { CommandPalette } from './CommandPalette'
 import { ShortcutsOverlay } from './Shortcuts'
 import { Onboarding } from './Onboarding'
 import { usePlaybackChrome } from './system'
-import { HomeView } from '../views/library/Home'
 import { LikedView } from '../views/library/Liked'
 import { StatsView } from '../views/library/Stats'
 import { SongsView } from '../views/library/Songs'
@@ -42,8 +41,6 @@ import { GetRipsView } from '../views/rips/GetRipsView'
 /** Title for the sticky header on views that don't set their own. */
 function titleOf(r: Route): string | undefined {
   switch (r.view) {
-    case 'home':
-      return 'Home'
     case 'songs':
       return 'Songs'
     case 'albums':
@@ -83,8 +80,6 @@ function titleOf(r: Route): string | undefined {
 
 function renderRoute(r: Route): ReactNode {
   switch (r.view) {
-    case 'home':
-      return <HomeView />
     case 'liked':
       return <LikedView tab={r.tab} />
     case 'stats':
@@ -308,7 +303,9 @@ function useOnboarding(): void {
     if (!setting('ui.onboarded', false)) useUi.getState().setOnboarding(true)
     // Settings → Appearance → Open Valence to.
     const start = setting<string>('ui.startPage', 'last')
-    if (start === 'home' || start === 'albums' || start === 'songs' || start === 'liked') useUi.getState().navigate({ view: start }, { replace: true })
+    // 'home' is from before the Home page was removed; it opens Albums now.
+    if (start === 'home' || start === 'albums') useUi.getState().navigate({ view: 'albums' }, { replace: true })
+    else if (start === 'songs' || start === 'liked') useUi.getState().navigate({ view: start }, { replace: true })
   }, [loaded])
 }
 

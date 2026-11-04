@@ -204,7 +204,7 @@ export function Sidebar() {
           void invoke(LIB.deletePlaylist, p.id).then(() => {
             toast(`Deleted “${p.name}”`)
             const r = useUi.getState().route
-            if ((r.view === 'playlist' || r.view === 'smart') && r.id === p.id) navigate({ view: 'home' })
+            if ((r.view === 'playlist' || r.view === 'smart') && r.id === p.id) navigate({ view: 'albums' })
           })
         },
       },
@@ -245,7 +245,6 @@ export function Sidebar() {
       </div>
       <div className={cx('sb-scroll', shadow && 'shadowed')} onScroll={(e) => setShadow((e.target as HTMLElement).scrollTop > 2)}>
         <Group id="browse" title="Browse" rail={rail}>
-          <Item rail={rail} icon="home" label="Home" to={{ view: 'home' }} />
           <Item rail={rail} icon="heart" label="Liked Songs" to={{ view: 'liked' }} extra={counts.tracks ? <span className="sb-count">{counts.tracks.toLocaleString()}</span> : undefined} />
           <Item rail={rail} icon="albums" label="Albums" to={{ view: 'albums' }} />
           <Item rail={rail} icon="songs" label="Songs" to={{ view: 'songs' }} />

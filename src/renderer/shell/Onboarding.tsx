@@ -74,7 +74,7 @@ function Flow() {
               {i === 0 ? "Let's go" : 'Next'}
             </button>
           ) : (
-            <button className="btn btn-primary" onClick={() => finish(() => navigate({ view: 'home' }))} autoFocus>
+            <button className="btn btn-primary" onClick={() => finish(() => navigate({ view: 'albums' }))} autoFocus>
               Start listening
             </button>
           )}

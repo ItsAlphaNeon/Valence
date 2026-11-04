@@ -1,9 +1,9 @@
-// Home shelves, listening stats and "similar tracks" over a small fixture library (plays and
+// Listening stats and "similar tracks" over a small fixture library (plays and
 // favorites inserted directly), plus a timing check of similarTracks on a 50k-track library.
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { openDb, type DB } from '@main/db/db'
-import { formatLabel, homeData, listeningStats, localDayKey, seededRandom, similarTracks, statsRangeStart } from '@main/library/insights'
+import { formatLabel, listeningStats, localDayKey, seededRandom, similarTracks, statsRangeStart } from '@main/library/insights'
 import { libraryStats } from '@main/library/queries'
 import { insertAlbum, insertPlay, insertTrack, trackKey } from '../helpers/library-fixture'
 
@@ -15,7 +15,7 @@ const NOW = new Date(2026, 5, 15, 12, 0, 0).getTime()
 const like = (db: DB, kind: 't' | 'a' | 'r', key: string, at = NOW - DAY) =>
   db.prepare('INSERT OR REPLACE INTO favorites(kind, item_key, liked, hlc, at) VALUES (?, ?, 1, ?, ?)').run(kind, key, `${at.toString(36)}-0000-x`, at)
 
-describe('home and listening stats', () => {
+describe('listening stats', () => {
   const db = openDb(':memory:')
   const al: Record<string, number> = {}
   const tr: Record<string, number> = {}
@@ -53,30 +53,6 @@ describe('home and listening stats', () => {
     like(db, 'a', (db.prepare('SELECT album_key FROM albums WHERE id = ?').get(al.gamma) as { album_key: string }).album_key)
   })
   afterAll(() => db.close())
-
-  it('builds the Home shelves from the main library', () => {
-    const h = homeData(db, NOW)
-    expect(h.recentlyPlayed.map((a) => a.id)).toEqual([al.alpha, al.beta, al.comp, al.gamma, al.old])
-    expect(h.recentlyAdded.map((a) => a.id)).toEqual([al.never, al.old, al.comp, al.gamma, al.beta, al.alpha])
-    expect(h.favoriteAlbums.map((a) => a.id)).toEqual([al.gamma])
-    expect(h.mostPlayed.map((t) => [t.id, t.plays])).toEqual([
-      [tr.a1, 5],
-      [tr.b1, 3],
-      [tr.d1, 2],
-      [tr.c1, 1],
-    ])
-    expect(h.mostPlayed[3].liked).toBe(true)
-    expect(h.topArtists.map((a) => [a.name, a.plays])).toEqual([
-      ['Artist A', 5],
-      ['Artist B', 3],
-      ['Artist C', 1],
-    ])
-    expect(h.topArtists[0]).toMatchObject({ albumCount: 1, trackCount: 2, liked: false })
-    // Played long ago first, then never played; the same all day.
-    expect(h.rediscover.map((a) => a.id)).toEqual([al.old, al.never])
-    expect(homeData(db, NOW + HOUR).rediscover).toEqual(h.rediscover)
-    expect(h.likedCount).toBe(1)
-  })
 
   it('summarizes listening for a range', () => {
     const lib = libraryStats(db, '/music', false)
