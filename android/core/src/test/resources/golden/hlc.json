@@ -1,0 +1,299 @@
+{
+ "ids": {
+  "A": "aaaaaaaaaaaa0001",
+  "B": "bbbbbbbbbbbb0002"
+ },
+ "steps": [
+  {
+   "op": "tickA",
+   "tA": 1000,
+   "tB": 0,
+   "remote": null,
+   "out": "0000000rs-0000-aaaaaaaaaaaa0001"
+  },
+  {
+   "op": "tickA",
+   "tA": 1000,
+   "tB": 0,
+   "remote": null,
+   "out": "0000000rs-0001-aaaaaaaaaaaa0001"
+  },
+  {
+   "op": "tickA",
+   "tA": 500,
+   "tB": 0,
+   "remote": null,
+   "out": "0000000rs-0002-aaaaaaaaaaaa0001"
+  },
+  {
+   "op": "tickB",
+   "tA": 500,
+   "tB": 99999,
+   "remote": null,
+   "out": "00000255r-0000-bbbbbbbbbbbb0002"
+  },
+  {
+   "op": "observeA",
+   "tA": 600,
+   "tB": 99999,
+   "remote": "00000255r-0000-bbbbbbbbbbbb0002",
+   "out": null
+  },
+  {
+   "op": "tickA",
+   "tA": 600,
+   "tB": 99999,
+   "remote": null,
+   "out": "00000255r-0002-aaaaaaaaaaaa0001"
+  },
+  {
+   "op": "observeA",
+   "tA": 600,
+   "tB": 99999,
+   "remote": "garbage",
+   "out": null
+  },
+  {
+   "op": "tickA",
+   "tA": 600,
+   "tB": 99999,
+   "remote": null,
+   "out": "00000255r-0003-aaaaaaaaaaaa0001"
+  },
+  {
+   "op": "observeA",
+   "tA": 600,
+   "tB": 99999,
+   "remote": "ABC-0000-x",
+   "out": null
+  },
+  {
+   "op": "tickA",
+   "tA": 600,
+   "tB": 99999,
+   "remote": null,
+   "out": "00000255r-0004-aaaaaaaaaaaa0001"
+  },
+  {
+   "op": "observeA",
+   "tA": 600,
+   "tB": 99999,
+   "remote": "0000002n9-zzzz-cccccccccccc0003",
+   "out": null
+  },
+  {
+   "op": "tickA",
+   "tA": 600,
+   "tB": 99999,
+   "remote": null,
+   "out": "00000255r-0006-aaaaaaaaaaaa0001"
+  },
+  {
+   "op": "tickA",
+   "tA": 1793765024371,
+   "tB": 99999,
+   "remote": null,
+   "out": "0mw1ldqwj-0000-aaaaaaaaaaaa0001"
+  },
+  {
+   "op": "observeB",
+   "tA": 1793765024371,
+   "tB": 1793765024000,
+   "remote": "0mw1ldqwj-0000-aaaaaaaaaaaa0001",
+   "out": null
+  },
+  {
+   "op": "tickB",
+   "tA": 1793765024371,
+   "tB": 1793765024000,
+   "remote": null,
+   "out": "0mw1ldqwj-0002-bbbbbbbbbbbb0002"
+  },
+  {
+   "op": "tickB",
+   "tA": 1793765024371,
+   "tB": 1793765024371,
+   "remote": null,
+   "out": "0mw1ldqwj-0003-bbbbbbbbbbbb0002"
+  },
+  {
+   "op": "observeA",
+   "tA": 1793765024371,
+   "tB": 1793765024371,
+   "remote": "0mw1ldqwj-0003-bbbbbbbbbbbb0002",
+   "out": null
+  },
+  {
+   "op": "tickA",
+   "tA": 1793765024371,
+   "tB": 1793765024371,
+   "remote": null,
+   "out": "0mw1ldqwj-0005-aaaaaaaaaaaa0001"
+  },
+  {
+   "op": "observeA",
+   "tA": 1793765099999,
+   "tB": 1793765024371,
+   "remote": "0mw1lds8d-0005-cccccccccccc0003",
+   "out": null
+  },
+  {
+   "op": "tickA",
+   "tA": 1793765099999,
+   "tB": 1793765024371,
+   "remote": null,
+   "out": "0mw1lfd9b-0001-aaaaaaaaaaaa0001"
+  },
+  {
+   "op": "observeA",
+   "tA": 1793765099999,
+   "tB": 1793765024371,
+   "remote": "zzzzzzzzz-0000-cccccccccccc0003",
+   "out": null
+  },
+  {
+   "op": "tickA",
+   "tA": 1793765099999,
+   "tB": 1793765024371,
+   "remote": null,
+   "out": "zzzzzzzzz-0002-aaaaaaaaaaaa0001"
+  },
+  {
+   "op": "tickA",
+   "tA": 1793765099999,
+   "tB": 1793765024371,
+   "remote": null,
+   "out": "zzzzzzzzz-0003-aaaaaaaaaaaa0001"
+  },
+  {
+   "op": "observeB",
+   "tA": 1793765099999,
+   "tB": 5,
+   "remote": "1-1-x",
+   "out": null
+  },
+  {
+   "op": "tickB",
+   "tA": 1793765099999,
+   "tB": 5,
+   "remote": null,
+   "out": "0mw1ldqwj-0005-bbbbbbbbbbbb0002"
+  }
+ ],
+ "decode": [
+  {
+   "in": "0mw1lk7za-0000-aaaaaaaaaaaaaaaa",
+   "out": {
+    "ms": 1793765326438,
+    "c": 0,
+    "d": "aaaaaaaaaaaaaaaa"
+   }
+  },
+  {
+   "in": "abc",
+   "out": null
+  },
+  {
+   "in": "-0000-x",
+   "out": null
+  },
+  {
+   "in": "ABC-0000-x",
+   "out": null
+  },
+  {
+   "in": "0-0-",
+   "out": null
+  },
+  {
+   "in": "0-0-x",
+   "out": {
+    "ms": 0,
+    "c": 0,
+    "d": "x"
+   }
+  },
+  {
+   "in": "0-0-x-y-z",
+   "out": {
+    "ms": 0,
+    "c": 0,
+    "d": "x-y-z"
+   }
+  },
+  {
+   "in": "0-0-x\ny",
+   "out": null
+  },
+  {
+   "in": "zz-zz-aaa",
+   "out": {
+    "ms": 1295,
+    "c": 1295,
+    "d": "aaa"
+   }
+  },
+  {
+   "in": "0mw1lk7za-0000",
+   "out": null
+  },
+  {
+   "in": "0mw1lk7za--x",
+   "out": null
+  },
+  {
+   "in": " 0-0-x",
+   "out": null
+  },
+  {
+   "in": "0-0-x ",
+   "out": {
+    "ms": 0,
+    "c": 0,
+    "d": "x "
+   }
+  },
+  {
+   "in": "0-0- ",
+   "out": null
+  }
+ ],
+ "encode": [
+  {
+   "ms": 0,
+   "c": 0,
+   "d": "d",
+   "out": "000000000-0000-d"
+  },
+  {
+   "ms": 1793765024371,
+   "c": 0,
+   "d": "aaaaaaaaaaaaaaaa",
+   "out": "0mw1ldqwj-0000-aaaaaaaaaaaaaaaa"
+  },
+  {
+   "ms": 1793765024371,
+   "c": 46655,
+   "d": "x",
+   "out": "0mw1ldqwj-0zzz-x"
+  },
+  {
+   "ms": 1793765024371,
+   "c": 1679616,
+   "d": "x",
+   "out": "0mw1ldqwj-10000-x"
+  },
+  {
+   "ms": 101559956668415,
+   "c": 1,
+   "d": "y",
+   "out": "zzzzzzzzz-0001-y"
+  },
+  {
+   "ms": 101559956668416,
+   "c": 0,
+   "d": "z",
+   "out": "1000000000-0000-z"
+  }
+ ]
+}

@@ -1,0 +1,29 @@
+{"hlc":"0mw1lds8d-0000-aaaaaaaaaaaa0001","k":"66f343d2-8370-43c5-b699-b3315a3b995d","at":1793765024371,"ms":387,"c":0,"s":1}
+{"hlc":"0mw1lf9kd-0000-aaaaaaaaaaaa0001","k":"9befbb1d-59a3-48ef-87e1-5d93b4d48f0d","at":1793765026093,"ms":68917,"c":0,"s":0}
+{"hlc":"0mw1lf9ke-0000-aaaaaaaaaaaa0001","k":"corrupt","at":1
+
+   
+{"k":"nohlc","at":1,"ms":2,"c":1,"s":0}
+{"hlc":123,"k":"numhlc","at":1,"ms":2,"c":1,"s":0}
+{"hlc":"0mw1lfa00-0000-aaaaaaaaaaaa0001","k":42,"at":1,"ms":1,"c":1,"s":0}
+{"hlc":"0mw1lfa01-0000-aaaaaaaaaaaa0001","k":"strings","at":"1793765030000","ms":"1500","c":"0","s":""}
+{"hlc":"0mw1lfa02-0000-aaaaaaaaaaaa0001","k":"nulls","at":null,"ms":null,"c":null,"s":null}
+{"hlc":"0mw1lfa03-0000-aaaaaaaaaaaa0001","k":"bools","at":true,"ms":false,"c":true,"s":false}
+{"hlc":"0mw1lfa04-0000-aaaaaaaaaaaa0001","k":"missing"}
+{"hlc":"0mw1lfa05-0000-aaaaaaaaaaaa0001","k":"extra","at":5,"ms":6,"c":0,"s":1,"zz":{"nested":[1,2]}}
+{"hlc":"0mw1lfa06-0000-aaaaaaaaaaaa0001","k":"ünï 😀 x","at":7,"ms":8,"c":0,"s":0}
+["array"]
+"string"
+null
+{"hlc":"0mw1lfa08-0000-aaaaaaaaaaaa0001","k":"crlf","at":10,"ms":10,"c":0,"s":0}
+﻿{"hlc":"0mw1lfa09-0000-aaaaaaaaaaaa0001","k":"bom","at":10,"ms":10,"c":0,"s":0}
+{"hlc":"0mw1lfa0a-0000-aaaaaaaaaaaa0001","k":"esc\"aped\\/\u0041\n","at":11,"ms":11,"c":0,"s":0}
+{"hlc":"0mw1lfa0b-0000-aaaaaaaaaaaa0001","k":"numstr","at":" 12 ","ms":"0x10","c":0,"s":0}
+{"hlc":"0mw1lfa0c-0000-aaaaaaaaaaaa0001","k":"neg","at":-5,"ms":-0,"c":0,"s":0}
+{"hlc":"0mw1lfa0d-0000-aaaaaaaaaaaa0001","k":"exp","at":1.5e3,"ms":2E2,"c":0.0,"s":1}
+{"hlc":"0mw1lfa0e-0000-aaaaaaaaaaaa0001","k":"objs","at":[7],"ms":{},"c":[],"s":{}}
+{"hlc":"0mw1lfa0f-0000-aaaaaaaaaaaa0001","k":"","at":1,"ms":1,"c":1,"s":0}
+  {"hlc":"0mw1lfa0g-0000-aaaaaaaaaaaa0001","k":"indented","at":1,"ms":1,"c":1,"s":0}  
+{"hlc":"0mw1lfa0h-0000-aaaaaaaaaaaa0001","k":"badnum","at":"12abc","ms":"Infinity","c":"false","s":0}
+{"hlc":"0mw1lfa0i-0000-aaaaaaaaaaaa0001","k":"nan-ish","at":"","ms":" ","c":0,"s":0}
+{"hlc":"0mw1lfz00-0000-aaaaaaaaaaaa0001","k":"partial"

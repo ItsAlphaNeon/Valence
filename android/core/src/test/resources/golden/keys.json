@@ -1,0 +1,2673 @@
+{
+ "strings": [
+  {
+   "in": "",
+   "cleanText": "",
+   "foldKey": "",
+   "matchKey": "",
+   "artistFavoriteKey": "",
+   "isVariousArtists": false,
+   "sanitize80": "_",
+   "sanitize60": "_"
+  },
+  {
+   "in": " ",
+   "cleanText": "",
+   "foldKey": " ",
+   "matchKey": "",
+   "artistFavoriteKey": "",
+   "isVariousArtists": false,
+   "sanitize80": "_",
+   "sanitize60": "_"
+  },
+  {
+   "in": "   \t  ",
+   "cleanText": "",
+   "foldKey": "   \t  ",
+   "matchKey": "",
+   "artistFavoriteKey": "",
+   "isVariousArtists": false,
+   "sanitize80": "_",
+   "sanitize60": "_"
+  },
+  {
+   "in": " ",
+   "cleanText": "",
+   "foldKey": " ",
+   "matchKey": "",
+   "artistFavoriteKey": "",
+   "isVariousArtists": false,
+   "sanitize80": "_",
+   "sanitize60": "_"
+  },
+  {
+   "in": "a",
+   "cleanText": "a",
+   "foldKey": "a",
+   "matchKey": "",
+   "artistFavoriteKey": "a",
+   "isVariousArtists": false,
+   "sanitize80": "a",
+   "sanitize60": "a"
+  },
+  {
+   "in": "A",
+   "cleanText": "A",
+   "foldKey": "a",
+   "matchKey": "",
+   "artistFavoriteKey": "a",
+   "isVariousArtists": false,
+   "sanitize80": "A",
+   "sanitize60": "A"
+  },
+  {
+   "in": "an",
+   "cleanText": "an",
+   "foldKey": "an",
+   "matchKey": "",
+   "artistFavoriteKey": "an",
+   "isVariousArtists": false,
+   "sanitize80": "an",
+   "sanitize60": "an"
+  },
+  {
+   "in": "the",
+   "cleanText": "the",
+   "foldKey": "the",
+   "matchKey": "",
+   "artistFavoriteKey": "the",
+   "isVariousArtists": false,
+   "sanitize80": "the",
+   "sanitize60": "the"
+  },
+  {
+   "in": "The",
+   "cleanText": "The",
+   "foldKey": "the",
+   "matchKey": "",
+   "artistFavoriteKey": "the",
+   "isVariousArtists": false,
+   "sanitize80": "The",
+   "sanitize60": "The"
+  },
+  {
+   "in": "THE",
+   "cleanText": "THE",
+   "foldKey": "the",
+   "matchKey": "",
+   "artistFavoriteKey": "the",
+   "isVariousArtists": false,
+   "sanitize80": "THE",
+   "sanitize60": "THE"
+  },
+  {
+   "in": "The Beatles",
+   "cleanText": "The Beatles",
+   "foldKey": "the beatles",
+   "matchKey": "beatles",
+   "artistFavoriteKey": "the beatles",
+   "isVariousArtists": false,
+   "sanitize80": "The Beatles",
+   "sanitize60": "The Beatles"
+  },
+  {
+   "in": "the beatles",
+   "cleanText": "the beatles",
+   "foldKey": "the beatles",
+   "matchKey": "beatles",
+   "artistFavoriteKey": "the beatles",
+   "isVariousArtists": false,
+   "sanitize80": "the beatles",
+   "sanitize60": "the beatles"
+  },
+  {
+   "in": "A Tribe Called Quest",
+   "cleanText": "A Tribe Called Quest",
+   "foldKey": "a tribe called quest",
+   "matchKey": "tribe called quest",
+   "artistFavoriteKey": "a tribe called quest",
+   "isVariousArtists": false,
+   "sanitize80": "A Tribe Called Quest",
+   "sanitize60": "A Tribe Called Quest"
+  },
+  {
+   "in": "An Album",
+   "cleanText": "An Album",
+   "foldKey": "an album",
+   "matchKey": "album",
+   "artistFavoriteKey": "an album",
+   "isVariousArtists": false,
+   "sanitize80": "An Album",
+   "sanitize60": "An Album"
+  },
+  {
+   "in": "Anathema",
+   "cleanText": "Anathema",
+   "foldKey": "anathema",
+   "matchKey": "anathema",
+   "artistFavoriteKey": "anathema",
+   "isVariousArtists": false,
+   "sanitize80": "Anathema",
+   "sanitize60": "Anathema"
+  },
+  {
+   "in": "theater",
+   "cleanText": "theater",
+   "foldKey": "theater",
+   "matchKey": "theater",
+   "artistFavoriteKey": "theater",
+   "isVariousArtists": false,
+   "sanitize80": "theater",
+   "sanitize60": "theater"
+  },
+  {
+   "in": "a-ha",
+   "cleanText": "a-ha",
+   "foldKey": "a-ha",
+   "matchKey": "ha",
+   "artistFavoriteKey": "a-ha",
+   "isVariousArtists": false,
+   "sanitize80": "a-ha",
+   "sanitize60": "a-ha"
+  },
+  {
+   "in": "the_the",
+   "cleanText": "the_the",
+   "foldKey": "the_the",
+   "matchKey": "the the",
+   "artistFavoriteKey": "the_the",
+   "isVariousArtists": false,
+   "sanitize80": "the_the",
+   "sanitize60": "the_the"
+  },
+  {
+   "in": "the1",
+   "cleanText": "the1",
+   "foldKey": "the1",
+   "matchKey": "the1",
+   "artistFavoriteKey": "the1",
+   "isVariousArtists": false,
+   "sanitize80": "the1",
+   "sanitize60": "the1"
+  },
+  {
+   "in": "a.b.c",
+   "cleanText": "a.b.c",
+   "foldKey": "a.b.c",
+   "matchKey": "b c",
+   "artistFavoriteKey": "a.b.c",
+   "isVariousArtists": false,
+   "sanitize80": "a.b.c",
+   "sanitize60": "a.b.c"
+  },
+  {
+   "in": "an'",
+   "cleanText": "an'",
+   "foldKey": "an'",
+   "matchKey": "",
+   "artistFavoriteKey": "an'",
+   "isVariousArtists": false,
+   "sanitize80": "an'",
+   "sanitize60": "an'"
+  },
+  {
+   "in": "THE THE",
+   "cleanText": "THE THE",
+   "foldKey": "the the",
+   "matchKey": "",
+   "artistFavoriteKey": "the the",
+   "isVariousArtists": false,
+   "sanitize80": "THE THE",
+   "sanitize60": "THE THE"
+  },
+  {
+   "in": "The The",
+   "cleanText": "The The",
+   "foldKey": "the the",
+   "matchKey": "",
+   "artistFavoriteKey": "the the",
+   "isVariousArtists": false,
+   "sanitize80": "The The",
+   "sanitize60": "The The"
+  },
+  {
+   "in": "Kaos & Ethos",
+   "cleanText": "Kaos & Ethos",
+   "foldKey": "kaos & ethos",
+   "matchKey": "kaos and ethos",
+   "artistFavoriteKey": "kaos & ethos",
+   "isVariousArtists": false,
+   "sanitize80": "Kaos & Ethos",
+   "sanitize60": "Kaos & Ethos"
+  },
+  {
+   "in": "Simon & Garfunkel",
+   "cleanText": "Simon & Garfunkel",
+   "foldKey": "simon & garfunkel",
+   "matchKey": "simon and garfunkel",
+   "artistFavoriteKey": "simon & garfunkel",
+   "isVariousArtists": false,
+   "sanitize80": "Simon & Garfunkel",
+   "sanitize60": "Simon & Garfunkel"
+  },
+  {
+   "in": "Earth, Wind & Fire",
+   "cleanText": "Earth, Wind & Fire",
+   "foldKey": "earth, wind & fire",
+   "matchKey": "earth wind and fire",
+   "artistFavoriteKey": "earth, wind & fire",
+   "isVariousArtists": false,
+   "sanitize80": "Earth, Wind & Fire",
+   "sanitize60": "Earth, Wind & Fire"
+  },
+  {
+   "in": "&",
+   "cleanText": "&",
+   "foldKey": "&",
+   "matchKey": "and",
+   "artistFavoriteKey": "&",
+   "isVariousArtists": false,
+   "sanitize80": "&",
+   "sanitize60": "&"
+  },
+  {
+   "in": "&&",
+   "cleanText": "&&",
+   "foldKey": "&&",
+   "matchKey": "and and",
+   "artistFavoriteKey": "&&",
+   "isVariousArtists": false,
+   "sanitize80": "&&",
+   "sanitize60": "&&"
+  },
+  {
+   "in": "R&B",
+   "cleanText": "R&B",
+   "foldKey": "r&b",
+   "matchKey": "r and b",
+   "artistFavoriteKey": "r&b",
+   "isVariousArtists": false,
+   "sanitize80": "R&B",
+   "sanitize60": "R&B"
+  },
+  {
+   "in": "a&b",
+   "cleanText": "a&b",
+   "foldKey": "a&b",
+   "matchKey": "and b",
+   "artistFavoriteKey": "a&b",
+   "isVariousArtists": false,
+   "sanitize80": "a&b",
+   "sanitize60": "a&b"
+  },
+  {
+   "in": "The & An",
+   "cleanText": "The & An",
+   "foldKey": "the & an",
+   "matchKey": "and",
+   "artistFavoriteKey": "the & an",
+   "isVariousArtists": false,
+   "sanitize80": "The & An",
+   "sanitize60": "The & An"
+  },
+  {
+   "in": "Rock&Roll",
+   "cleanText": "Rock&Roll",
+   "foldKey": "rock&roll",
+   "matchKey": "rock and roll",
+   "artistFavoriteKey": "rock&roll",
+   "isVariousArtists": false,
+   "sanitize80": "Rock&Roll",
+   "sanitize60": "Rock&Roll"
+  },
+  {
+   "in": "A & The",
+   "cleanText": "A & The",
+   "foldKey": "a & the",
+   "matchKey": "and",
+   "artistFavoriteKey": "a & the",
+   "isVariousArtists": false,
+   "sanitize80": "A & The",
+   "sanitize60": "A & The"
+  },
+  {
+   "in": "Кa",
+   "cleanText": "Кa",
+   "foldKey": "кa",
+   "matchKey": "к",
+   "artistFavoriteKey": "кa",
+   "isVariousArtists": false,
+   "sanitize80": "Кa",
+   "sanitize60": "Кa"
+  },
+  {
+   "in": "Кa band",
+   "cleanText": "Кa band",
+   "foldKey": "кa band",
+   "matchKey": "к band",
+   "artistFavoriteKey": "кa band",
+   "isVariousArtists": false,
+   "sanitize80": "Кa band",
+   "sanitize60": "Кa band"
+  },
+  {
+   "in": "Ка a Ка",
+   "cleanText": "Ка a Ка",
+   "foldKey": "ка a ка",
+   "matchKey": "ка ка",
+   "artistFavoriteKey": "ка a ка",
+   "isVariousArtists": false,
+   "sanitize80": "Ка a Ка",
+   "sanitize60": "Ка a Ка"
+  },
+  {
+   "in": "aК",
+   "cleanText": "aК",
+   "foldKey": "aк",
+   "matchKey": "к",
+   "artistFavoriteKey": "aк",
+   "isVariousArtists": false,
+   "sanitize80": "aК",
+   "sanitize60": "aК"
+  },
+  {
+   "in": "the Кthe",
+   "cleanText": "the Кthe",
+   "foldKey": "the кthe",
+   "matchKey": "к",
+   "artistFavoriteKey": "the кthe",
+   "isVariousArtists": false,
+   "sanitize80": "the Кthe",
+   "sanitize60": "the Кthe"
+  },
+  {
+   "in": "Тhe",
+   "cleanText": "Тhe",
+   "foldKey": "тhe",
+   "matchKey": "тhe",
+   "artistFavoriteKey": "тhe",
+   "isVariousArtists": false,
+   "sanitize80": "Тhe",
+   "sanitize60": "Тhe"
+  },
+  {
+   "in": "Кино",
+   "cleanText": "Кино",
+   "foldKey": "кино",
+   "matchKey": "кино",
+   "artistFavoriteKey": "кино",
+   "isVariousArtists": false,
+   "sanitize80": "Кино",
+   "sanitize60": "Кино"
+  },
+  {
+   "in": "Группа крови",
+   "cleanText": "Группа крови",
+   "foldKey": "группа крови",
+   "matchKey": "группа крови",
+   "artistFavoriteKey": "группа крови",
+   "isVariousArtists": false,
+   "sanitize80": "Группа крови",
+   "sanitize60": "Группа крови"
+  },
+  {
+   "in": "Би-2",
+   "cleanText": "Би-2",
+   "foldKey": "би-2",
+   "matchKey": "би 2",
+   "artistFavoriteKey": "би-2",
+   "isVariousArtists": false,
+   "sanitize80": "Би-2",
+   "sanitize60": "Би-2"
+  },
+  {
+   "in": "КИНО",
+   "cleanText": "КИНО",
+   "foldKey": "кино",
+   "matchKey": "кино",
+   "artistFavoriteKey": "кино",
+   "isVariousArtists": false,
+   "sanitize80": "КИНО",
+   "sanitize60": "КИНО"
+  },
+  {
+   "in": "aé",
+   "cleanText": "aé",
+   "foldKey": "aé",
+   "matchKey": "ae",
+   "artistFavoriteKey": "aé",
+   "isVariousArtists": false,
+   "sanitize80": "aé",
+   "sanitize60": "aé"
+  },
+  {
+   "in": "éa",
+   "cleanText": "éa",
+   "foldKey": "éa",
+   "matchKey": "ea",
+   "artistFavoriteKey": "éa",
+   "isVariousArtists": false,
+   "sanitize80": "éa",
+   "sanitize60": "éa"
+  },
+  {
+   "in": "é a é",
+   "cleanText": "é a é",
+   "foldKey": "é a é",
+   "matchKey": "e e",
+   "artistFavoriteKey": "é a é",
+   "isVariousArtists": false,
+   "sanitize80": "é a é",
+   "sanitize60": "é a é"
+  },
+  {
+   "in": "aa a",
+   "cleanText": "aa a",
+   "foldKey": "aa a",
+   "matchKey": "aa",
+   "artistFavoriteKey": "aa a",
+   "isVariousArtists": false,
+   "sanitize80": "aa a",
+   "sanitize60": "aa a"
+  },
+  {
+   "in": "a1a",
+   "cleanText": "a1a",
+   "foldKey": "a1a",
+   "matchKey": "a1a",
+   "artistFavoriteKey": "a1a",
+   "isVariousArtists": false,
+   "sanitize80": "a1a",
+   "sanitize60": "a1a"
+  },
+  {
+   "in": "1a",
+   "cleanText": "1a",
+   "foldKey": "1a",
+   "matchKey": "1a",
+   "artistFavoriteKey": "1a",
+   "isVariousArtists": false,
+   "sanitize80": "1a",
+   "sanitize60": "1a"
+  },
+  {
+   "in": "a1",
+   "cleanText": "a1",
+   "foldKey": "a1",
+   "matchKey": "a1",
+   "artistFavoriteKey": "a1",
+   "isVariousArtists": false,
+   "sanitize80": "a1",
+   "sanitize60": "a1"
+  },
+  {
+   "in": "_a_",
+   "cleanText": "_a_",
+   "foldKey": "_a_",
+   "matchKey": "a",
+   "artistFavoriteKey": "_a_",
+   "isVariousArtists": false,
+   "sanitize80": "_a_",
+   "sanitize60": "_a_"
+  },
+  {
+   "in": "a_",
+   "cleanText": "a_",
+   "foldKey": "a_",
+   "matchKey": "a",
+   "artistFavoriteKey": "a_",
+   "isVariousArtists": false,
+   "sanitize80": "a_",
+   "sanitize60": "a_"
+  },
+  {
+   "in": "ä a",
+   "cleanText": "ä a",
+   "foldKey": "ä a",
+   "matchKey": "",
+   "artistFavoriteKey": "ä a",
+   "isVariousArtists": false,
+   "sanitize80": "ä a",
+   "sanitize60": "ä a"
+  },
+  {
+   "in": "Ña an",
+   "cleanText": "Ña an",
+   "foldKey": "ña an",
+   "matchKey": "na",
+   "artistFavoriteKey": "ña an",
+   "isVariousArtists": false,
+   "sanitize80": "Ña an",
+   "sanitize60": "Ña an"
+  },
+  {
+   "in": "宇多田ヒカル",
+   "cleanText": "宇多田ヒカル",
+   "foldKey": "宇多田ヒカル",
+   "matchKey": "宇多田ヒカル",
+   "artistFavoriteKey": "宇多田ヒカル",
+   "isVariousArtists": false,
+   "sanitize80": "宇多田ヒカル",
+   "sanitize60": "宇多田ヒカル"
+  },
+  {
+   "in": "ＹＯＡＳＯＢＩ",
+   "cleanText": "ＹＯＡＳＯＢＩ",
+   "foldKey": "ｙｏａｓｏｂｉ",
+   "matchKey": "yoasobi",
+   "artistFavoriteKey": "ｙｏａｓｏｂｉ",
+   "isVariousArtists": false,
+   "sanitize80": "ＹＯＡＳＯＢＩ",
+   "sanitize60": "ＹＯＡＳＯＢＩ"
+  },
+  {
+   "in": "ｱｲﾄﾞﾙ",
+   "cleanText": "ｱｲﾄﾞﾙ",
+   "foldKey": "ｱｲﾄﾞﾙ",
+   "matchKey": "アイト ル",
+   "artistFavoriteKey": "ｱｲﾄﾞﾙ",
+   "isVariousArtists": false,
+   "sanitize80": "ｱｲﾄﾞﾙ",
+   "sanitize60": "ｱｲﾄﾞﾙ"
+  },
+  {
+   "in": "ポケモン",
+   "cleanText": "ポケモン",
+   "foldKey": "ポケモン",
+   "matchKey": "ホ ケモン",
+   "artistFavoriteKey": "ポケモン",
+   "isVariousArtists": false,
+   "sanitize80": "ポケモン",
+   "sanitize60": "ポケモン"
+  },
+  {
+   "in": "ガンダム",
+   "cleanText": "ガンダム",
+   "foldKey": "ガンダム",
+   "matchKey": "カ ンタ ム",
+   "artistFavoriteKey": "ガンダム",
+   "isVariousArtists": false,
+   "sanitize80": "ガンダム",
+   "sanitize60": "ガンダム"
+  },
+  {
+   "in": "ぱぴぷぺぽ",
+   "cleanText": "ぱぴぷぺぽ",
+   "foldKey": "ぱぴぷぺぽ",
+   "matchKey": "は ひ ふ へ ほ",
+   "artistFavoriteKey": "ぱぴぷぺぽ",
+   "isVariousArtists": false,
+   "sanitize80": "ぱぴぷぺぽ",
+   "sanitize60": "ぱぴぷぺぽ"
+  },
+  {
+   "in": "東京事変 - 群青日和",
+   "cleanText": "東京事変 - 群青日和",
+   "foldKey": "東京事変 - 群青日和",
+   "matchKey": "東京事変 群青日和",
+   "artistFavoriteKey": "東京事変 - 群青日和",
+   "isVariousArtists": false,
+   "sanitize80": "東京事変 - 群青日和",
+   "sanitize60": "東京事変 - 群青日和"
+  },
+  {
+   "in": "初音ミク",
+   "cleanText": "初音ミク",
+   "foldKey": "初音ミク",
+   "matchKey": "初音ミク",
+   "artistFavoriteKey": "初音ミク",
+   "isVariousArtists": false,
+   "sanitize80": "初音ミク",
+   "sanitize60": "初音ミク"
+  },
+  {
+   "in": "Ａ　Ｂ",
+   "cleanText": "Ａ Ｂ",
+   "foldKey": "ａ　ｂ",
+   "matchKey": "b",
+   "artistFavoriteKey": "ａ　ｂ",
+   "isVariousArtists": false,
+   "sanitize80": "Ａ Ｂ",
+   "sanitize60": "Ａ Ｂ"
+  },
+  {
+   "in": "Beyoncé",
+   "cleanText": "Beyoncé",
+   "foldKey": "beyoncé",
+   "matchKey": "beyonce",
+   "artistFavoriteKey": "beyoncé",
+   "isVariousArtists": false,
+   "sanitize80": "Beyoncé",
+   "sanitize60": "Beyoncé"
+  },
+  {
+   "in": "BEYONCÉ",
+   "cleanText": "BEYONCÉ",
+   "foldKey": "beyoncé",
+   "matchKey": "beyonce",
+   "artistFavoriteKey": "beyoncé",
+   "isVariousArtists": false,
+   "sanitize80": "BEYONCÉ",
+   "sanitize60": "BEYONCÉ"
+  },
+  {
+   "in": "Beyoncé",
+   "cleanText": "Beyoncé",
+   "foldKey": "beyoncé",
+   "matchKey": "beyonce",
+   "artistFavoriteKey": "beyoncé",
+   "isVariousArtists": false,
+   "sanitize80": "Beyoncé",
+   "sanitize60": "Beyoncé"
+  },
+  {
+   "in": "Sigur Rós",
+   "cleanText": "Sigur Rós",
+   "foldKey": "sigur rós",
+   "matchKey": "sigur ros",
+   "artistFavoriteKey": "sigur rós",
+   "isVariousArtists": false,
+   "sanitize80": "Sigur Rós",
+   "sanitize60": "Sigur Rós"
+  },
+  {
+   "in": "Mötley Crüe",
+   "cleanText": "Mötley Crüe",
+   "foldKey": "mötley crüe",
+   "matchKey": "motley crue",
+   "artistFavoriteKey": "mötley crüe",
+   "isVariousArtists": false,
+   "sanitize80": "Mötley Crüe",
+   "sanitize60": "Mötley Crüe"
+  },
+  {
+   "in": "Ætherium",
+   "cleanText": "Ætherium",
+   "foldKey": "ætherium",
+   "matchKey": "ætherium",
+   "artistFavoriteKey": "ætherium",
+   "isVariousArtists": false,
+   "sanitize80": "Ætherium",
+   "sanitize60": "Ætherium"
+  },
+  {
+   "in": "Øystein",
+   "cleanText": "Øystein",
+   "foldKey": "øystein",
+   "matchKey": "øystein",
+   "artistFavoriteKey": "øystein",
+   "isVariousArtists": false,
+   "sanitize80": "Øystein",
+   "sanitize60": "Øystein"
+  },
+  {
+   "in": "Straße",
+   "cleanText": "Straße",
+   "foldKey": "straße",
+   "matchKey": "straße",
+   "artistFavoriteKey": "straße",
+   "isVariousArtists": false,
+   "sanitize80": "Straße",
+   "sanitize60": "Straße"
+  },
+  {
+   "in": "STRASSE",
+   "cleanText": "STRASSE",
+   "foldKey": "strasse",
+   "matchKey": "strasse",
+   "artistFavoriteKey": "strasse",
+   "isVariousArtists": false,
+   "sanitize80": "STRASSE",
+   "sanitize60": "STRASSE"
+  },
+  {
+   "in": "ẞ",
+   "cleanText": "ẞ",
+   "foldKey": "ß",
+   "matchKey": "ß",
+   "artistFavoriteKey": "ß",
+   "isVariousArtists": false,
+   "sanitize80": "ẞ",
+   "sanitize60": "ẞ"
+  },
+  {
+   "in": "İstanbul",
+   "cleanText": "İstanbul",
+   "foldKey": "i̇stanbul",
+   "matchKey": "istanbul",
+   "artistFavoriteKey": "i̇stanbul",
+   "isVariousArtists": false,
+   "sanitize80": "İstanbul",
+   "sanitize60": "İstanbul"
+  },
+  {
+   "in": "ISTANBUL",
+   "cleanText": "ISTANBUL",
+   "foldKey": "istanbul",
+   "matchKey": "istanbul",
+   "artistFavoriteKey": "istanbul",
+   "isVariousArtists": false,
+   "sanitize80": "ISTANBUL",
+   "sanitize60": "ISTANBUL"
+  },
+  {
+   "in": "ı",
+   "cleanText": "ı",
+   "foldKey": "ı",
+   "matchKey": "ı",
+   "artistFavoriteKey": "ı",
+   "isVariousArtists": false,
+   "sanitize80": "ı",
+   "sanitize60": "ı"
+  },
+  {
+   "in": "ΟΔΥΣΣΕΥΣ",
+   "cleanText": "ΟΔΥΣΣΕΥΣ",
+   "foldKey": "οδυσσευς",
+   "matchKey": "οδυσσευς",
+   "artistFavoriteKey": "οδυσσευς",
+   "isVariousArtists": false,
+   "sanitize80": "ΟΔΥΣΣΕΥΣ",
+   "sanitize60": "ΟΔΥΣΣΕΥΣ"
+  },
+  {
+   "in": "Σ",
+   "cleanText": "Σ",
+   "foldKey": "σ",
+   "matchKey": "σ",
+   "artistFavoriteKey": "σ",
+   "isVariousArtists": false,
+   "sanitize80": "Σ",
+   "sanitize60": "Σ"
+  },
+  {
+   "in": "ΣΑΣ ΣΑΣ",
+   "cleanText": "ΣΑΣ ΣΑΣ",
+   "foldKey": "σας σας",
+   "matchKey": "σας σας",
+   "artistFavoriteKey": "σας σας",
+   "isVariousArtists": false,
+   "sanitize80": "ΣΑΣ ΣΑΣ",
+   "sanitize60": "ΣΑΣ ΣΑΣ"
+  },
+  {
+   "in": "ǅ",
+   "cleanText": "ǅ",
+   "foldKey": "ǆ",
+   "matchKey": "dz",
+   "artistFavoriteKey": "ǆ",
+   "isVariousArtists": false,
+   "sanitize80": "ǅ",
+   "sanitize60": "ǅ"
+  },
+  {
+   "in": "ǆ",
+   "cleanText": "ǆ",
+   "foldKey": "ǆ",
+   "matchKey": "dz",
+   "artistFavoriteKey": "ǆ",
+   "isVariousArtists": false,
+   "sanitize80": "ǆ",
+   "sanitize60": "ǆ"
+  },
+  {
+   "in": "Ǆ",
+   "cleanText": "Ǆ",
+   "foldKey": "ǆ",
+   "matchKey": "dz",
+   "artistFavoriteKey": "ǆ",
+   "isVariousArtists": false,
+   "sanitize80": "Ǆ",
+   "sanitize60": "Ǆ"
+  },
+  {
+   "in": "ﬁnal",
+   "cleanText": "ﬁnal",
+   "foldKey": "ﬁnal",
+   "matchKey": "final",
+   "artistFavoriteKey": "ﬁnal",
+   "isVariousArtists": false,
+   "sanitize80": "ﬁnal",
+   "sanitize60": "ﬁnal"
+  },
+  {
+   "in": "Ⅻ",
+   "cleanText": "Ⅻ",
+   "foldKey": "ⅻ",
+   "matchKey": "xii",
+   "artistFavoriteKey": "ⅻ",
+   "isVariousArtists": false,
+   "sanitize80": "Ⅻ",
+   "sanitize60": "Ⅻ"
+  },
+  {
+   "in": "①②③",
+   "cleanText": "①②③",
+   "foldKey": "①②③",
+   "matchKey": "123",
+   "artistFavoriteKey": "①②③",
+   "isVariousArtists": false,
+   "sanitize80": "①②③",
+   "sanitize60": "①②③"
+  },
+  {
+   "in": "½",
+   "cleanText": "½",
+   "foldKey": "½",
+   "matchKey": "1 2",
+   "artistFavoriteKey": "½",
+   "isVariousArtists": false,
+   "sanitize80": "½",
+   "sanitize60": "½"
+  },
+  {
+   "in": "x²",
+   "cleanText": "x²",
+   "foldKey": "x²",
+   "matchKey": "x2",
+   "artistFavoriteKey": "x²",
+   "isVariousArtists": false,
+   "sanitize80": "x²",
+   "sanitize60": "x²"
+  },
+  {
+   "in": "٣٤",
+   "cleanText": "٣٤",
+   "foldKey": "٣٤",
+   "matchKey": "٣٤",
+   "artistFavoriteKey": "٣٤",
+   "isVariousArtists": false,
+   "sanitize80": "٣٤",
+   "sanitize60": "٣٤"
+  },
+  {
+   "in": "Ⓐ",
+   "cleanText": "Ⓐ",
+   "foldKey": "ⓐ",
+   "matchKey": "",
+   "artistFavoriteKey": "ⓐ",
+   "isVariousArtists": false,
+   "sanitize80": "Ⓐ",
+   "sanitize60": "Ⓐ"
+  },
+  {
+   "in": "Å",
+   "cleanText": "Å",
+   "foldKey": "å",
+   "matchKey": "",
+   "artistFavoriteKey": "å",
+   "isVariousArtists": false,
+   "sanitize80": "Å",
+   "sanitize60": "Å"
+  },
+  {
+   "in": "K",
+   "cleanText": "K",
+   "foldKey": "k",
+   "matchKey": "k",
+   "artistFavoriteKey": "k",
+   "isVariousArtists": false,
+   "sanitize80": "K",
+   "sanitize60": "K"
+  },
+  {
+   "in": "µ",
+   "cleanText": "µ",
+   "foldKey": "µ",
+   "matchKey": "μ",
+   "artistFavoriteKey": "µ",
+   "isVariousArtists": false,
+   "sanitize80": "µ",
+   "sanitize60": "µ"
+  },
+  {
+   "in": "ﬀ",
+   "cleanText": "ﬀ",
+   "foldKey": "ﬀ",
+   "matchKey": "ff",
+   "artistFavoriteKey": "ﬀ",
+   "isVariousArtists": false,
+   "sanitize80": "ﬀ",
+   "sanitize60": "ﬀ"
+  },
+  {
+   "in": "Ǳ",
+   "cleanText": "Ǳ",
+   "foldKey": "ǳ",
+   "matchKey": "dz",
+   "artistFavoriteKey": "ǳ",
+   "isVariousArtists": false,
+   "sanitize80": "Ǳ",
+   "sanitize60": "Ǳ"
+  },
+  {
+   "in": "A B",
+   "cleanText": "A B",
+   "foldKey": "a b",
+   "matchKey": "b",
+   "artistFavoriteKey": "a b",
+   "isVariousArtists": false,
+   "sanitize80": "A B",
+   "sanitize60": "A B"
+  },
+  {
+   "in": "The Beatles",
+   "cleanText": "The Beatles",
+   "foldKey": "the beatles",
+   "matchKey": "beatles",
+   "artistFavoriteKey": "the beatles",
+   "isVariousArtists": false,
+   "sanitize80": "The Beatles",
+   "sanitize60": "The Beatles"
+  },
+  {
+   "in": " Em space",
+   "cleanText": "Em space",
+   "foldKey": " em space",
+   "matchKey": "em space",
+   "artistFavoriteKey": "em space",
+   "isVariousArtists": false,
+   "sanitize80": "Em space",
+   "sanitize60": "Em space"
+  },
+  {
+   "in": "　ideo",
+   "cleanText": "ideo",
+   "foldKey": "　ideo",
+   "matchKey": "ideo",
+   "artistFavoriteKey": "ideo",
+   "isVariousArtists": false,
+   "sanitize80": "ideo",
+   "sanitize60": "ideo"
+  },
+  {
+   "in": "narrow nbsp",
+   "cleanText": "narrow nbsp",
+   "foldKey": "narrow nbsp",
+   "matchKey": "narrow nbsp",
+   "artistFavoriteKey": "narrow nbsp",
+   "isVariousArtists": false,
+   "sanitize80": "narrow nbsp",
+   "sanitize60": "narrow nbsp"
+  },
+  {
+   "in": "m m",
+   "cleanText": "m m",
+   "foldKey": "m m",
+   "matchKey": "m m",
+   "artistFavoriteKey": "m m",
+   "isVariousArtists": false,
+   "sanitize80": "m m",
+   "sanitize60": "m m"
+  },
+  {
+   "in": " ogham",
+   "cleanText": "ogham",
+   "foldKey": " ogham",
+   "matchKey": "ogham",
+   "artistFavoriteKey": "ogham",
+   "isVariousArtists": false,
+   "sanitize80": "ogham",
+   "sanitize60": "ogham"
+  },
+  {
+   "in": "line sep para",
+   "cleanText": "line sep para",
+   "foldKey": "line sep para",
+   "matchKey": "line sep para",
+   "artistFavoriteKey": "line sep para",
+   "isVariousArtists": false,
+   "sanitize80": "line sep para",
+   "sanitize60": "line sep para"
+  },
+  {
+   "in": "nel",
+   "cleanText": "nel",
+   "foldKey": "nel",
+   "matchKey": "nel",
+   "artistFavoriteKey": "nel",
+   "isVariousArtists": false,
+   "sanitize80": "nel",
+   "sanitize60": "nel"
+  },
+  {
+   "in": "mongolian᠎vs",
+   "cleanText": "mongolianvs",
+   "foldKey": "mongolian᠎vs",
+   "matchKey": "mongolianvs",
+   "artistFavoriteKey": "mongolian᠎vs",
+   "isVariousArtists": false,
+   "sanitize80": "mongolianvs",
+   "sanitize60": "mongolianvs"
+  },
+  {
+   "in": "tab\tand\nnewline\r",
+   "cleanText": "tab and newline",
+   "foldKey": "tab\tand\nnewline\r",
+   "matchKey": "tab and newline",
+   "artistFavoriteKey": "tab\tand\nnewline",
+   "isVariousArtists": false,
+   "sanitize80": "tab and newline",
+   "sanitize60": "tab and newline"
+  },
+  {
+   "in": "\u000bvt\fff",
+   "cleanText": "vt ff",
+   "foldKey": "\u000bvt\fff",
+   "matchKey": "vt ff",
+   "artistFavoriteKey": "vt\fff",
+   "isVariousArtists": false,
+   "sanitize80": "vt ff",
+   "sanitize60": "vt ff"
+  },
+  {
+   "in": "Zero​Width",
+   "cleanText": "ZeroWidth",
+   "foldKey": "zero​width",
+   "matchKey": "zerowidth",
+   "artistFavoriteKey": "zero​width",
+   "isVariousArtists": false,
+   "sanitize80": "ZeroWidth",
+   "sanitize60": "ZeroWidth"
+  },
+  {
+   "in": "‌‍",
+   "cleanText": "",
+   "foldKey": "‌‍",
+   "matchKey": "",
+   "artistFavoriteKey": "‌‍",
+   "isVariousArtists": false,
+   "sanitize80": "_",
+   "sanitize60": "_"
+  },
+  {
+   "in": "﻿BOM",
+   "cleanText": "BOM",
+   "foldKey": "﻿bom",
+   "matchKey": "bom",
+   "artistFavoriteKey": "bom",
+   "isVariousArtists": false,
+   "sanitize80": "BOM",
+   "sanitize60": "BOM"
+  },
+  {
+   "in": "soft­hyphen",
+   "cleanText": "softhyphen",
+   "foldKey": "soft­hyphen",
+   "matchKey": "softhyphen",
+   "artistFavoriteKey": "soft­hyphen",
+   "isVariousArtists": false,
+   "sanitize80": "softhyphen",
+   "sanitize60": "softhyphen"
+  },
+  {
+   "in": "bidi‪text‬",
+   "cleanText": "biditext",
+   "foldKey": "bidi‪text‬",
+   "matchKey": "biditext",
+   "artistFavoriteKey": "bidi‪text‬",
+   "isVariousArtists": false,
+   "sanitize80": "biditext",
+   "sanitize60": "biditext"
+  },
+  {
+   "in": "⁦iso⁩",
+   "cleanText": "iso",
+   "foldKey": "⁦iso⁩",
+   "matchKey": "iso",
+   "artistFavoriteKey": "⁦iso⁩",
+   "isVariousArtists": false,
+   "sanitize80": "iso",
+   "sanitize60": "iso"
+  },
+  {
+   "in": "‎‏marks",
+   "cleanText": "marks",
+   "foldKey": "‎‏marks",
+   "matchKey": "marks",
+   "artistFavoriteKey": "‎‏marks",
+   "isVariousArtists": false,
+   "sanitize80": "marks",
+   "sanitize60": "marks"
+  },
+  {
+   "in": "w⁠j",
+   "cleanText": "wj",
+   "foldKey": "w⁠j",
+   "matchKey": "wj",
+   "artistFavoriteKey": "w⁠j",
+   "isVariousArtists": false,
+   "sanitize80": "wj",
+   "sanitize60": "wj"
+  },
+  {
+   "in": "the​beatles",
+   "cleanText": "thebeatles",
+   "foldKey": "the​beatles",
+   "matchKey": "thebeatles",
+   "artistFavoriteKey": "the​beatles",
+   "isVariousArtists": false,
+   "sanitize80": "thebeatles",
+   "sanitize60": "thebeatles"
+  },
+  {
+   "in": "a​",
+   "cleanText": "a",
+   "foldKey": "a​",
+   "matchKey": "",
+   "artistFavoriteKey": "a​",
+   "isVariousArtists": false,
+   "sanitize80": "a",
+   "sanitize60": "a"
+  },
+  {
+   "in": "e​́",
+   "cleanText": "é",
+   "foldKey": "e​́",
+   "matchKey": "e",
+   "artistFavoriteKey": "e​́",
+   "isVariousArtists": false,
+   "sanitize80": "é",
+   "sanitize60": "é"
+  },
+  {
+   "in": "😀",
+   "cleanText": "😀",
+   "foldKey": "😀",
+   "matchKey": "",
+   "artistFavoriteKey": "😀",
+   "isVariousArtists": false,
+   "sanitize80": "😀",
+   "sanitize60": "😀"
+  },
+  {
+   "in": "🎵 Music 🎶",
+   "cleanText": "🎵 Music 🎶",
+   "foldKey": "🎵 music 🎶",
+   "matchKey": "music",
+   "artistFavoriteKey": "🎵 music 🎶",
+   "isVariousArtists": false,
+   "sanitize80": "🎵 Music 🎶",
+   "sanitize60": "🎵 Music 🎶"
+  },
+  {
+   "in": "👨‍👩‍👧 family",
+   "cleanText": "👨👩👧 family",
+   "foldKey": "👨‍👩‍👧 family",
+   "matchKey": "family",
+   "artistFavoriteKey": "👨‍👩‍👧 family",
+   "isVariousArtists": false,
+   "sanitize80": "👨👩👧 family",
+   "sanitize60": "👨👩👧 family"
+  },
+  {
+   "in": "🇯🇵 flag",
+   "cleanText": "🇯🇵 flag",
+   "foldKey": "🇯🇵 flag",
+   "matchKey": "flag",
+   "artistFavoriteKey": "🇯🇵 flag",
+   "isVariousArtists": false,
+   "sanitize80": "🇯🇵 flag",
+   "sanitize60": "🇯🇵 flag"
+  },
+  {
+   "in": "❤️ heart",
+   "cleanText": "❤️ heart",
+   "foldKey": "❤️ heart",
+   "matchKey": "heart",
+   "artistFavoriteKey": "❤️ heart",
+   "isVariousArtists": false,
+   "sanitize80": "❤️ heart",
+   "sanitize60": "❤️ heart"
+  },
+  {
+   "in": "1️⃣",
+   "cleanText": "1️⃣",
+   "foldKey": "1️⃣",
+   "matchKey": "1",
+   "artistFavoriteKey": "1️⃣",
+   "isVariousArtists": false,
+   "sanitize80": "1️⃣",
+   "sanitize60": "1️⃣"
+  },
+  {
+   "in": "Café 😀 Ünïcödé",
+   "cleanText": "Café 😀 Ünïcödé",
+   "foldKey": "café 😀 ünïcödé",
+   "matchKey": "cafe unicode",
+   "artistFavoriteKey": "café 😀 ünïcödé",
+   "isVariousArtists": false,
+   "sanitize80": "Café 😀 Ünïcödé",
+   "sanitize60": "Café 😀 Ünïcödé"
+  },
+  {
+   "in": "a😀a",
+   "cleanText": "a😀a",
+   "foldKey": "a😀a",
+   "matchKey": "",
+   "artistFavoriteKey": "a😀a",
+   "isVariousArtists": false,
+   "sanitize80": "a😀a",
+   "sanitize60": "a😀a"
+  },
+  {
+   "in": "the😀",
+   "cleanText": "the😀",
+   "foldKey": "the😀",
+   "matchKey": "",
+   "artistFavoriteKey": "the😀",
+   "isVariousArtists": false,
+   "sanitize80": "the😀",
+   "sanitize60": "the😀"
+  },
+  {
+   "in": "😀the",
+   "cleanText": "😀the",
+   "foldKey": "😀the",
+   "matchKey": "",
+   "artistFavoriteKey": "😀the",
+   "isVariousArtists": false,
+   "sanitize80": "😀the",
+   "sanitize60": "😀the"
+  },
+  {
+   "in": "é",
+   "cleanText": "é",
+   "foldKey": "é",
+   "matchKey": "e",
+   "artistFavoriteKey": "é",
+   "isVariousArtists": false,
+   "sanitize80": "é",
+   "sanitize60": "é"
+  },
+  {
+   "in": "ä",
+   "cleanText": "ä",
+   "foldKey": "ä",
+   "matchKey": "",
+   "artistFavoriteKey": "ä",
+   "isVariousArtists": false,
+   "sanitize80": "ä",
+   "sanitize60": "ä"
+  },
+  {
+   "in": "ño",
+   "cleanText": "ño",
+   "foldKey": "ño",
+   "matchKey": "no",
+   "artistFavoriteKey": "ño",
+   "isVariousArtists": false,
+   "sanitize80": "ño",
+   "sanitize60": "ño"
+  },
+  {
+   "in": "o̶strike",
+   "cleanText": "o̶strike",
+   "foldKey": "o̶strike",
+   "matchKey": "ostrike",
+   "artistFavoriteKey": "o̶strike",
+   "isVariousArtists": false,
+   "sanitize80": "o̶strike",
+   "sanitize60": "o̶strike"
+  },
+  {
+   "in": "q̣̇",
+   "cleanText": "q̣̇",
+   "foldKey": "q̣̇",
+   "matchKey": "q",
+   "artistFavoriteKey": "q̣̇",
+   "isVariousArtists": false,
+   "sanitize80": "q̣̇",
+   "sanitize60": "q̣̇"
+  },
+  {
+   "in": "ḱ",
+   "cleanText": "ḱ",
+   "foldKey": "ḱ",
+   "matchKey": "k",
+   "artistFavoriteKey": "ḱ",
+   "isVariousArtists": false,
+   "sanitize80": "ḱ",
+   "sanitize60": "ḱ"
+  },
+  {
+   "in": "\u0000null",
+   "cleanText": "null",
+   "foldKey": "\u0000null",
+   "matchKey": "null",
+   "artistFavoriteKey": "\u0000null",
+   "isVariousArtists": false,
+   "sanitize80": "null",
+   "sanitize60": "null"
+  },
+  {
+   "in": "a\u0007bell",
+   "cleanText": "a bell",
+   "foldKey": "a\u0007bell",
+   "matchKey": "bell",
+   "artistFavoriteKey": "a\u0007bell",
+   "isVariousArtists": false,
+   "sanitize80": "a bell",
+   "sanitize60": "a bell"
+  },
+  {
+   "in": "del",
+   "cleanText": "del",
+   "foldKey": "del",
+   "matchKey": "del",
+   "artistFavoriteKey": "del",
+   "isVariousArtists": false,
+   "sanitize80": "del",
+   "sanitize60": "del"
+  },
+  {
+   "in": "apc",
+   "cleanText": "apc",
+   "foldKey": "apc",
+   "matchKey": "apc",
+   "artistFavoriteKey": "apc",
+   "isVariousArtists": false,
+   "sanitize80": "apc",
+   "sanitize60": "apc"
+  },
+  {
+   "in": "x\u001fy",
+   "cleanText": "x y",
+   "foldKey": "x\u001fy",
+   "matchKey": "x y",
+   "artistFavoriteKey": "x\u001fy",
+   "isVariousArtists": false,
+   "sanitize80": "x y",
+   "sanitize60": "x y"
+  },
+  {
+   "in": "\ud800",
+   "cleanText": "\ud800",
+   "foldKey": "\ud800",
+   "matchKey": "",
+   "artistFavoriteKey": "\ud800",
+   "isVariousArtists": false,
+   "sanitize80": "\ud800",
+   "sanitize60": "\ud800"
+  },
+  {
+   "in": "a\udc00b",
+   "cleanText": "a\udc00b",
+   "foldKey": "a\udc00b",
+   "matchKey": "b",
+   "artistFavoriteKey": "a\udc00b",
+   "isVariousArtists": false,
+   "sanitize80": "a\udc00b",
+   "sanitize60": "a\udc00b"
+  },
+  {
+   "in": "􏿿",
+   "cleanText": "􏿿",
+   "foldKey": "􏿿",
+   "matchKey": "",
+   "artistFavoriteKey": "􏿿",
+   "isVariousArtists": false,
+   "sanitize80": "􏿿",
+   "sanitize60": "􏿿"
+  },
+  {
+   "in": "Various Artists",
+   "cleanText": "Various Artists",
+   "foldKey": "various artists",
+   "matchKey": "various artists",
+   "artistFavoriteKey": "various artists",
+   "isVariousArtists": true,
+   "sanitize80": "Various Artists",
+   "sanitize60": "Various Artists"
+  },
+  {
+   "in": "various",
+   "cleanText": "various",
+   "foldKey": "various",
+   "matchKey": "various",
+   "artistFavoriteKey": "various",
+   "isVariousArtists": true,
+   "sanitize80": "various",
+   "sanitize60": "various"
+  },
+  {
+   "in": "VA",
+   "cleanText": "VA",
+   "foldKey": "va",
+   "matchKey": "va",
+   "artistFavoriteKey": "va",
+   "isVariousArtists": true,
+   "sanitize80": "VA",
+   "sanitize60": "VA"
+  },
+  {
+   "in": "V.A.",
+   "cleanText": "V.A.",
+   "foldKey": "v.a.",
+   "matchKey": "v",
+   "artistFavoriteKey": "v.a.",
+   "isVariousArtists": true,
+   "sanitize80": "V.A",
+   "sanitize60": "V.A"
+  },
+  {
+   "in": "v.a.",
+   "cleanText": "v.a.",
+   "foldKey": "v.a.",
+   "matchKey": "v",
+   "artistFavoriteKey": "v.a.",
+   "isVariousArtists": true,
+   "sanitize80": "v.a",
+   "sanitize60": "v.a"
+  },
+  {
+   "in": "Verschiedene Interpreten",
+   "cleanText": "Verschiedene Interpreten",
+   "foldKey": "verschiedene interpreten",
+   "matchKey": "verschiedene interpreten",
+   "artistFavoriteKey": "verschiedene interpreten",
+   "isVariousArtists": true,
+   "sanitize80": "Verschiedene Interpreten",
+   "sanitize60": "Verschiedene Interpreten"
+  },
+  {
+   "in": " various artists ",
+   "cleanText": "various artists",
+   "foldKey": " various artists ",
+   "matchKey": "various artists",
+   "artistFavoriteKey": "various artists",
+   "isVariousArtists": true,
+   "sanitize80": "various artists",
+   "sanitize60": "various artists"
+  },
+  {
+   "in": "Various Artist",
+   "cleanText": "Various Artist",
+   "foldKey": "various artist",
+   "matchKey": "various artist",
+   "artistFavoriteKey": "various artist",
+   "isVariousArtists": false,
+   "sanitize80": "Various Artist",
+   "sanitize60": "Various Artist"
+  },
+  {
+   "in": "VARIOUS ARTISTS",
+   "cleanText": "VARIOUS ARTISTS",
+   "foldKey": "various artists",
+   "matchKey": "various artists",
+   "artistFavoriteKey": "various artists",
+   "isVariousArtists": true,
+   "sanitize80": "VARIOUS ARTISTS",
+   "sanitize60": "VARIOUS ARTISTS"
+  },
+  {
+   "in": "Various​ Artists",
+   "cleanText": "Various Artists",
+   "foldKey": "various​ artists",
+   "matchKey": "various artists",
+   "artistFavoriteKey": "various​ artists",
+   "isVariousArtists": true,
+   "sanitize80": "Various Artists",
+   "sanitize60": "Various Artists"
+  },
+  {
+   "in": "va ",
+   "cleanText": "va",
+   "foldKey": "va ",
+   "matchKey": "va",
+   "artistFavoriteKey": "va",
+   "isVariousArtists": true,
+   "sanitize80": "va",
+   "sanitize60": "va"
+  },
+  {
+   "in": "10,000 gecs",
+   "cleanText": "10,000 gecs",
+   "foldKey": "10,000 gecs",
+   "matchKey": "10 000 gecs",
+   "artistFavoriteKey": "10,000 gecs",
+   "isVariousArtists": false,
+   "sanitize80": "10,000 gecs",
+   "sanitize60": "10,000 gecs"
+  },
+  {
+   "in": "100 gecs",
+   "cleanText": "100 gecs",
+   "foldKey": "100 gecs",
+   "matchKey": "100 gecs",
+   "artistFavoriteKey": "100 gecs",
+   "isVariousArtists": false,
+   "sanitize80": "100 gecs",
+   "sanitize60": "100 gecs"
+  },
+  {
+   "in": "SiIvaGunner: Season 7 – The Year of Grand Dad",
+   "cleanText": "SiIvaGunner: Season 7 – The Year of Grand Dad",
+   "foldKey": "siivagunner: season 7 – the year of grand dad",
+   "matchKey": "siivagunner season 7 year of grand dad",
+   "artistFavoriteKey": "siivagunner: season 7 – the year of grand dad",
+   "isVariousArtists": false,
+   "sanitize80": "SiIvaGunner - Season 7 – The Year of Grand Dad",
+   "sanitize60": "SiIvaGunner - Season 7 – The Year of Grand Dad"
+  },
+  {
+   "in": "SiIvaGunner - Season 1",
+   "cleanText": "SiIvaGunner - Season 1",
+   "foldKey": "siivagunner - season 1",
+   "matchKey": "siivagunner season 1",
+   "artistFavoriteKey": "siivagunner - season 1",
+   "isVariousArtists": false,
+   "sanitize80": "SiIvaGunner - Season 1",
+   "sanitize60": "SiIvaGunner - Season 1"
+  },
+  {
+   "in": "The Bass & the Melody",
+   "cleanText": "The Bass & the Melody",
+   "foldKey": "the bass & the melody",
+   "matchKey": "bass and melody",
+   "artistFavoriteKey": "the bass & the melody",
+   "isVariousArtists": false,
+   "sanitize80": "The Bass & the Melody",
+   "sanitize60": "The Bass & the Melody"
+  },
+  {
+   "in": "SugarCrash!",
+   "cleanText": "SugarCrash!",
+   "foldKey": "sugarcrash!",
+   "matchKey": "sugarcrash",
+   "artistFavoriteKey": "sugarcrash!",
+   "isVariousArtists": false,
+   "sanitize80": "SugarCrash!",
+   "sanitize60": "SugarCrash!"
+  },
+  {
+   "in": "Hey Big Man",
+   "cleanText": "Hey Big Man",
+   "foldKey": "hey big man",
+   "matchKey": "hey big man",
+   "artistFavoriteKey": "hey big man",
+   "isVariousArtists": false,
+   "sanitize80": "Hey Big Man",
+   "sanitize60": "Hey Big Man"
+  },
+  {
+   "in": "Fast & Furious: The Fast Saga",
+   "cleanText": "Fast & Furious: The Fast Saga",
+   "foldKey": "fast & furious: the fast saga",
+   "matchKey": "fast and furious fast saga",
+   "artistFavoriteKey": "fast & furious: the fast saga",
+   "isVariousArtists": false,
+   "sanitize80": "Fast & Furious - The Fast Saga",
+   "sanitize60": "Fast & Furious - The Fast Saga"
+  },
+  {
+   "in": "Re:Zero",
+   "cleanText": "Re:Zero",
+   "foldKey": "re:zero",
+   "matchKey": "re zero",
+   "artistFavoriteKey": "re:zero",
+   "isVariousArtists": false,
+   "sanitize80": "Re-Zero",
+   "sanitize60": "Re-Zero"
+  },
+  {
+   "in": "AC/DC",
+   "cleanText": "AC/DC",
+   "foldKey": "ac/dc",
+   "matchKey": "ac dc",
+   "artistFavoriteKey": "ac/dc",
+   "isVariousArtists": false,
+   "sanitize80": "AC-DC",
+   "sanitize60": "AC-DC"
+  },
+  {
+   "in": "Back\\slash",
+   "cleanText": "Back\\slash",
+   "foldKey": "back\\slash",
+   "matchKey": "back slash",
+   "artistFavoriteKey": "back\\slash",
+   "isVariousArtists": false,
+   "sanitize80": "Back-slash",
+   "sanitize60": "Back-slash"
+  },
+  {
+   "in": "What?*",
+   "cleanText": "What?*",
+   "foldKey": "what?*",
+   "matchKey": "what",
+   "artistFavoriteKey": "what?*",
+   "isVariousArtists": false,
+   "sanitize80": "What",
+   "sanitize60": "What"
+  },
+  {
+   "in": "He said \"hi\"",
+   "cleanText": "He said \"hi\"",
+   "foldKey": "he said \"hi\"",
+   "matchKey": "he said hi",
+   "artistFavoriteKey": "he said \"hi\"",
+   "isVariousArtists": false,
+   "sanitize80": "He said 'hi'",
+   "sanitize60": "He said 'hi'"
+  },
+  {
+   "in": "<tag>|",
+   "cleanText": "<tag>|",
+   "foldKey": "<tag>|",
+   "matchKey": "tag",
+   "artistFavoriteKey": "<tag>|",
+   "isVariousArtists": false,
+   "sanitize80": "_tag__",
+   "sanitize60": "_tag__"
+  },
+  {
+   "in": "...dots...",
+   "cleanText": "...dots...",
+   "foldKey": "...dots...",
+   "matchKey": "dots",
+   "artistFavoriteKey": "...dots...",
+   "isVariousArtists": false,
+   "sanitize80": "dots",
+   "sanitize60": "dots"
+  },
+  {
+   "in": "trailing. ",
+   "cleanText": "trailing.",
+   "foldKey": "trailing. ",
+   "matchKey": "trailing",
+   "artistFavoriteKey": "trailing.",
+   "isVariousArtists": false,
+   "sanitize80": "trailing",
+   "sanitize60": "trailing"
+  },
+  {
+   "in": "con",
+   "cleanText": "con",
+   "foldKey": "con",
+   "matchKey": "con",
+   "artistFavoriteKey": "con",
+   "isVariousArtists": false,
+   "sanitize80": "_con",
+   "sanitize60": "_con"
+  },
+  {
+   "in": "CON.txt",
+   "cleanText": "CON.txt",
+   "foldKey": "con.txt",
+   "matchKey": "con txt",
+   "artistFavoriteKey": "con.txt",
+   "isVariousArtists": false,
+   "sanitize80": "_CON.txt",
+   "sanitize60": "_CON.txt"
+  },
+  {
+   "in": "COM1",
+   "cleanText": "COM1",
+   "foldKey": "com1",
+   "matchKey": "com1",
+   "artistFavoriteKey": "com1",
+   "isVariousArtists": false,
+   "sanitize80": "_COM1",
+   "sanitize60": "_COM1"
+  },
+  {
+   "in": "lpt¹.mp3",
+   "cleanText": "lpt¹.mp3",
+   "foldKey": "lpt¹.mp3",
+   "matchKey": "lpt1 mp3",
+   "artistFavoriteKey": "lpt¹.mp3",
+   "isVariousArtists": false,
+   "sanitize80": "_lpt¹.mp3",
+   "sanitize60": "_lpt¹.mp3"
+  },
+  {
+   "in": "nul.",
+   "cleanText": "nul.",
+   "foldKey": "nul.",
+   "matchKey": "nul",
+   "artistFavoriteKey": "nul.",
+   "isVariousArtists": false,
+   "sanitize80": "_nul",
+   "sanitize60": "_nul"
+  },
+  {
+   "in": "a :b",
+   "cleanText": "a :b",
+   "foldKey": "a :b",
+   "matchKey": "b",
+   "artistFavoriteKey": "a :b",
+   "isVariousArtists": false,
+   "sanitize80": "a -b",
+   "sanitize60": "a -b"
+  },
+  {
+   "in": "a: b",
+   "cleanText": "a: b",
+   "foldKey": "a: b",
+   "matchKey": "b",
+   "artistFavoriteKey": "a: b",
+   "isVariousArtists": false,
+   "sanitize80": "a - b",
+   "sanitize60": "a - b"
+  },
+  {
+   "in": "a:  b",
+   "cleanText": "a: b",
+   "foldKey": "a:  b",
+   "matchKey": "b",
+   "artistFavoriteKey": "a:  b",
+   "isVariousArtists": false,
+   "sanitize80": "a - b",
+   "sanitize60": "a - b"
+  },
+  {
+   "in": "a  :  b",
+   "cleanText": "a : b",
+   "foldKey": "a  :  b",
+   "matchKey": "b",
+   "artistFavoriteKey": "a  :  b",
+   "isVariousArtists": false,
+   "sanitize80": "a - b",
+   "sanitize60": "a - b"
+  },
+  {
+   "in": "Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore",
+   "cleanText": "Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore",
+   "foldKey": "lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore",
+   "matchKey": "lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore",
+   "artistFavoriteKey": "lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore",
+   "isVariousArtists": false,
+   "sanitize80": "Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor inc",
+   "sanitize60": "Lorem ipsum dolor sit amet consectetur adipiscing elit sed d"
+  },
+  {
+   "in": "Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor 👨‍👩‍👧‍👦 incididunt",
+   "cleanText": "Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor 👨👩👧👦 incididunt",
+   "foldKey": "lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor 👨‍👩‍👧‍👦 incididunt",
+   "matchKey": "lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt",
+   "artistFavoriteKey": "lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor 👨‍👩‍👧‍👦 incididunt",
+   "isVariousArtists": false,
+   "sanitize80": "Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor 👨",
+   "sanitize60": "Lorem ipsum dolor sit amet consectetur adipiscing elit sed d"
+  },
+  {
+   "in": "Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmo 🇯🇵🇯🇵 tempor",
+   "cleanText": "Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmo 🇯🇵🇯🇵 tempor",
+   "foldKey": "lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmo 🇯🇵🇯🇵 tempor",
+   "matchKey": "lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmo tempor",
+   "artistFavoriteKey": "lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmo 🇯🇵🇯🇵 tempor",
+   "isVariousArtists": false,
+   "sanitize80": "Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmo 🇯🇵🇯🇵 te",
+   "sanitize60": "Lorem ipsum dolor sit amet consectetur adipiscing elit sed d"
+  },
+  {
+   "in": "  multiple   spaces\t\there  ",
+   "cleanText": "multiple spaces here",
+   "foldKey": "  multiple   spaces\t\there  ",
+   "matchKey": "multiple spaces here",
+   "artistFavoriteKey": "multiple   spaces\t\there",
+   "isVariousArtists": false,
+   "sanitize80": "multiple spaces here",
+   "sanitize60": "multiple spaces here"
+  },
+  {
+   "in": "-",
+   "cleanText": "-",
+   "foldKey": "-",
+   "matchKey": "",
+   "artistFavoriteKey": "-",
+   "isVariousArtists": false,
+   "sanitize80": "-",
+   "sanitize60": "-"
+  },
+  {
+   "in": "- the -",
+   "cleanText": "- the -",
+   "foldKey": "- the -",
+   "matchKey": "",
+   "artistFavoriteKey": "- the -",
+   "isVariousArtists": false,
+   "sanitize80": "- the -",
+   "sanitize60": "- the -"
+  },
+  {
+   "in": "!!!",
+   "cleanText": "!!!",
+   "foldKey": "!!!",
+   "matchKey": "",
+   "artistFavoriteKey": "!!!",
+   "isVariousArtists": false,
+   "sanitize80": "!!!",
+   "sanitize60": "!!!"
+  },
+  {
+   "in": "( )",
+   "cleanText": "( )",
+   "foldKey": "( )",
+   "matchKey": "",
+   "artistFavoriteKey": "( )",
+   "isVariousArtists": false,
+   "sanitize80": "( )",
+   "sanitize60": "( )"
+  },
+  {
+   "in": "[the]",
+   "cleanText": "[the]",
+   "foldKey": "[the]",
+   "matchKey": "",
+   "artistFavoriteKey": "[the]",
+   "isVariousArtists": false,
+   "sanitize80": "[the]",
+   "sanitize60": "[the]"
+  },
+  {
+   "in": "{a}",
+   "cleanText": "{a}",
+   "foldKey": "{a}",
+   "matchKey": "",
+   "artistFavoriteKey": "{a}",
+   "isVariousArtists": false,
+   "sanitize80": "{a}",
+   "sanitize60": "{a}"
+  },
+  {
+   "in": "x-the-y",
+   "cleanText": "x-the-y",
+   "foldKey": "x-the-y",
+   "matchKey": "x y",
+   "artistFavoriteKey": "x-the-y",
+   "isVariousArtists": false,
+   "sanitize80": "x-the-y",
+   "sanitize60": "x-the-y"
+  },
+  {
+   "in": "the.the",
+   "cleanText": "the.the",
+   "foldKey": "the.the",
+   "matchKey": "",
+   "artistFavoriteKey": "the.the",
+   "isVariousArtists": false,
+   "sanitize80": "the.the",
+   "sanitize60": "the.the"
+  },
+  {
+   "in": "a/b",
+   "cleanText": "a/b",
+   "foldKey": "a/b",
+   "matchKey": "b",
+   "artistFavoriteKey": "a/b",
+   "isVariousArtists": false,
+   "sanitize80": "a-b",
+   "sanitize60": "a-b"
+  },
+  {
+   "in": "The‐Hyphen",
+   "cleanText": "The‐Hyphen",
+   "foldKey": "the‐hyphen",
+   "matchKey": "hyphen",
+   "artistFavoriteKey": "the‐hyphen",
+   "isVariousArtists": false,
+   "sanitize80": "The‐Hyphen",
+   "sanitize60": "The‐Hyphen"
+  },
+  {
+   "in": "the­end",
+   "cleanText": "theend",
+   "foldKey": "the­end",
+   "matchKey": "theend",
+   "artistFavoriteKey": "the­end",
+   "isVariousArtists": false,
+   "sanitize80": "theend",
+   "sanitize60": "theend"
+  }
+ ],
+ "albumKeys": [
+  {
+   "relPath": "100 gecs/10,000 gecs (2023)/hey big man.mp3",
+   "album": "10,000 gecs",
+   "title": "hey big man",
+   "relDir": "100 gecs/10,000 gecs (2023)",
+   "key": "100 gecs/10,000 gecs (2023)|10 000 gecs"
+  },
+  {
+   "relPath": "High Quality Rips/SiIvaGunner - Season 7 – The Year of Grand Dad/x.opus",
+   "album": "SiIvaGunner: Season 7 – The Year of Grand Dad",
+   "title": "x",
+   "relDir": "High Quality Rips/SiIvaGunner - Season 7 – The Year of Grand Dad",
+   "key": "high quality rips/siivagunner - season 7 – the year of grand dad|siivagunner season 7 year of grand dad"
+  },
+  {
+   "relPath": "Loose.mp3",
+   "album": null,
+   "title": "Loose",
+   "relDir": "",
+   "key": "|loose"
+  },
+  {
+   "relPath": "A/B/c.mp3",
+   "album": "",
+   "title": "",
+   "relDir": "A/B",
+   "key": "a/b|"
+  },
+  {
+   "relPath": "A/B/c.mp3",
+   "album": null,
+   "title": null,
+   "relDir": "A/B",
+   "key": "a/b|"
+  },
+  {
+   "relPath": "A/B/c.mp3",
+   "album": "​",
+   "title": "Title Wins",
+   "relDir": "A/B",
+   "key": "a/b|title wins"
+  },
+  {
+   "relPath": "A/B/c.mp3",
+   "album": " ",
+   "title": "Title Wins",
+   "relDir": "A/B",
+   "key": "a/b|title wins"
+  },
+  {
+   "relPath": "İSTANBUL/ÇAĞ/x.flac",
+   "album": "Çağ",
+   "title": "t",
+   "relDir": "İSTANBUL/ÇAĞ",
+   "key": "i̇stanbul/çağ|cag"
+  },
+  {
+   "relPath": "The Beatles/Abbey Road (1969)/Something.mp3",
+   "album": "Abbey Road",
+   "title": "Something",
+   "relDir": "The Beatles/Abbey Road (1969)",
+   "key": "the beatles/abbey road (1969)|abbey road"
+  },
+  {
+   "relPath": "Beyoncé/Lemonade (2016)/Formation.m4a",
+   "album": "Lemonade",
+   "title": "Formation",
+   "relDir": "Beyoncé/Lemonade (2016)",
+   "key": "beyoncé/lemonade (2016)|lemonade"
+  },
+  {
+   "relPath": "КИНО/Группа крови (1988)/x.mp3",
+   "album": "Группа крови",
+   "title": "x",
+   "relDir": "КИНО/Группа крови (1988)",
+   "key": "кино/группа крови (1988)|группа крови"
+  },
+  {
+   "relPath": "ΟΔΥΣΣΕΥΣ/ΣΑΣ/y.mp3",
+   "album": "ΣΑΣ",
+   "title": "y",
+   "relDir": "ΟΔΥΣΣΕΥΣ/ΣΑΣ",
+   "key": "οδυσσευς/σας|σας"
+  },
+  {
+   "relPath": "STRAẞE/x/y.mp3",
+   "album": "Straße",
+   "title": "y",
+   "relDir": "STRAẞE/x",
+   "key": "straße/x|straße"
+  },
+  {
+   "relPath": "宇多田ヒカル/First Love (1999)/x.mp3",
+   "album": "First Love",
+   "title": "x",
+   "relDir": "宇多田ヒカル/First Love (1999)",
+   "key": "宇多田ヒカル/first love (1999)|first love"
+  },
+  {
+   "relPath": "a/b/c/d/deep.mp3",
+   "album": "Deep & The Album",
+   "title": "z",
+   "relDir": "a/b/c/d",
+   "key": "a/b/c/d|deep and album"
+  },
+  {
+   "relPath": "/leading/slash.mp3",
+   "album": "Kа",
+   "title": "z",
+   "relDir": "/leading",
+   "key": "/leading|kа"
+  },
+  {
+   "relPath": "trailing/",
+   "album": "Album",
+   "title": "z",
+   "relDir": "trailing",
+   "key": "trailing|album"
+  },
+  {
+   "relPath": "Various Artists/Hits (2010)/Song A.mp3",
+   "album": "Hits",
+   "title": "Song A",
+   "relDir": "Various Artists/Hits (2010)",
+   "key": "various artists/hits (2010)|hits"
+  },
+  {
+   "relPath": "x/y.mp3",
+   "album": "A B",
+   "title": "z",
+   "relDir": "x",
+   "key": "x|b"
+  },
+  {
+   "relPath": "x/y.mp3",
+   "album": "e​́",
+   "title": "z",
+   "relDir": "x",
+   "key": "x|e"
+  },
+  {
+   "relPath": "x/y.mp3",
+   "album": "😀 the 😀",
+   "title": "z",
+   "relDir": "x",
+   "key": "x|"
+  }
+ ],
+ "albumArtists": [
+  {
+   "albumArtist": "Daft Punk",
+   "artist": "Daft Punk",
+   "compilation": false,
+   "out": "Daft Punk"
+  },
+  {
+   "albumArtist": null,
+   "artist": "Someone",
+   "compilation": false,
+   "out": "Someone"
+  },
+  {
+   "albumArtist": "",
+   "artist": "",
+   "compilation": false,
+   "out": "Unknown Artist"
+  },
+  {
+   "albumArtist": null,
+   "artist": null,
+   "compilation": false,
+   "out": "Unknown Artist"
+  },
+  {
+   "albumArtist": "Various Artists",
+   "artist": "X",
+   "compilation": false,
+   "out": "Various Artists"
+  },
+  {
+   "albumArtist": "va",
+   "artist": "X",
+   "compilation": false,
+   "out": "Various Artists"
+  },
+  {
+   "albumArtist": "Real Artist",
+   "artist": "X",
+   "compilation": true,
+   "out": "Various Artists"
+  },
+  {
+   "albumArtist": "  Spaced  Out ",
+   "artist": "x",
+   "compilation": false,
+   "out": "Spaced Out"
+  },
+  {
+   "albumArtist": "​",
+   "artist": "Artist",
+   "compilation": false,
+   "out": "Artist"
+  },
+  {
+   "albumArtist": " ",
+   "artist": "",
+   "compilation": false,
+   "out": "Unknown Artist"
+  },
+  {
+   "albumArtist": "V.A.",
+   "artist": "",
+   "compilation": false,
+   "out": "Various Artists"
+  },
+  {
+   "albumArtist": "Verschiedene Interpreten",
+   "artist": "Y",
+   "compilation": false,
+   "out": "Various Artists"
+  },
+  {
+   "albumArtist": "Beyoncé",
+   "artist": "z",
+   "compilation": false,
+   "out": "Beyoncé"
+  }
+ ],
+ "names": [
+  {
+   "name": "Song.mp3",
+   "ignored": false,
+   "skipDir0": false,
+   "skipDir1": false,
+   "audio": true
+  },
+  {
+   "name": "a.sync-conflict-20250101-120000-ABCDEFG.mp3",
+   "ignored": true,
+   "skipDir0": true,
+   "skipDir1": true,
+   "audio": true
+  },
+  {
+   "name": "x.valence-tmp",
+   "ignored": true,
+   "skipDir0": true,
+   "skipDir1": true,
+   "audio": false
+  },
+  {
+   "name": "X.VALENCE-TMP",
+   "ignored": true,
+   "skipDir0": true,
+   "skipDir1": true,
+   "audio": false
+  },
+  {
+   "name": "~syncthing~a.mp3.tmp",
+   "ignored": true,
+   "skipDir0": true,
+   "skipDir1": true,
+   "audio": false
+  },
+  {
+   "name": "~SYNCTHING~x",
+   "ignored": true,
+   "skipDir0": true,
+   "skipDir1": true,
+   "audio": false
+  },
+  {
+   "name": ".syncthing.a.tmp",
+   "ignored": true,
+   "skipDir0": true,
+   "skipDir1": true,
+   "audio": false
+  },
+  {
+   "name": ".stfolder",
+   "ignored": true,
+   "skipDir0": true,
+   "skipDir1": true,
+   "audio": false
+  },
+  {
+   "name": ".STFolder",
+   "ignored": true,
+   "skipDir0": true,
+   "skipDir1": true,
+   "audio": false
+  },
+  {
+   "name": ".stversions",
+   "ignored": true,
+   "skipDir0": true,
+   "skipDir1": true,
+   "audio": false
+  },
+  {
+   "name": ".stignore",
+   "ignored": true,
+   "skipDir0": true,
+   "skipDir1": true,
+   "audio": false
+  },
+  {
+   "name": ".trashed",
+   "ignored": true,
+   "skipDir0": true,
+   "skipDir1": true,
+   "audio": false
+  },
+  {
+   "name": ".trashed-1700000000-x.mp3",
+   "ignored": false,
+   "skipDir0": true,
+   "skipDir1": true,
+   "audio": true
+  },
+  {
+   "name": "._x.mp3",
+   "ignored": true,
+   "skipDir0": true,
+   "skipDir1": true,
+   "audio": true
+  },
+  {
+   "name": "._",
+   "ignored": true,
+   "skipDir0": true,
+   "skipDir1": true,
+   "audio": false
+  },
+  {
+   "name": "desktop.ini",
+   "ignored": true,
+   "skipDir0": true,
+   "skipDir1": true,
+   "audio": false
+  },
+  {
+   "name": "Desktop.ini",
+   "ignored": true,
+   "skipDir0": true,
+   "skipDir1": true,
+   "audio": false
+  },
+  {
+   "name": "Thumbs.db",
+   "ignored": true,
+   "skipDir0": true,
+   "skipDir1": true,
+   "audio": false
+  },
+  {
+   "name": "thumbs.db",
+   "ignored": true,
+   "skipDir0": true,
+   "skipDir1": true,
+   "audio": false
+  },
+  {
+   "name": ".DS_Store",
+   "ignored": true,
+   "skipDir0": true,
+   "skipDir1": true,
+   "audio": false
+  },
+  {
+   "name": ".ds_store",
+   "ignored": true,
+   "skipDir0": true,
+   "skipDir1": true,
+   "audio": false
+  },
+  {
+   "name": "Playlists",
+   "ignored": false,
+   "skipDir0": true,
+   "skipDir1": false,
+   "audio": false
+  },
+  {
+   "name": "playlists",
+   "ignored": false,
+   "skipDir0": true,
+   "skipDir1": false,
+   "audio": false
+  },
+  {
+   "name": ".valence",
+   "ignored": false,
+   "skipDir0": true,
+   "skipDir1": true,
+   "audio": false
+  },
+  {
+   "name": "Music",
+   "ignored": false,
+   "skipDir0": true,
+   "skipDir1": false,
+   "audio": false
+  },
+  {
+   "name": "music",
+   "ignored": false,
+   "skipDir0": true,
+   "skipDir1": false,
+   "audio": false
+  },
+  {
+   "name": "iTunes",
+   "ignored": false,
+   "skipDir0": true,
+   "skipDir1": false,
+   "audio": false
+  },
+  {
+   "name": "GarageBand",
+   "ignored": false,
+   "skipDir0": true,
+   "skipDir1": false,
+   "audio": false
+  },
+  {
+   "name": "Audio Music Apps",
+   "ignored": false,
+   "skipDir0": true,
+   "skipDir1": false,
+   "audio": false
+  },
+  {
+   "name": "Logic",
+   "ignored": false,
+   "skipDir0": true,
+   "skipDir1": false,
+   "audio": false
+  },
+  {
+   "name": "Podcasts",
+   "ignored": false,
+   "skipDir0": true,
+   "skipDir1": false,
+   "audio": false
+  },
+  {
+   "name": "Android",
+   "ignored": false,
+   "skipDir0": true,
+   "skipDir1": false,
+   "audio": false
+  },
+  {
+   "name": "LOST.DIR",
+   "ignored": false,
+   "skipDir0": true,
+   "skipDir1": false,
+   "audio": false
+  },
+  {
+   "name": "lost.dir",
+   "ignored": false,
+   "skipDir0": true,
+   "skipDir1": false,
+   "audio": false
+  },
+  {
+   "name": "Lost.Dir",
+   "ignored": false,
+   "skipDir0": true,
+   "skipDir1": false,
+   "audio": false
+  },
+  {
+   "name": "Artist",
+   "ignored": false,
+   "skipDir0": false,
+   "skipDir1": false,
+   "audio": false
+  },
+  {
+   "name": ".hidden",
+   "ignored": false,
+   "skipDir0": true,
+   "skipDir1": true,
+   "audio": false
+  },
+  {
+   "name": "Music (Artist)",
+   "ignored": false,
+   "skipDir0": false,
+   "skipDir1": false,
+   "audio": false
+  },
+  {
+   "name": "podcasts ",
+   "ignored": false,
+   "skipDir0": false,
+   "skipDir1": false,
+   "audio": false
+  },
+  {
+   "name": ".stfolder.removed-20250101",
+   "ignored": false,
+   "skipDir0": true,
+   "skipDir1": true,
+   "audio": false
+  },
+  {
+   "name": "A.Sync-Conflict-x.mp3",
+   "ignored": true,
+   "skipDir0": true,
+   "skipDir1": true,
+   "audio": true
+  },
+  {
+   "name": "mp3",
+   "ignored": false,
+   "skipDir0": false,
+   "skipDir1": false,
+   "audio": true
+  },
+  {
+   "name": "song.MP3",
+   "ignored": false,
+   "skipDir0": false,
+   "skipDir1": false,
+   "audio": true
+  },
+  {
+   "name": "song.flac",
+   "ignored": false,
+   "skipDir0": false,
+   "skipDir1": false,
+   "audio": true
+  },
+  {
+   "name": "song.FLAC",
+   "ignored": false,
+   "skipDir0": false,
+   "skipDir1": false,
+   "audio": true
+  },
+  {
+   "name": "a.b.opus",
+   "ignored": false,
+   "skipDir0": false,
+   "skipDir1": false,
+   "audio": true
+  },
+  {
+   "name": "noext",
+   "ignored": false,
+   "skipDir0": false,
+   "skipDir1": false,
+   "audio": false
+  },
+  {
+   "name": ".mp3",
+   "ignored": false,
+   "skipDir0": true,
+   "skipDir1": true,
+   "audio": true
+  },
+  {
+   "name": "x.m4a",
+   "ignored": false,
+   "skipDir0": false,
+   "skipDir1": false,
+   "audio": true
+  },
+  {
+   "name": "x.mp4",
+   "ignored": false,
+   "skipDir0": false,
+   "skipDir1": false,
+   "audio": true
+  },
+  {
+   "name": "x.aac",
+   "ignored": false,
+   "skipDir0": false,
+   "skipDir1": false,
+   "audio": true
+  },
+  {
+   "name": "x.alac",
+   "ignored": false,
+   "skipDir0": false,
+   "skipDir1": false,
+   "audio": true
+  },
+  {
+   "name": "x.ogg",
+   "ignored": false,
+   "skipDir0": false,
+   "skipDir1": false,
+   "audio": true
+  },
+  {
+   "name": "x.oga",
+   "ignored": false,
+   "skipDir0": false,
+   "skipDir1": false,
+   "audio": true
+  },
+  {
+   "name": "x.wav",
+   "ignored": false,
+   "skipDir0": false,
+   "skipDir1": false,
+   "audio": true
+  },
+  {
+   "name": "x.aif",
+   "ignored": false,
+   "skipDir0": false,
+   "skipDir1": false,
+   "audio": true
+  },
+  {
+   "name": "x.aiff",
+   "ignored": false,
+   "skipDir0": false,
+   "skipDir1": false,
+   "audio": true
+  },
+  {
+   "name": "x.aifc",
+   "ignored": false,
+   "skipDir0": false,
+   "skipDir1": false,
+   "audio": true
+  },
+  {
+   "name": "x.wma",
+   "ignored": false,
+   "skipDir0": false,
+   "skipDir1": false,
+   "audio": true
+  },
+  {
+   "name": "x.ape",
+   "ignored": false,
+   "skipDir0": false,
+   "skipDir1": false,
+   "audio": true
+  },
+  {
+   "name": "x.wv",
+   "ignored": false,
+   "skipDir0": false,
+   "skipDir1": false,
+   "audio": true
+  },
+  {
+   "name": "x.tta",
+   "ignored": false,
+   "skipDir0": false,
+   "skipDir1": false,
+   "audio": true
+  },
+  {
+   "name": "x.mpc",
+   "ignored": false,
+   "skipDir0": false,
+   "skipDir1": false,
+   "audio": true
+  },
+  {
+   "name": "x.mp2",
+   "ignored": false,
+   "skipDir0": false,
+   "skipDir1": false,
+   "audio": true
+  },
+  {
+   "name": "x.ac3",
+   "ignored": false,
+   "skipDir0": false,
+   "skipDir1": false,
+   "audio": true
+  },
+  {
+   "name": "x.dsf",
+   "ignored": false,
+   "skipDir0": false,
+   "skipDir1": false,
+   "audio": true
+  },
+  {
+   "name": "x.dff",
+   "ignored": false,
+   "skipDir0": false,
+   "skipDir1": false,
+   "audio": true
+  },
+  {
+   "name": "x.webm",
+   "ignored": false,
+   "skipDir0": false,
+   "skipDir1": false,
+   "audio": true
+  },
+  {
+   "name": "x.mka",
+   "ignored": false,
+   "skipDir0": false,
+   "skipDir1": false,
+   "audio": true
+  },
+  {
+   "name": "x.m3u8",
+   "ignored": false,
+   "skipDir0": false,
+   "skipDir1": false,
+   "audio": false
+  },
+  {
+   "name": "x.jpg",
+   "ignored": false,
+   "skipDir0": false,
+   "skipDir1": false,
+   "audio": false
+  },
+  {
+   "name": "x.mp3.",
+   "ignored": false,
+   "skipDir0": false,
+   "skipDir1": false,
+   "audio": false
+  },
+  {
+   "name": "x.lrc",
+   "ignored": false,
+   "skipDir0": false,
+   "skipDir1": false,
+   "audio": false
+  },
+  {
+   "name": "İ.mp3",
+   "ignored": false,
+   "skipDir0": false,
+   "skipDir1": false,
+   "audio": true
+  }
+ ]
+}

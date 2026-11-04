@@ -1,0 +1,927 @@
+{
+ "seasonOrder": [
+  {
+   "in": "SiIvaGunner: Season 1",
+   "out": 1
+  },
+  {
+   "in": "SiIvaGunner: Season 4 Episode 2",
+   "out": 4.2
+  },
+  {
+   "in": "SiIvaGunner: Season X",
+   "out": 10
+  },
+  {
+   "in": "SiIvaGunner: season x",
+   "out": 10
+  },
+  {
+   "in": "SiIvaGunner: Season 7 – The Year of Grand Dad",
+   "out": 7
+  },
+  {
+   "in": "Season 10",
+   "out": 10
+  },
+  {
+   "in": "SEASON 3",
+   "out": 3
+  },
+  {
+   "in": "season 5",
+   "out": 5
+  },
+  {
+   "in": "Season  4  episode  3",
+   "out": 4.3
+  },
+  {
+   "in": "Season 4 Episode",
+   "out": 4
+  },
+  {
+   "in": "Season4",
+   "out": 1000
+  },
+  {
+   "in": "Rip Album",
+   "out": 1000
+  },
+  {
+   "in": "",
+   "out": 1000
+  },
+  {
+   "in": "Season 012",
+   "out": 12
+  },
+  {
+   "in": "Season 4 Episode 12",
+   "out": 5.2
+  },
+  {
+   "in": "Season x Episode 1",
+   "out": 10.1
+  },
+  {
+   "in": "The Season 2 Thing",
+   "out": 2
+  },
+  {
+   "in": "season\t9",
+   "out": 9
+  },
+  {
+   "in": "Season 99999999999999999999",
+   "out": 100000000000000000000
+  },
+  {
+   "in": "ſeason 3",
+   "out": 1000
+  }
+ ],
+ "gameFromTitle": [
+  {
+   "title": "Swashbuckler Spectacular - A Truth-Plundering Author - Phoenix Wright: Ace Attorney - Dual Destinies",
+   "music": "Swashbuckler Spectacular - A Truth-Plundering Author",
+   "out": "Phoenix Wright: Ace Attorney - Dual Destinies"
+  },
+  {
+   "title": "Gourmet Race (Beta Mix) - Kirby Super Star",
+   "music": null,
+   "out": "Kirby Super Star"
+  },
+  {
+   "title": "Just a title",
+   "music": null,
+   "out": null
+  },
+  {
+   "title": "  Ground Theme - Super Mario Bros. - Super Mario Bros.  ",
+   "music": null,
+   "out": "Super Mario Bros."
+  },
+  {
+   "title": "Ground Theme - Super Mario Bros. - Super Mario Bros.",
+   "music": "Ground Theme - Super Mario Bros.",
+   "out": "Super Mario Bros."
+  },
+  {
+   "title": "GROUND THEME — Game",
+   "music": "ground theme",
+   "out": "Game"
+  },
+  {
+   "title": "Track – Game",
+   "music": "Track",
+   "out": "Game"
+  },
+  {
+   "title": "Track - ",
+   "music": null,
+   "out": null
+  },
+  {
+   "title": " - Game",
+   "music": null,
+   "out": null
+  },
+  {
+   "title": "Track",
+   "music": "Track",
+   "out": null
+  },
+  {
+   "title": "Track - Game",
+   "music": "",
+   "out": "Game"
+  },
+  {
+   "title": "Track - Game",
+   "music": "   ",
+   "out": "Track - Game"
+  },
+  {
+   "title": "Track-Game",
+   "music": "Track",
+   "out": "Game"
+  },
+  {
+   "title": "Song Name   -   The Game",
+   "music": "Song Name",
+   "out": "The Game"
+  },
+  {
+   "title": "A - B - C",
+   "music": "Nope",
+   "out": "C"
+  },
+  {
+   "title": "İstanbul - Game",
+   "music": "i̇stanbul",
+   "out": "Game"
+  }
+ ],
+ "seasons": [
+  {
+   "name": "missing",
+   "content": null,
+   "out": [
+    {
+     "key": "s1",
+     "name": "Season 1",
+     "start": "2016-01-09"
+    },
+    {
+     "key": "s2",
+     "name": "Season 2",
+     "start": "2016-10-19"
+    },
+    {
+     "key": "s3",
+     "name": "Season 3",
+     "start": "2018-01-01"
+    },
+    {
+     "key": "s4",
+     "name": "Season 4",
+     "start": "2019-03-26"
+    },
+    {
+     "key": "s4e2",
+     "name": "Season 4 Episode 2",
+     "start": "2020-02-01"
+    },
+    {
+     "key": "s5",
+     "name": "Season 5",
+     "start": "2021-01-04"
+    },
+    {
+     "key": "s6",
+     "name": "Season 6",
+     "start": "2022-01-31"
+    },
+    {
+     "key": "s7",
+     "name": "Season 7: The Year of Grand Dad",
+     "start": "2023-02-01"
+    },
+    {
+     "key": "s8",
+     "name": "Season 8",
+     "start": "2024-01-18"
+    },
+    {
+     "key": "s9",
+     "name": "Season 9",
+     "start": "2025-01-24"
+    },
+    {
+     "key": "sx",
+     "name": "Season X",
+     "start": "2026-01-07"
+    }
+   ]
+  },
+  {
+   "name": "valid",
+   "content": "{\"seasons\":[{\"key\":\"s2\",\"name\":\"Two\",\"start\":\"2016-10-19\"},{\"key\":\"s1\",\"name\":\"One\",\"start\":\"2016-01-09\"},{\"name\":\"No Key!\",\"start\":\"2017-01-01\"}]}",
+   "out": [
+    {
+     "key": "s1",
+     "name": "One",
+     "start": "2016-01-09"
+    },
+    {
+     "key": "s2",
+     "name": "Two",
+     "start": "2016-10-19"
+    },
+    {
+     "key": "s-no-key-",
+     "name": "No Key!",
+     "start": "2017-01-01"
+    }
+   ]
+  },
+  {
+   "name": "empty",
+   "content": "{\"seasons\":[]}",
+   "out": [
+    {
+     "key": "s1",
+     "name": "Season 1",
+     "start": "2016-01-09"
+    },
+    {
+     "key": "s2",
+     "name": "Season 2",
+     "start": "2016-10-19"
+    },
+    {
+     "key": "s3",
+     "name": "Season 3",
+     "start": "2018-01-01"
+    },
+    {
+     "key": "s4",
+     "name": "Season 4",
+     "start": "2019-03-26"
+    },
+    {
+     "key": "s4e2",
+     "name": "Season 4 Episode 2",
+     "start": "2020-02-01"
+    },
+    {
+     "key": "s5",
+     "name": "Season 5",
+     "start": "2021-01-04"
+    },
+    {
+     "key": "s6",
+     "name": "Season 6",
+     "start": "2022-01-31"
+    },
+    {
+     "key": "s7",
+     "name": "Season 7: The Year of Grand Dad",
+     "start": "2023-02-01"
+    },
+    {
+     "key": "s8",
+     "name": "Season 8",
+     "start": "2024-01-18"
+    },
+    {
+     "key": "s9",
+     "name": "Season 9",
+     "start": "2025-01-24"
+    },
+    {
+     "key": "sx",
+     "name": "Season X",
+     "start": "2026-01-07"
+    }
+   ]
+  },
+  {
+   "name": "badDate",
+   "content": "{\"seasons\":[{\"key\":\"a\",\"name\":\"A\",\"start\":\"2016-13-01\"}]}",
+   "out": [
+    {
+     "key": "s1",
+     "name": "Season 1",
+     "start": "2016-01-09"
+    },
+    {
+     "key": "s2",
+     "name": "Season 2",
+     "start": "2016-10-19"
+    },
+    {
+     "key": "s3",
+     "name": "Season 3",
+     "start": "2018-01-01"
+    },
+    {
+     "key": "s4",
+     "name": "Season 4",
+     "start": "2019-03-26"
+    },
+    {
+     "key": "s4e2",
+     "name": "Season 4 Episode 2",
+     "start": "2020-02-01"
+    },
+    {
+     "key": "s5",
+     "name": "Season 5",
+     "start": "2021-01-04"
+    },
+    {
+     "key": "s6",
+     "name": "Season 6",
+     "start": "2022-01-31"
+    },
+    {
+     "key": "s7",
+     "name": "Season 7: The Year of Grand Dad",
+     "start": "2023-02-01"
+    },
+    {
+     "key": "s8",
+     "name": "Season 8",
+     "start": "2024-01-18"
+    },
+    {
+     "key": "s9",
+     "name": "Season 9",
+     "start": "2025-01-24"
+    },
+    {
+     "key": "sx",
+     "name": "Season X",
+     "start": "2026-01-07"
+    }
+   ]
+  },
+  {
+   "name": "feb30",
+   "content": "{\"seasons\":[{\"key\":\"a\",\"name\":\"A\",\"start\":\"2016-02-30\"},{\"key\":\"b\",\"name\":\" B \",\"start\":\" 2015-01-01 \"}]}",
+   "out": [
+    {
+     "key": "b",
+     "name": "B",
+     "start": "2015-01-01"
+    },
+    {
+     "key": "a",
+     "name": "A",
+     "start": "2016-02-30"
+    }
+   ]
+  },
+  {
+   "name": "dupKey",
+   "content": "{\"seasons\":[{\"key\":\"a\",\"name\":\"A\",\"start\":\"2016-01-01\"},{\"key\":\"a\",\"name\":\"B\",\"start\":\"2016-01-02\"}]}",
+   "out": [
+    {
+     "key": "s1",
+     "name": "Season 1",
+     "start": "2016-01-09"
+    },
+    {
+     "key": "s2",
+     "name": "Season 2",
+     "start": "2016-10-19"
+    },
+    {
+     "key": "s3",
+     "name": "Season 3",
+     "start": "2018-01-01"
+    },
+    {
+     "key": "s4",
+     "name": "Season 4",
+     "start": "2019-03-26"
+    },
+    {
+     "key": "s4e2",
+     "name": "Season 4 Episode 2",
+     "start": "2020-02-01"
+    },
+    {
+     "key": "s5",
+     "name": "Season 5",
+     "start": "2021-01-04"
+    },
+    {
+     "key": "s6",
+     "name": "Season 6",
+     "start": "2022-01-31"
+    },
+    {
+     "key": "s7",
+     "name": "Season 7: The Year of Grand Dad",
+     "start": "2023-02-01"
+    },
+    {
+     "key": "s8",
+     "name": "Season 8",
+     "start": "2024-01-18"
+    },
+    {
+     "key": "s9",
+     "name": "Season 9",
+     "start": "2025-01-24"
+    },
+    {
+     "key": "sx",
+     "name": "Season X",
+     "start": "2026-01-07"
+    }
+   ]
+  },
+  {
+   "name": "dupName",
+   "content": "{\"seasons\":[{\"key\":\"a\",\"name\":\"Same\",\"start\":\"2016-01-01\"},{\"key\":\"b\",\"name\":\"SAME\",\"start\":\"2016-01-02\"}]}",
+   "out": [
+    {
+     "key": "s1",
+     "name": "Season 1",
+     "start": "2016-01-09"
+    },
+    {
+     "key": "s2",
+     "name": "Season 2",
+     "start": "2016-10-19"
+    },
+    {
+     "key": "s3",
+     "name": "Season 3",
+     "start": "2018-01-01"
+    },
+    {
+     "key": "s4",
+     "name": "Season 4",
+     "start": "2019-03-26"
+    },
+    {
+     "key": "s4e2",
+     "name": "Season 4 Episode 2",
+     "start": "2020-02-01"
+    },
+    {
+     "key": "s5",
+     "name": "Season 5",
+     "start": "2021-01-04"
+    },
+    {
+     "key": "s6",
+     "name": "Season 6",
+     "start": "2022-01-31"
+    },
+    {
+     "key": "s7",
+     "name": "Season 7: The Year of Grand Dad",
+     "start": "2023-02-01"
+    },
+    {
+     "key": "s8",
+     "name": "Season 8",
+     "start": "2024-01-18"
+    },
+    {
+     "key": "s9",
+     "name": "Season 9",
+     "start": "2025-01-24"
+    },
+    {
+     "key": "sx",
+     "name": "Season X",
+     "start": "2026-01-07"
+    }
+   ]
+  },
+  {
+   "name": "noName",
+   "content": "{\"seasons\":[{\"key\":\"a\",\"start\":\"2016-01-01\"}]}",
+   "out": [
+    {
+     "key": "s1",
+     "name": "Season 1",
+     "start": "2016-01-09"
+    },
+    {
+     "key": "s2",
+     "name": "Season 2",
+     "start": "2016-10-19"
+    },
+    {
+     "key": "s3",
+     "name": "Season 3",
+     "start": "2018-01-01"
+    },
+    {
+     "key": "s4",
+     "name": "Season 4",
+     "start": "2019-03-26"
+    },
+    {
+     "key": "s4e2",
+     "name": "Season 4 Episode 2",
+     "start": "2020-02-01"
+    },
+    {
+     "key": "s5",
+     "name": "Season 5",
+     "start": "2021-01-04"
+    },
+    {
+     "key": "s6",
+     "name": "Season 6",
+     "start": "2022-01-31"
+    },
+    {
+     "key": "s7",
+     "name": "Season 7: The Year of Grand Dad",
+     "start": "2023-02-01"
+    },
+    {
+     "key": "s8",
+     "name": "Season 8",
+     "start": "2024-01-18"
+    },
+    {
+     "key": "s9",
+     "name": "Season 9",
+     "start": "2025-01-24"
+    },
+    {
+     "key": "sx",
+     "name": "Season X",
+     "start": "2026-01-07"
+    }
+   ]
+  },
+  {
+   "name": "numbers",
+   "content": "{\"seasons\":[{\"key\":5,\"name\":7,\"start\":\"2016-01-01\"}]}",
+   "out": [
+    {
+     "key": "5",
+     "name": "7",
+     "start": "2016-01-01"
+    }
+   ]
+  },
+  {
+   "name": "notJson",
+   "content": "{\"seasons\": [",
+   "out": [
+    {
+     "key": "s1",
+     "name": "Season 1",
+     "start": "2016-01-09"
+    },
+    {
+     "key": "s2",
+     "name": "Season 2",
+     "start": "2016-10-19"
+    },
+    {
+     "key": "s3",
+     "name": "Season 3",
+     "start": "2018-01-01"
+    },
+    {
+     "key": "s4",
+     "name": "Season 4",
+     "start": "2019-03-26"
+    },
+    {
+     "key": "s4e2",
+     "name": "Season 4 Episode 2",
+     "start": "2020-02-01"
+    },
+    {
+     "key": "s5",
+     "name": "Season 5",
+     "start": "2021-01-04"
+    },
+    {
+     "key": "s6",
+     "name": "Season 6",
+     "start": "2022-01-31"
+    },
+    {
+     "key": "s7",
+     "name": "Season 7: The Year of Grand Dad",
+     "start": "2023-02-01"
+    },
+    {
+     "key": "s8",
+     "name": "Season 8",
+     "start": "2024-01-18"
+    },
+    {
+     "key": "s9",
+     "name": "Season 9",
+     "start": "2025-01-24"
+    },
+    {
+     "key": "sx",
+     "name": "Season X",
+     "start": "2026-01-07"
+    }
+   ]
+  },
+  {
+   "name": "notArray",
+   "content": "{\"seasons\":{\"key\":\"a\"}}",
+   "out": [
+    {
+     "key": "s1",
+     "name": "Season 1",
+     "start": "2016-01-09"
+    },
+    {
+     "key": "s2",
+     "name": "Season 2",
+     "start": "2016-10-19"
+    },
+    {
+     "key": "s3",
+     "name": "Season 3",
+     "start": "2018-01-01"
+    },
+    {
+     "key": "s4",
+     "name": "Season 4",
+     "start": "2019-03-26"
+    },
+    {
+     "key": "s4e2",
+     "name": "Season 4 Episode 2",
+     "start": "2020-02-01"
+    },
+    {
+     "key": "s5",
+     "name": "Season 5",
+     "start": "2021-01-04"
+    },
+    {
+     "key": "s6",
+     "name": "Season 6",
+     "start": "2022-01-31"
+    },
+    {
+     "key": "s7",
+     "name": "Season 7: The Year of Grand Dad",
+     "start": "2023-02-01"
+    },
+    {
+     "key": "s8",
+     "name": "Season 8",
+     "start": "2024-01-18"
+    },
+    {
+     "key": "s9",
+     "name": "Season 9",
+     "start": "2025-01-24"
+    },
+    {
+     "key": "sx",
+     "name": "Season X",
+     "start": "2026-01-07"
+    }
+   ]
+  },
+  {
+   "name": "nullEntry",
+   "content": "{\"seasons\":[null]}",
+   "out": [
+    {
+     "key": "s1",
+     "name": "Season 1",
+     "start": "2016-01-09"
+    },
+    {
+     "key": "s2",
+     "name": "Season 2",
+     "start": "2016-10-19"
+    },
+    {
+     "key": "s3",
+     "name": "Season 3",
+     "start": "2018-01-01"
+    },
+    {
+     "key": "s4",
+     "name": "Season 4",
+     "start": "2019-03-26"
+    },
+    {
+     "key": "s4e2",
+     "name": "Season 4 Episode 2",
+     "start": "2020-02-01"
+    },
+    {
+     "key": "s5",
+     "name": "Season 5",
+     "start": "2021-01-04"
+    },
+    {
+     "key": "s6",
+     "name": "Season 6",
+     "start": "2022-01-31"
+    },
+    {
+     "key": "s7",
+     "name": "Season 7: The Year of Grand Dad",
+     "start": "2023-02-01"
+    },
+    {
+     "key": "s8",
+     "name": "Season 8",
+     "start": "2024-01-18"
+    },
+    {
+     "key": "s9",
+     "name": "Season 9",
+     "start": "2025-01-24"
+    },
+    {
+     "key": "sx",
+     "name": "Season X",
+     "start": "2026-01-07"
+    }
+   ]
+  },
+  {
+   "name": "sameStart",
+   "content": "{\"seasons\":[{\"key\":\"z\",\"name\":\"Z\",\"start\":\"2016-01-01\"},{\"key\":\"y\",\"name\":\"Y\",\"start\":\"2016-01-01\"},{\"key\":\"\",\"name\":\"Ünï Name 2\",\"start\":\"2010-01-01\"}]}",
+   "out": [
+    {
+     "key": "s--n-name-2",
+     "name": "Ünï Name 2",
+     "start": "2010-01-01"
+    },
+    {
+     "key": "z",
+     "name": "Z",
+     "start": "2016-01-01"
+    },
+    {
+     "key": "y",
+     "name": "Y",
+     "start": "2016-01-01"
+    }
+   ]
+  }
+ ],
+ "seasonAlbum": [
+  {
+   "name": "Season 1",
+   "out": "SiIvaGunner: Season 1"
+  },
+  {
+   "name": "Season 2",
+   "out": "SiIvaGunner: Season 2"
+  },
+  {
+   "name": "Season 3",
+   "out": "SiIvaGunner: Season 3"
+  },
+  {
+   "name": "Season 4",
+   "out": "SiIvaGunner: Season 4"
+  },
+  {
+   "name": "Season 4 Episode 2",
+   "out": "SiIvaGunner: Season 4 Episode 2"
+  },
+  {
+   "name": "Season 5",
+   "out": "SiIvaGunner: Season 5"
+  },
+  {
+   "name": "Season 6",
+   "out": "SiIvaGunner: Season 6"
+  },
+  {
+   "name": "Season 7: The Year of Grand Dad",
+   "out": "SiIvaGunner: Season 7 – The Year of Grand Dad"
+  },
+  {
+   "name": "Season 8",
+   "out": "SiIvaGunner: Season 8"
+  },
+  {
+   "name": "Season 9",
+   "out": "SiIvaGunner: Season 9"
+  },
+  {
+   "name": "Season X",
+   "out": "SiIvaGunner: Season X"
+  },
+  {
+   "name": "A:B: C",
+   "out": "SiIvaGunner: A – B: C"
+  },
+  {
+   "name": "A : B",
+   "out": "SiIvaGunner: A – B"
+  }
+ ],
+ "seasonFor": [
+  {
+   "in": "2015-01-01T00:00:00.000Z",
+   "out": "s1"
+  },
+  {
+   "in": "2016-01-09T00:00:00.000Z",
+   "out": "s1"
+  },
+  {
+   "in": "2016-10-18T23:59:59.000Z",
+   "out": "s1"
+  },
+  {
+   "in": "2020-02-01",
+   "out": "s4e2"
+  },
+  {
+   "in": "2026-11-03T12:00:00Z",
+   "out": "sx"
+  },
+  {
+   "in": "2023-01-31T23:00:00.000Z",
+   "out": "s6"
+  },
+  {
+   "in": "",
+   "out": "s1"
+  }
+ ],
+ "defaults": [
+  {
+   "key": "s1",
+   "name": "Season 1",
+   "start": "2016-01-09"
+  },
+  {
+   "key": "s2",
+   "name": "Season 2",
+   "start": "2016-10-19"
+  },
+  {
+   "key": "s3",
+   "name": "Season 3",
+   "start": "2018-01-01"
+  },
+  {
+   "key": "s4",
+   "name": "Season 4",
+   "start": "2019-03-26"
+  },
+  {
+   "key": "s4e2",
+   "name": "Season 4 Episode 2",
+   "start": "2020-02-01"
+  },
+  {
+   "key": "s5",
+   "name": "Season 5",
+   "start": "2021-01-04"
+  },
+  {
+   "key": "s6",
+   "name": "Season 6",
+   "start": "2022-01-31"
+  },
+  {
+   "key": "s7",
+   "name": "Season 7: The Year of Grand Dad",
+   "start": "2023-02-01"
+  },
+  {
+   "key": "s8",
+   "name": "Season 8",
+   "start": "2024-01-18"
+  },
+  {
+   "key": "s9",
+   "name": "Season 9",
+   "start": "2025-01-24"
+  },
+  {
+   "key": "sx",
+   "name": "Season X",
+   "start": "2026-01-07"
+  }
+ ]
+}

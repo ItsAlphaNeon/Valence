@@ -1,0 +1,14 @@
+{"hlc":"0mw1lk7za-0000-aaaaaaaaaaaa0001","kind":"t","k":"387bc1bd-fd8c-495e-9230-431716b91784","on":1}
+{"hlc":"0mw1lk8wg-0000-aaaaaaaaaaaa0001","kind":"t","k":"387bc1bd-fd8c-495e-9230-431716b91784","on":0}
+{"hlc":"0mw1lk9aa-0000-aaaaaaaaaaaa0001","kind":"a","k":"100 gecs/10,000 gecs (2023)|10 000 gecs","on":1}
+{"hlc":"0mw1lk9ab-0000-aaaaaaaaaaaa0001","kind":"r","k":"100 gecs","on":true}
+{"hlc":"0mw1lk9ac-0000-aaaaaaaaaaaa0001","kind":"x","k":"bad kind","on":1}
+{"hlc":"0mw1lk9ad-0000-aaaaaaaaaaaa0001","kind":"t","k":"","on":1}
+{"hlc":"0mw1lk9ae-0000-aaaaaaaaaaaa0001","kind":"t","k":"moved","on":1,"at":1700000000000}
+{"hlc":"0mw1lk9af-0000-aaaaaaaaaaaa0001","kind":"t","k":"atstr","on":1,"at":"1700000000000"}
+{"hlc":"0mw1lk9ag-0000-aaaaaaaaaaaa0001","kind":"t","k":"fracat","on":1,"at":1700000000000.6}
+{"hlc":"0mw1lk9ah-0000-aaaaaaaaaaaa0001","kind":"T","k":"upper kind","on":1}
+{"hlc":"0mw1lk9ai-0000-aaaaaaaaaaaa0001","kind":"r","k":"on string","on":"0"}
+{"hlc":"0mw1lk9aj-0000-aaaaaaaaaaaa0001","kind":"r","k":"on missing"}
+{"hlc":"0mw1lk9ak-0000-aaaaaaaaaaaa0001","kind":"a","k":7,"on":1}
+{"hlc":"0mw1lk9al-0000-aaaaaaaaaaaa0001","kind":"t","k":"neg at","on":1,"at":-2.5}

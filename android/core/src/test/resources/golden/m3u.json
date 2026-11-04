@@ -1,0 +1,1007 @@
+{
+ "relative": [
+  {
+   "from": "Playlists",
+   "to": "A/B (2020)/C.mp3",
+   "out": "../A/B (2020)/C.mp3"
+  },
+  {
+   "from": "Playlists",
+   "to": "Playlists/Inner.mp3",
+   "out": "Inner.mp3"
+  },
+  {
+   "from": "Playlists",
+   "to": "Root.mp3",
+   "out": "../Root.mp3"
+  },
+  {
+   "from": "Playlists/Sub",
+   "to": "A/b.mp3",
+   "out": "../../A/b.mp3"
+  },
+  {
+   "from": ".",
+   "to": "A/b.mp3",
+   "out": "A/b.mp3"
+  },
+  {
+   "from": "Playlists",
+   "to": "Playlists",
+   "out": ""
+  },
+  {
+   "from": "Playlists",
+   "to": "Playlists/",
+   "out": ""
+  },
+  {
+   "from": "Playlists",
+   "to": "A//B/./C.mp3",
+   "out": "../A/B/C.mp3"
+  },
+  {
+   "from": "Playlists",
+   "to": "A/../B.mp3",
+   "out": "../B.mp3"
+  },
+  {
+   "from": "Playlists",
+   "to": "PlaylistsX/a.mp3",
+   "out": "../PlaylistsX/a.mp3"
+  },
+  {
+   "from": "Playlists",
+   "to": "Play/a.mp3",
+   "out": "../Play/a.mp3"
+  },
+  {
+   "from": "a/b/c",
+   "to": "a/b",
+   "out": ".."
+  },
+  {
+   "from": "a/b",
+   "to": "a/b/c/d",
+   "out": "c/d"
+  },
+  {
+   "from": "",
+   "to": "x",
+   "out": "x"
+  },
+  {
+   "from": "Playlists",
+   "to": "",
+   "out": ".."
+  },
+  {
+   "from": "Playlists",
+   "to": "ünï/😀.mp3",
+   "out": "../ünï/😀.mp3"
+  },
+  {
+   "from": "Playlists",
+   "to": "../x.mp3",
+   "out": "../../x.mp3"
+  }
+ ],
+ "normalize": [
+  {
+   "in": "",
+   "out": "."
+  },
+  {
+   "in": ".",
+   "out": "."
+  },
+  {
+   "in": "./",
+   "out": "./"
+  },
+  {
+   "in": "..",
+   "out": ".."
+  },
+  {
+   "in": "../",
+   "out": "../"
+  },
+  {
+   "in": "a/..",
+   "out": "."
+  },
+  {
+   "in": "a/../..",
+   "out": ".."
+  },
+  {
+   "in": "Playlists/../A/B.mp3",
+   "out": "A/B.mp3"
+  },
+  {
+   "in": "Playlists/./x",
+   "out": "Playlists/x"
+  },
+  {
+   "in": "Playlists//x",
+   "out": "Playlists/x"
+  },
+  {
+   "in": "Playlists/x/",
+   "out": "Playlists/x/"
+  },
+  {
+   "in": "/abs/../x",
+   "out": "/x"
+  },
+  {
+   "in": "/..",
+   "out": "/"
+  },
+  {
+   "in": "a/b/../../../c",
+   "out": "../c"
+  },
+  {
+   "in": "...",
+   "out": "..."
+  },
+  {
+   "in": "a/.../b",
+   "out": "a/.../b"
+  },
+  {
+   "in": ".hidden/x",
+   "out": ".hidden/x"
+  },
+  {
+   "in": "a/./",
+   "out": "a/"
+  },
+  {
+   "in": "//x",
+   "out": "/x"
+  }
+ ],
+ "dirname": [
+  {
+   "in": "",
+   "out": "."
+  },
+  {
+   "in": "/",
+   "out": "/"
+  },
+  {
+   "in": "a",
+   "out": "."
+  },
+  {
+   "in": "a/b",
+   "out": "a"
+  },
+  {
+   "in": "a/b/",
+   "out": "a"
+  },
+  {
+   "in": "/a",
+   "out": "/"
+  },
+  {
+   "in": "//a",
+   "out": "//"
+  },
+  {
+   "in": "Playlists/x.m3u8",
+   "out": "Playlists"
+  },
+  {
+   "in": "a//b",
+   "out": "a/"
+  }
+ ],
+ "join": [
+  {
+   "a": "Playlists",
+   "b": "../A/B.mp3",
+   "out": "A/B.mp3"
+  },
+  {
+   "a": "Playlists",
+   "b": "A.mp3",
+   "out": "Playlists/A.mp3"
+  },
+  {
+   "a": "Playlists",
+   "b": "../../x.mp3",
+   "out": "../x.mp3"
+  },
+  {
+   "a": "Playlists",
+   "b": "./../A.mp3",
+   "out": "A.mp3"
+  },
+  {
+   "a": "Playlists",
+   "b": "..",
+   "out": "."
+  },
+  {
+   "a": "Playlists",
+   "b": "../",
+   "out": "./"
+  },
+  {
+   "a": ".",
+   "b": "x",
+   "out": "x"
+  },
+  {
+   "a": "Playlists",
+   "b": "",
+   "out": "Playlists"
+  }
+ ],
+ "parse": [
+  {
+   "text": "#EXTM3U\n#EXTINF:200,A - C\n../A/B (2020)/C.mp3\n",
+   "playlist": "Playlists/x.m3u8",
+   "root": null,
+   "out": [
+    {
+     "relPath": "A/B (2020)/C.mp3",
+     "durationSec": 200,
+     "title": "A - C"
+    }
+   ]
+  },
+  {
+   "text": "#EXTM3U\n#EXTINF:200,A - C\n../A/B (2020)/C.mp3\n",
+   "playlist": "Playlists/x.m3u8",
+   "root": "/storage/emulated/0/Music",
+   "out": [
+    {
+     "relPath": "A/B (2020)/C.mp3",
+     "durationSec": 200,
+     "title": "A - C"
+    }
+   ]
+  },
+  {
+   "text": "#EXTM3U\n#EXTINF:200,A - C\n../A/B (2020)/C.mp3\n",
+   "playlist": "Playlists/x.m3u8",
+   "root": "C:\\Users\\Neon\\Music",
+   "out": [
+    {
+     "relPath": "A/B (2020)/C.mp3",
+     "durationSec": 200,
+     "title": "A - C"
+    }
+   ]
+  },
+  {
+   "text": "﻿#EXTM3U\r\n#EXTINF:123.5,Title Here\r\n../A/b.mp3\r\n",
+   "playlist": "Playlists/x.m3u8",
+   "root": null,
+   "out": [
+    {
+     "relPath": "A/b.mp3",
+     "durationSec": 123.5,
+     "title": "Title Here"
+    }
+   ]
+  },
+  {
+   "text": "﻿#EXTM3U\r\n#EXTINF:123.5,Title Here\r\n../A/b.mp3\r\n",
+   "playlist": "Playlists/x.m3u8",
+   "root": "/storage/emulated/0/Music",
+   "out": [
+    {
+     "relPath": "A/b.mp3",
+     "durationSec": 123.5,
+     "title": "Title Here"
+    }
+   ]
+  },
+  {
+   "text": "﻿#EXTM3U\r\n#EXTINF:123.5,Title Here\r\n../A/b.mp3\r\n",
+   "playlist": "Playlists/x.m3u8",
+   "root": "C:\\Users\\Neon\\Music",
+   "out": [
+    {
+     "relPath": "A/b.mp3",
+     "durationSec": 123.5,
+     "title": "Title Here"
+    }
+   ]
+  },
+  {
+   "text": "#EXTINF:-1,Neg\n../a.mp3\n#EXTINF:0 tvg-id=\"x\",Name, with comma\n../b.mp3\n#EXTINF:abc,Bad\n../c.mp3\n#EXTINF:200,\n../d.mp3\n#EXTINF:200 ,  spaced title  \n../e.mp3\n#EXTINF:200\n../f.mp3\n",
+   "playlist": "Playlists/x.m3u8",
+   "root": null,
+   "out": [
+    {
+     "relPath": "a.mp3",
+     "title": "Neg"
+    },
+    {
+     "relPath": "b.mp3",
+     "durationSec": 0,
+     "title": "Name, with comma"
+    },
+    {
+     "relPath": "c.mp3"
+    },
+    {
+     "relPath": "d.mp3",
+     "durationSec": 200
+    },
+    {
+     "relPath": "e.mp3",
+     "durationSec": 200,
+     "title": "spaced title"
+    },
+    {
+     "relPath": "f.mp3"
+    }
+   ]
+  },
+  {
+   "text": "#EXTINF:-1,Neg\n../a.mp3\n#EXTINF:0 tvg-id=\"x\",Name, with comma\n../b.mp3\n#EXTINF:abc,Bad\n../c.mp3\n#EXTINF:200,\n../d.mp3\n#EXTINF:200 ,  spaced title  \n../e.mp3\n#EXTINF:200\n../f.mp3\n",
+   "playlist": "Playlists/x.m3u8",
+   "root": "/storage/emulated/0/Music",
+   "out": [
+    {
+     "relPath": "a.mp3",
+     "title": "Neg"
+    },
+    {
+     "relPath": "b.mp3",
+     "durationSec": 0,
+     "title": "Name, with comma"
+    },
+    {
+     "relPath": "c.mp3"
+    },
+    {
+     "relPath": "d.mp3",
+     "durationSec": 200
+    },
+    {
+     "relPath": "e.mp3",
+     "durationSec": 200,
+     "title": "spaced title"
+    },
+    {
+     "relPath": "f.mp3"
+    }
+   ]
+  },
+  {
+   "text": "#EXTINF:-1,Neg\n../a.mp3\n#EXTINF:0 tvg-id=\"x\",Name, with comma\n../b.mp3\n#EXTINF:abc,Bad\n../c.mp3\n#EXTINF:200,\n../d.mp3\n#EXTINF:200 ,  spaced title  \n../e.mp3\n#EXTINF:200\n../f.mp3\n",
+   "playlist": "Playlists/x.m3u8",
+   "root": "C:\\Users\\Neon\\Music",
+   "out": [
+    {
+     "relPath": "a.mp3",
+     "title": "Neg"
+    },
+    {
+     "relPath": "b.mp3",
+     "durationSec": 0,
+     "title": "Name, with comma"
+    },
+    {
+     "relPath": "c.mp3"
+    },
+    {
+     "relPath": "d.mp3",
+     "durationSec": 200
+    },
+    {
+     "relPath": "e.mp3",
+     "durationSec": 200,
+     "title": "spaced title"
+    },
+    {
+     "relPath": "f.mp3"
+    }
+   ]
+  },
+  {
+   "text": "#EXTINF:5,First\n#EXTINF:6,Second\n../g.mp3\n#EXTINF:7,Lost\n../../escape.mp3\n../h.mp3\n",
+   "playlist": "Playlists/x.m3u8",
+   "root": null,
+   "out": [
+    {
+     "relPath": "g.mp3",
+     "durationSec": 6,
+     "title": "Second"
+    },
+    {
+     "relPath": "h.mp3"
+    }
+   ]
+  },
+  {
+   "text": "#EXTINF:5,First\n#EXTINF:6,Second\n../g.mp3\n#EXTINF:7,Lost\n../../escape.mp3\n../h.mp3\n",
+   "playlist": "Playlists/x.m3u8",
+   "root": "/storage/emulated/0/Music",
+   "out": [
+    {
+     "relPath": "g.mp3",
+     "durationSec": 6,
+     "title": "Second"
+    },
+    {
+     "relPath": "h.mp3"
+    }
+   ]
+  },
+  {
+   "text": "#EXTINF:5,First\n#EXTINF:6,Second\n../g.mp3\n#EXTINF:7,Lost\n../../escape.mp3\n../h.mp3\n",
+   "playlist": "Playlists/x.m3u8",
+   "root": "C:\\Users\\Neon\\Music",
+   "out": [
+    {
+     "relPath": "g.mp3",
+     "durationSec": 6,
+     "title": "Second"
+    },
+    {
+     "relPath": "h.mp3"
+    }
+   ]
+  },
+  {
+   "text": "A/B.mp3\n./../A.mp3\n..\\Win\\Path.mp3\n../A//B/./C.mp3\n..\n../\n  ../trimmed.mp3  \n\t../tab.mp3\n",
+   "playlist": "Playlists/x.m3u8",
+   "root": null,
+   "out": [
+    {
+     "relPath": "Playlists/A/B.mp3"
+    },
+    {
+     "relPath": "A.mp3"
+    },
+    {
+     "relPath": "Win/Path.mp3"
+    },
+    {
+     "relPath": "A/B/C.mp3"
+    },
+    {
+     "relPath": "."
+    },
+    {
+     "relPath": "./"
+    },
+    {
+     "relPath": "trimmed.mp3"
+    },
+    {
+     "relPath": "tab.mp3"
+    }
+   ]
+  },
+  {
+   "text": "A/B.mp3\n./../A.mp3\n..\\Win\\Path.mp3\n../A//B/./C.mp3\n..\n../\n  ../trimmed.mp3  \n\t../tab.mp3\n",
+   "playlist": "Playlists/x.m3u8",
+   "root": "/storage/emulated/0/Music",
+   "out": [
+    {
+     "relPath": "Playlists/A/B.mp3"
+    },
+    {
+     "relPath": "A.mp3"
+    },
+    {
+     "relPath": "Win/Path.mp3"
+    },
+    {
+     "relPath": "A/B/C.mp3"
+    },
+    {
+     "relPath": "."
+    },
+    {
+     "relPath": "./"
+    },
+    {
+     "relPath": "trimmed.mp3"
+    },
+    {
+     "relPath": "tab.mp3"
+    }
+   ]
+  },
+  {
+   "text": "A/B.mp3\n./../A.mp3\n..\\Win\\Path.mp3\n../A//B/./C.mp3\n..\n../\n  ../trimmed.mp3  \n\t../tab.mp3\n",
+   "playlist": "Playlists/x.m3u8",
+   "root": "C:\\Users\\Neon\\Music",
+   "out": [
+    {
+     "relPath": "Playlists/A/B.mp3"
+    },
+    {
+     "relPath": "A.mp3"
+    },
+    {
+     "relPath": "Win/Path.mp3"
+    },
+    {
+     "relPath": "A/B/C.mp3"
+    },
+    {
+     "relPath": "."
+    },
+    {
+     "relPath": "./"
+    },
+    {
+     "relPath": "trimmed.mp3"
+    },
+    {
+     "relPath": "tab.mp3"
+    }
+   ]
+  },
+  {
+   "text": "C:\\Users\\Neon\\Music\\A\\b.mp3\nc:/users/neon/music/A/b2.mp3\nC:/Users/Neon/Music\n/storage/emulated/0/Music/A/b.mp3\n/STORAGE/emulated/0/music/A/c.mp3\n/other/root/x.mp3\n/storage/emulated/0/Musical/x.mp3\n",
+   "playlist": "Playlists/x.m3u8",
+   "root": null,
+   "out": []
+  },
+  {
+   "text": "C:\\Users\\Neon\\Music\\A\\b.mp3\nc:/users/neon/music/A/b2.mp3\nC:/Users/Neon/Music\n/storage/emulated/0/Music/A/b.mp3\n/STORAGE/emulated/0/music/A/c.mp3\n/other/root/x.mp3\n/storage/emulated/0/Musical/x.mp3\n",
+   "playlist": "Playlists/x.m3u8",
+   "root": "/storage/emulated/0/Music",
+   "out": [
+    {
+     "relPath": "A/b.mp3"
+    },
+    {
+     "relPath": "A/c.mp3"
+    }
+   ]
+  },
+  {
+   "text": "C:\\Users\\Neon\\Music\\A\\b.mp3\nc:/users/neon/music/A/b2.mp3\nC:/Users/Neon/Music\n/storage/emulated/0/Music/A/b.mp3\n/STORAGE/emulated/0/music/A/c.mp3\n/other/root/x.mp3\n/storage/emulated/0/Musical/x.mp3\n",
+   "playlist": "Playlists/x.m3u8",
+   "root": "C:\\Users\\Neon\\Music",
+   "out": [
+    {
+     "relPath": "A/b.mp3"
+    },
+    {
+     "relPath": "A/b2.mp3"
+    }
+   ]
+  },
+  {
+   "text": "file:///C:/Users/Neon/Music/A%20B/c.mp3\nfile:///storage/emulated/0/Music/A/b.mp3\nFILE://C:/Users/Neon/Music/x.mp3\nfile://localhost/x.mp3\nfile:///C:/Users/Neon/Music/%C3%BC.mp3\n",
+   "playlist": "Playlists/x.m3u8",
+   "root": null,
+   "out": [
+    {
+     "relPath": "Playlists/storage/emulated/0/Music/A/b.mp3"
+    },
+    {
+     "relPath": "Playlists/localhost/x.mp3"
+    }
+   ]
+  },
+  {
+   "text": "file:///C:/Users/Neon/Music/A%20B/c.mp3\nfile:///storage/emulated/0/Music/A/b.mp3\nFILE://C:/Users/Neon/Music/x.mp3\nfile://localhost/x.mp3\nfile:///C:/Users/Neon/Music/%C3%BC.mp3\n",
+   "playlist": "Playlists/x.m3u8",
+   "root": "/storage/emulated/0/Music",
+   "out": [
+    {
+     "relPath": "Playlists/storage/emulated/0/Music/A/b.mp3"
+    },
+    {
+     "relPath": "Playlists/localhost/x.mp3"
+    }
+   ]
+  },
+  {
+   "text": "file:///C:/Users/Neon/Music/A%20B/c.mp3\nfile:///storage/emulated/0/Music/A/b.mp3\nFILE://C:/Users/Neon/Music/x.mp3\nfile://localhost/x.mp3\nfile:///C:/Users/Neon/Music/%C3%BC.mp3\n",
+   "playlist": "Playlists/x.m3u8",
+   "root": "C:\\Users\\Neon\\Music",
+   "out": [
+    {
+     "relPath": "A B/c.mp3"
+    },
+    {
+     "relPath": "Playlists/storage/emulated/0/Music/A/b.mp3"
+    },
+    {
+     "relPath": "x.mp3"
+    },
+    {
+     "relPath": "Playlists/localhost/x.mp3"
+    },
+    {
+     "relPath": "ü.mp3"
+    }
+   ]
+  },
+  {
+   "text": "#EXTM3U\n#PLAYLIST:x\n# comment\n#EXTINF:10,Ünïcödé 😀\n../Ünï/😀.mp3\n#EXTINF:1.0,x\n../x.mp3\n#EXTINF:0.4,y\n../y.mp3\n#EXTINF:99999999999,z\n../z.mp3\n",
+   "playlist": "Playlists/x.m3u8",
+   "root": null,
+   "out": [
+    {
+     "relPath": "Ünï/😀.mp3",
+     "durationSec": 10,
+     "title": "Ünïcödé 😀"
+    },
+    {
+     "relPath": "x.mp3",
+     "durationSec": 1,
+     "title": "x"
+    },
+    {
+     "relPath": "y.mp3",
+     "durationSec": 0.4,
+     "title": "y"
+    },
+    {
+     "relPath": "z.mp3",
+     "durationSec": 99999999999,
+     "title": "z"
+    }
+   ]
+  },
+  {
+   "text": "#EXTM3U\n#PLAYLIST:x\n# comment\n#EXTINF:10,Ünïcödé 😀\n../Ünï/😀.mp3\n#EXTINF:1.0,x\n../x.mp3\n#EXTINF:0.4,y\n../y.mp3\n#EXTINF:99999999999,z\n../z.mp3\n",
+   "playlist": "Playlists/x.m3u8",
+   "root": "/storage/emulated/0/Music",
+   "out": [
+    {
+     "relPath": "Ünï/😀.mp3",
+     "durationSec": 10,
+     "title": "Ünïcödé 😀"
+    },
+    {
+     "relPath": "x.mp3",
+     "durationSec": 1,
+     "title": "x"
+    },
+    {
+     "relPath": "y.mp3",
+     "durationSec": 0.4,
+     "title": "y"
+    },
+    {
+     "relPath": "z.mp3",
+     "durationSec": 99999999999,
+     "title": "z"
+    }
+   ]
+  },
+  {
+   "text": "#EXTM3U\n#PLAYLIST:x\n# comment\n#EXTINF:10,Ünïcödé 😀\n../Ünï/😀.mp3\n#EXTINF:1.0,x\n../x.mp3\n#EXTINF:0.4,y\n../y.mp3\n#EXTINF:99999999999,z\n../z.mp3\n",
+   "playlist": "Playlists/x.m3u8",
+   "root": "C:\\Users\\Neon\\Music",
+   "out": [
+    {
+     "relPath": "Ünï/😀.mp3",
+     "durationSec": 10,
+     "title": "Ünïcödé 😀"
+    },
+    {
+     "relPath": "x.mp3",
+     "durationSec": 1,
+     "title": "x"
+    },
+    {
+     "relPath": "y.mp3",
+     "durationSec": 0.4,
+     "title": "y"
+    },
+    {
+     "relPath": "z.mp3",
+     "durationSec": 99999999999,
+     "title": "z"
+    }
+   ]
+  },
+  {
+   "text": "#EXTINF:10,line sep\n../ls.mp3\n#EXTINF:11,a b \n../nb.mp3\n#extinf:12,lower\n../lc.mp3\n#EXTINF: 13,space\n../sp.mp3\n#EXTINF:+14,plus\n../pl.mp3\n#EXTINF:-0,negzero\n../nz.mp3\n",
+   "playlist": "Playlists/x.m3u8",
+   "root": null,
+   "out": [
+    {
+     "relPath": "ls.mp3"
+    },
+    {
+     "relPath": "nb.mp3",
+     "durationSec": 11,
+     "title": "a b"
+    },
+    {
+     "relPath": "lc.mp3"
+    },
+    {
+     "relPath": "sp.mp3"
+    },
+    {
+     "relPath": "pl.mp3"
+    },
+    {
+     "relPath": "nz.mp3",
+     "durationSec": 0,
+     "title": "negzero"
+    }
+   ]
+  },
+  {
+   "text": "#EXTINF:10,line sep\n../ls.mp3\n#EXTINF:11,a b \n../nb.mp3\n#extinf:12,lower\n../lc.mp3\n#EXTINF: 13,space\n../sp.mp3\n#EXTINF:+14,plus\n../pl.mp3\n#EXTINF:-0,negzero\n../nz.mp3\n",
+   "playlist": "Playlists/x.m3u8",
+   "root": "/storage/emulated/0/Music",
+   "out": [
+    {
+     "relPath": "ls.mp3"
+    },
+    {
+     "relPath": "nb.mp3",
+     "durationSec": 11,
+     "title": "a b"
+    },
+    {
+     "relPath": "lc.mp3"
+    },
+    {
+     "relPath": "sp.mp3"
+    },
+    {
+     "relPath": "pl.mp3"
+    },
+    {
+     "relPath": "nz.mp3",
+     "durationSec": 0,
+     "title": "negzero"
+    }
+   ]
+  },
+  {
+   "text": "#EXTINF:10,line sep\n../ls.mp3\n#EXTINF:11,a b \n../nb.mp3\n#extinf:12,lower\n../lc.mp3\n#EXTINF: 13,space\n../sp.mp3\n#EXTINF:+14,plus\n../pl.mp3\n#EXTINF:-0,negzero\n../nz.mp3\n",
+   "playlist": "Playlists/x.m3u8",
+   "root": "C:\\Users\\Neon\\Music",
+   "out": [
+    {
+     "relPath": "ls.mp3"
+    },
+    {
+     "relPath": "nb.mp3",
+     "durationSec": 11,
+     "title": "a b"
+    },
+    {
+     "relPath": "lc.mp3"
+    },
+    {
+     "relPath": "sp.mp3"
+    },
+    {
+     "relPath": "pl.mp3"
+    },
+    {
+     "relPath": "nz.mp3",
+     "durationSec": 0,
+     "title": "negzero"
+    }
+   ]
+  },
+  {
+   "text": "lone\rcr.mp3\n\n\n#EXTINF:3,t\r\n\r\n../after-blank.mp3\n",
+   "playlist": "Playlists/x.m3u8",
+   "root": null,
+   "out": [
+    {
+     "relPath": "Playlists/lone\rcr.mp3"
+    },
+    {
+     "relPath": "after-blank.mp3",
+     "durationSec": 3,
+     "title": "t"
+    }
+   ]
+  },
+  {
+   "text": "lone\rcr.mp3\n\n\n#EXTINF:3,t\r\n\r\n../after-blank.mp3\n",
+   "playlist": "Playlists/x.m3u8",
+   "root": "/storage/emulated/0/Music",
+   "out": [
+    {
+     "relPath": "Playlists/lone\rcr.mp3"
+    },
+    {
+     "relPath": "after-blank.mp3",
+     "durationSec": 3,
+     "title": "t"
+    }
+   ]
+  },
+  {
+   "text": "lone\rcr.mp3\n\n\n#EXTINF:3,t\r\n\r\n../after-blank.mp3\n",
+   "playlist": "Playlists/x.m3u8",
+   "root": "C:\\Users\\Neon\\Music",
+   "out": [
+    {
+     "relPath": "Playlists/lone\rcr.mp3"
+    },
+    {
+     "relPath": "after-blank.mp3",
+     "durationSec": 3,
+     "title": "t"
+    }
+   ]
+  },
+  {
+   "text": "",
+   "playlist": "Playlists/x.m3u8",
+   "root": null,
+   "out": []
+  },
+  {
+   "text": "",
+   "playlist": "Playlists/x.m3u8",
+   "root": "/storage/emulated/0/Music",
+   "out": []
+  },
+  {
+   "text": "",
+   "playlist": "Playlists/x.m3u8",
+   "root": "C:\\Users\\Neon\\Music",
+   "out": []
+  },
+  {
+   "text": "#EXTM3U\n",
+   "playlist": "Playlists/x.m3u8",
+   "root": null,
+   "out": []
+  },
+  {
+   "text": "#EXTM3U\n",
+   "playlist": "Playlists/x.m3u8",
+   "root": "/storage/emulated/0/Music",
+   "out": []
+  },
+  {
+   "text": "#EXTM3U\n",
+   "playlist": "Playlists/x.m3u8",
+   "root": "C:\\Users\\Neon\\Music",
+   "out": []
+  }
+ ],
+ "write": [
+  {
+   "playlist": "Playlists/Mix.m3u8",
+   "tracks": [
+    {
+     "relPath": "A/B (2020)/C.mp3",
+     "artist": "A",
+     "title": "C",
+     "durationMs": 200000
+    },
+    {
+     "relPath": "S3RL/The Bass & the Melody (2020)/The Bass & the Melody.mp3",
+     "artist": "S3RL",
+     "title": "The Bass & the Melody",
+     "durationMs": 186499
+    },
+    {
+     "relPath": "x/y.mp3",
+     "artist": "",
+     "title": "No Artist",
+     "durationMs": 186500
+    },
+    {
+     "relPath": "Unknown/Not synced.mp3"
+    },
+    {
+     "relPath": "Root.mp3",
+     "artist": "R",
+     "title": "Line\r\nbreak\nhere\r",
+     "durationMs": 499
+    },
+    {
+     "relPath": "Playlists/Inner.mp3",
+     "artist": "I",
+     "title": "Inner",
+     "durationMs": 0
+    },
+    {
+     "relPath": "Ünï/😀.mp3",
+     "artist": "Ü",
+     "title": "😀",
+     "durationMs": 1500
+    },
+    {
+     "relPath": "A/B (2020)/C.mp3",
+     "artist": "A",
+     "title": "C",
+     "durationMs": 200000
+    },
+    {
+     "relPath": "z.mp3",
+     "artist": "",
+     "title": "",
+     "durationMs": 1000
+    }
+   ],
+   "out": "#EXTM3U\n#EXTINF:200,A - C\n../A/B (2020)/C.mp3\n#EXTINF:186,S3RL - The Bass & the Melody\n../S3RL/The Bass & the Melody (2020)/The Bass & the Melody.mp3\n#EXTINF:187, - No Artist\n../x/y.mp3\n../Unknown/Not synced.mp3\n#EXTINF:0,R - Line break here \n../Root.mp3\n#EXTINF:0,I - Inner\nInner.mp3\n#EXTINF:2,Ü - 😀\n../Ünï/😀.mp3\n#EXTINF:200,A - C\n../A/B (2020)/C.mp3\n#EXTINF:1, - \n../z.mp3\n"
+  },
+  {
+   "playlist": "Playlists/Empty.m3u8",
+   "tracks": [],
+   "out": "#EXTM3U\n"
+  },
+  {
+   "playlist": "Playlists/Sub/Deep.m3u8",
+   "tracks": [
+    {
+     "relPath": "A/b.mp3",
+     "artist": "x",
+     "title": "y",
+     "durationMs": 1
+    }
+   ],
+   "out": "#EXTM3U\n#EXTINF:0,x - y\n../../A/b.mp3\n"
+  }
+ ],
+ "union": {
+  "a": [
+   {
+    "relPath": "A/x.mp3"
+   },
+   {
+    "relPath": "B/y.mp3"
+   },
+   {
+    "relPath": "A/x.mp3"
+   }
+  ],
+  "b": [
+   {
+    "relPath": "a/X.mp3"
+   },
+   {
+    "relPath": "C/z.mp3"
+   },
+   {
+    "relPath": "C/z.mp3"
+   },
+   {
+    "relPath": "B/Y.MP3"
+   },
+   {
+    "relPath": "D/İ.mp3"
+   }
+  ],
+  "out": [
+   {
+    "relPath": "A/x.mp3"
+   },
+   {
+    "relPath": "B/y.mp3"
+   },
+   {
+    "relPath": "A/x.mp3"
+   },
+   {
+    "relPath": "C/z.mp3"
+   },
+   {
+    "relPath": "C/z.mp3"
+   },
+   {
+    "relPath": "D/İ.mp3"
+   }
+  ]
+ }
+}

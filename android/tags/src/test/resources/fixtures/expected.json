@@ -1,0 +1,650 @@
+{
+  "cbr_noxing.mp3": {
+    "tags": {
+      "title": "CBR",
+      "artist": "AC",
+      "artists": [
+        "AC",
+        "DC"
+      ],
+      "albumartist": "AC/DC",
+      "composer": "Young",
+      "rating": 1
+    },
+    "format": {
+      "container": "mpeg",
+      "codec": "mp3",
+      "lossless": false,
+      "bitrate": 128000,
+      "sampleRate": 44100,
+      "bitDepth": 0,
+      "channels": 2,
+      "durationMs": 3030
+    },
+    "tagTypes": [
+      "ID3v2.3"
+    ],
+    "picture": null
+  },
+  "desktop.flac": {
+    "tags": {
+      "title": "ближе",
+      "artist": "xXXi_wud_nvrstøp_ÜXXx",
+      "artists": [
+        "xXXi_wud_nvrstøp_ÜXXx",
+        "Кино"
+      ],
+      "album": "Ünïcødé Album (Deluxe)",
+      "albumartist": "xXXi_wud_nvrstøp_ÜXXx",
+      "artistsort": "wud nvrstop, xXXi",
+      "albumartistsort": "wud nvrstop",
+      "titlesort": "blizhe",
+      "albumsort": "Unicode Album",
+      "tracknumber": 3,
+      "totaltracks": 12,
+      "discnumber": 1,
+      "totaldiscs": 2,
+      "date": "2021-05-14",
+      "originaldate": "2020-01-01",
+      "genre": "Electronic",
+      "compilation": true,
+      "isrc": "USABC2100001",
+      "barcode": "0123456789012",
+      "label": "Test Label",
+      "catalognumber": "TL-001",
+      "copyright": "℗ 2021 Test",
+      "composer": "Виктор Цой",
+      "bpm": 128,
+      "key": "Am",
+      "comment": "A comment",
+      "media": "Digital Media",
+      "musicbrainz_recordingid": "11111111-1111-1111-1111-111111111111",
+      "musicbrainz_trackid": "22222222-2222-2222-2222-222222222222",
+      "musicbrainz_albumid": "33333333-3333-3333-3333-333333333333",
+      "musicbrainz_releasegroupid": "44444444-4444-4444-4444-444444444444",
+      "musicbrainz_artistid": [
+        "55555555-5555-5555-5555-555555555555",
+        "66666666-6666-6666-6666-666666666666"
+      ],
+      "musicbrainz_albumartistid": [
+        "55555555-5555-5555-5555-555555555555"
+      ],
+      "releasetype": "album",
+      "releasestatus": "official",
+      "releasecountry": "XW",
+      "acoustid_id": "77777777-7777-7777-7777-777777777777",
+      "replaygain_track_gain": -6.54,
+      "replaygain_track_peak": 0.988547,
+      "replaygain_album_gain": -7.1,
+      "replaygain_album_peak": 1,
+      "lyrics": "[00:01.00]Первая строка\n[00:02.50]Second line",
+      "rating": 5,
+      "explicit": true,
+      "valence_id": "0193f0c2-aaaa-7bbb-8ccc-dddddddddddd",
+      "valence_owner": "dev-0f3a9c",
+      "tidal_track_id": "123456789",
+      "tidal_album_id": "98765432",
+      "bandcamp_item_id": "1122334455",
+      "bandcamp_track_id": "5544332211",
+      "bandcamp_url": "https://artist.bandcamp.com/track/blizhe",
+      "source": "tidal",
+      "source_quality": "lossless:16:44100"
+    },
+    "format": {
+      "container": "flac",
+      "codec": "flac",
+      "lossless": true,
+      "bitrate": 99248,
+      "sampleRate": 44100,
+      "bitDepth": 16,
+      "channels": 2,
+      "durationMs": 1000
+    },
+    "tagTypes": [
+      "vorbis"
+    ],
+    "picture": {
+      "mime": "image/png",
+      "length": 101,
+      "sha256": "b3fe4ad6e5c269ad8ee36d5b002f60ed7fa1f0502fc5f7b273f641726c040412"
+    }
+  },
+  "desktop.ogg": {
+    "tags": {
+      "title": "ближе",
+      "artist": "xXXi_wud_nvrstøp_ÜXXx",
+      "artists": [
+        "xXXi_wud_nvrstøp_ÜXXx",
+        "Кино"
+      ],
+      "album": "Ünïcødé Album (Deluxe)",
+      "albumartist": "xXXi_wud_nvrstøp_ÜXXx",
+      "artistsort": "wud nvrstop, xXXi",
+      "albumartistsort": "wud nvrstop",
+      "titlesort": "blizhe",
+      "albumsort": "Unicode Album",
+      "tracknumber": 3,
+      "totaltracks": 12,
+      "discnumber": 1,
+      "totaldiscs": 2,
+      "date": "2021-05-14",
+      "originaldate": "2020-01-01",
+      "genre": "Electronic",
+      "isrc": "USABC2100001",
+      "barcode": "0123456789012",
+      "label": "Test Label",
+      "catalognumber": "TL-001",
+      "copyright": "℗ 2021 Test",
+      "composer": "Виктор Цой",
+      "bpm": 128,
+      "key": "Am",
+      "comment": "A comment",
+      "media": "Digital Media",
+      "musicbrainz_recordingid": "11111111-1111-1111-1111-111111111111",
+      "musicbrainz_trackid": "22222222-2222-2222-2222-222222222222",
+      "musicbrainz_albumid": "33333333-3333-3333-3333-333333333333",
+      "musicbrainz_releasegroupid": "44444444-4444-4444-4444-444444444444",
+      "musicbrainz_artistid": [
+        "55555555-5555-5555-5555-555555555555",
+        "66666666-6666-6666-6666-666666666666"
+      ],
+      "musicbrainz_albumartistid": [
+        "55555555-5555-5555-5555-555555555555"
+      ],
+      "releasetype": "album",
+      "releasestatus": "official",
+      "releasecountry": "XW",
+      "acoustid_id": "77777777-7777-7777-7777-777777777777",
+      "replaygain_track_gain": -6.54,
+      "replaygain_track_peak": 0.988547,
+      "replaygain_album_gain": -7.1,
+      "replaygain_album_peak": 1,
+      "lyrics": "[00:01.00]Первая строка\n[00:02.50]Second line",
+      "rating": 3,
+      "explicit": true,
+      "valence_id": "0193f0c2-aaaa-7bbb-8ccc-dddddddddddd",
+      "valence_owner": "dev-0f3a9c",
+      "tidal_track_id": "123456789",
+      "tidal_album_id": "98765432",
+      "bandcamp_item_id": "1122334455",
+      "bandcamp_track_id": "5544332211",
+      "bandcamp_url": "https://artist.bandcamp.com/track/blizhe",
+      "source": "tidal",
+      "source_quality": "lossless:16:44100"
+    },
+    "format": {
+      "container": "ogg",
+      "codec": "vorbis",
+      "lossless": false,
+      "bitrate": 96000,
+      "sampleRate": 44100,
+      "bitDepth": 0,
+      "channels": 2,
+      "durationMs": 1000
+    },
+    "tagTypes": [
+      "vorbis"
+    ],
+    "picture": {
+      "mime": "image/jpeg",
+      "length": 224,
+      "sha256": "7ce9f59d49f6973e865298bfa3cbe78ed8229efb3d578ff96fe5a5569088fdd2"
+    }
+  },
+  "desktop.opus": {
+    "tags": {
+      "title": "ближе",
+      "artist": "xXXi_wud_nvrstøp_ÜXXx",
+      "artists": [
+        "xXXi_wud_nvrstøp_ÜXXx",
+        "Кино"
+      ],
+      "album": "Ünïcødé Album (Deluxe)",
+      "albumartist": "xXXi_wud_nvrstøp_ÜXXx",
+      "artistsort": "wud nvrstop, xXXi",
+      "albumartistsort": "wud nvrstop",
+      "titlesort": "blizhe",
+      "albumsort": "Unicode Album",
+      "tracknumber": 3,
+      "totaltracks": 12,
+      "discnumber": 1,
+      "totaldiscs": 2,
+      "date": "2021-05-14",
+      "originaldate": "2020-01-01",
+      "genre": "Electronic",
+      "isrc": "USABC2100001",
+      "barcode": "0123456789012",
+      "label": "Test Label",
+      "catalognumber": "TL-001",
+      "copyright": "℗ 2021 Test",
+      "composer": "Виктор Цой",
+      "bpm": 128,
+      "key": "Am",
+      "comment": "A comment",
+      "media": "Digital Media",
+      "musicbrainz_recordingid": "11111111-1111-1111-1111-111111111111",
+      "musicbrainz_trackid": "22222222-2222-2222-2222-222222222222",
+      "musicbrainz_albumid": "33333333-3333-3333-3333-333333333333",
+      "musicbrainz_releasegroupid": "44444444-4444-4444-4444-444444444444",
+      "musicbrainz_artistid": [
+        "55555555-5555-5555-5555-555555555555",
+        "66666666-6666-6666-6666-666666666666"
+      ],
+      "musicbrainz_albumartistid": [
+        "55555555-5555-5555-5555-555555555555"
+      ],
+      "releasetype": "album",
+      "releasestatus": "official",
+      "releasecountry": "XW",
+      "acoustid_id": "77777777-7777-7777-7777-777777777777",
+      "replaygain_track_gain": -6.54,
+      "replaygain_track_peak": 0.988547,
+      "replaygain_album_gain": -7.1,
+      "replaygain_album_peak": 1,
+      "lyrics": "[00:01.00]Первая строка\n[00:02.50]Second line",
+      "rating": 2,
+      "explicit": true,
+      "valence_id": "0193f0c2-aaaa-7bbb-8ccc-dddddddddddd",
+      "valence_owner": "dev-0f3a9c",
+      "tidal_track_id": "123456789",
+      "tidal_album_id": "98765432",
+      "bandcamp_item_id": "1122334455",
+      "bandcamp_track_id": "5544332211",
+      "bandcamp_url": "https://artist.bandcamp.com/track/blizhe",
+      "source": "tidal",
+      "source_quality": "lossless:16:44100"
+    },
+    "format": {
+      "container": "ogg",
+      "codec": "opus",
+      "lossless": false,
+      "bitrate": 20400,
+      "sampleRate": 48000,
+      "bitDepth": 0,
+      "channels": 2,
+      "durationMs": 1000
+    },
+    "tagTypes": [
+      "vorbis"
+    ],
+    "picture": {
+      "mime": "image/jpeg",
+      "length": 224,
+      "sha256": "7ce9f59d49f6973e865298bfa3cbe78ed8229efb3d578ff96fe5a5569088fdd2"
+    }
+  },
+  "desktop_aac.m4a": {
+    "tags": {
+      "title": "ближе",
+      "artist": "xXXi_wud_nvrstøp_ÜXXx",
+      "artists": [
+        "xXXi_wud_nvrstøp_ÜXXx",
+        "Кино"
+      ],
+      "album": "Ünïcødé Album (Deluxe)",
+      "albumartist": "xXXi_wud_nvrstøp_ÜXXx",
+      "artistsort": "wud nvrstop, xXXi",
+      "albumartistsort": "wud nvrstop",
+      "titlesort": "blizhe",
+      "albumsort": "Unicode Album",
+      "tracknumber": 3,
+      "totaltracks": 12,
+      "discnumber": 1,
+      "totaldiscs": 2,
+      "date": "2021",
+      "originaldate": "2020-01-01",
+      "genre": "Electronic",
+      "compilation": true,
+      "isrc": "USABC2100001",
+      "barcode": "0123456789012",
+      "label": "Test Label",
+      "catalognumber": "TL-001",
+      "copyright": "℗ 2021 Test",
+      "composer": "Виктор Цой",
+      "bpm": 128,
+      "comment": "A comment",
+      "media": "Digital Media",
+      "musicbrainz_recordingid": "11111111-1111-1111-1111-111111111111",
+      "musicbrainz_trackid": "22222222-2222-2222-2222-222222222222",
+      "musicbrainz_albumid": "33333333-3333-3333-3333-333333333333",
+      "musicbrainz_releasegroupid": "44444444-4444-4444-4444-444444444444",
+      "musicbrainz_artistid": [
+        "55555555-5555-5555-5555-555555555555",
+        "66666666-6666-6666-6666-666666666666"
+      ],
+      "musicbrainz_albumartistid": [
+        "55555555-5555-5555-5555-555555555555"
+      ],
+      "releasetype": "album",
+      "releasestatus": "official",
+      "releasecountry": "XW",
+      "acoustid_id": "77777777-7777-7777-7777-777777777777",
+      "replaygain_track_gain": -6.54,
+      "replaygain_track_peak": 0.988547,
+      "replaygain_album_gain": -7.1,
+      "replaygain_album_peak": 1,
+      "lyrics": "[00:01.00]Первая строка\n[00:02.50]Second line",
+      "rating": 3,
+      "explicit": true,
+      "valence_id": "0193f0c2-aaaa-7bbb-8ccc-dddddddddddd",
+      "valence_owner": "dev-0f3a9c",
+      "tidal_track_id": "123456789",
+      "tidal_album_id": "98765432",
+      "bandcamp_item_id": "1122334455",
+      "bandcamp_track_id": "5544332211",
+      "bandcamp_url": "https://artist.bandcamp.com/track/blizhe",
+      "source": "tidal",
+      "source_quality": "lossless:16:44100"
+    },
+    "format": {
+      "container": "m4a/isom/iso2",
+      "codec": "aac",
+      "lossless": false,
+      "bitrate": 96253,
+      "sampleRate": 44100,
+      "bitDepth": 16,
+      "channels": 2,
+      "durationMs": 1023
+    },
+    "tagTypes": [
+      "iTunes"
+    ],
+    "picture": {
+      "mime": "image/jpeg",
+      "length": 224,
+      "sha256": "7ce9f59d49f6973e865298bfa3cbe78ed8229efb3d578ff96fe5a5569088fdd2"
+    }
+  },
+  "desktop_alac.m4a": {
+    "tags": {
+      "title": "ALAC",
+      "artist": "Tester",
+      "album": "Lossless",
+      "tracknumber": 1,
+      "totaltracks": 2,
+      "rating": 5
+    },
+    "format": {
+      "container": "m4a/isom/iso2",
+      "codec": "alac",
+      "lossless": true,
+      "bitrate": 136496,
+      "sampleRate": 44100,
+      "bitDepth": 16,
+      "channels": 2,
+      "durationMs": 1000
+    },
+    "tagTypes": [
+      "iTunes"
+    ],
+    "picture": null
+  },
+  "desktop_v23.mp3": {
+    "tags": {
+      "title": "ближе",
+      "artist": "xXXi_wud_nvrstøp_ÜXXx",
+      "artists": [
+        "xXXi_wud_nvrstøp_ÜXXx",
+        "Кино"
+      ],
+      "album": "Ünïcødé Album (Deluxe)",
+      "albumartist": "xXXi_wud_nvrstøp_ÜXXx",
+      "albumartistsort": "wud nvrstop",
+      "tracknumber": 3,
+      "totaltracks": 12,
+      "discnumber": 1,
+      "totaldiscs": 2,
+      "date": "2021-05-14",
+      "originaldate": "2020",
+      "genre": "Electronic",
+      "isrc": "USABC2100001",
+      "barcode": "0123456789012",
+      "label": "Test Label",
+      "catalognumber": "TL-001",
+      "copyright": "℗ 2021 Test",
+      "composer": "Виктор Цой",
+      "bpm": 128,
+      "key": "Am",
+      "comment": "A comment",
+      "media": "Digital Media",
+      "musicbrainz_recordingid": "11111111-1111-1111-1111-111111111111",
+      "musicbrainz_trackid": "22222222-2222-2222-2222-222222222222",
+      "musicbrainz_albumid": "33333333-3333-3333-3333-333333333333",
+      "musicbrainz_releasegroupid": "44444444-4444-4444-4444-444444444444",
+      "musicbrainz_artistid": [
+        "55555555-5555-5555-5555-555555555555",
+        "66666666-6666-6666-6666-666666666666"
+      ],
+      "musicbrainz_albumartistid": [
+        "55555555-5555-5555-5555-555555555555"
+      ],
+      "releasetype": "album",
+      "releasestatus": "official",
+      "releasecountry": "XW",
+      "acoustid_id": "77777777-7777-7777-7777-777777777777",
+      "replaygain_track_gain": -6.54,
+      "replaygain_track_peak": 0.988547,
+      "replaygain_album_gain": -7.1,
+      "replaygain_album_peak": 1,
+      "lyrics": "[00:01.00]Первая строка\n[00:02.50]Second line",
+      "rating": 4,
+      "explicit": true,
+      "valence_id": "0193f0c2-aaaa-7bbb-8ccc-dddddddddddd",
+      "valence_owner": "dev-0f3a9c",
+      "tidal_track_id": "123456789",
+      "tidal_album_id": "98765432",
+      "bandcamp_item_id": "1122334455",
+      "bandcamp_track_id": "5544332211",
+      "bandcamp_url": "https://artist.bandcamp.com/track/blizhe",
+      "source": "tidal",
+      "source_quality": "lossless:16:44100"
+    },
+    "format": {
+      "container": "mpeg",
+      "codec": "mp3",
+      "lossless": false,
+      "bitrate": 128000,
+      "sampleRate": 44100,
+      "bitDepth": 0,
+      "channels": 2,
+      "durationMs": 1045
+    },
+    "tagTypes": [
+      "ID3v2.3"
+    ],
+    "picture": {
+      "mime": "image/jpeg",
+      "length": 224,
+      "sha256": "7ce9f59d49f6973e865298bfa3cbe78ed8229efb3d578ff96fe5a5569088fdd2"
+    }
+  },
+  "handmade_v22.mp3": {
+    "tags": {
+      "title": "Old Title",
+      "artist": "Old Artist",
+      "album": "Old Album",
+      "tracknumber": 2,
+      "totaltracks": 10,
+      "date": "1998",
+      "genre": "Rock"
+    },
+    "format": {
+      "container": "mpeg",
+      "codec": "mp3",
+      "lossless": false,
+      "bitrate": 128000,
+      "sampleRate": 44100,
+      "bitDepth": 0,
+      "channels": 2,
+      "durationMs": 1045
+    },
+    "tagTypes": [
+      "ID3v2.2"
+    ],
+    "picture": {
+      "mime": "image/jpeg",
+      "length": 224,
+      "sha256": "7ce9f59d49f6973e865298bfa3cbe78ed8229efb3d578ff96fe5a5569088fdd2"
+    }
+  },
+  "handmade_v23_unsync.mp3": {
+    "tags": {
+      "title": "Unsynced",
+      "artist": "Plain Artist",
+      "album": "Plain Album",
+      "tracknumber": 7,
+      "date": "1999-12-31",
+      "genre": "Rock",
+      "comment": "00000001 00000002",
+      "replaygain_album_gain": -2.5,
+      "rating": 3
+    },
+    "format": {
+      "container": "mpeg",
+      "codec": "mp3",
+      "lossless": false,
+      "bitrate": 128000,
+      "sampleRate": 44100,
+      "bitDepth": 0,
+      "channels": 2,
+      "durationMs": 1045
+    },
+    "tagTypes": [
+      "ID3v2.3"
+    ],
+    "picture": {
+      "mime": "image/jpeg",
+      "length": 224,
+      "sha256": "7ce9f59d49f6973e865298bfa3cbe78ed8229efb3d578ff96fe5a5569088fdd2"
+    }
+  },
+  "handmade_v24.mp3": {
+    "tags": {
+      "title": "ближе (v2.4)",
+      "artist": "Artist One",
+      "artists": [
+        "Artist One",
+        "Артист Два"
+      ],
+      "album": "Альбом",
+      "albumartist": "xXXi_wud_nvrstøp_ÜXXx",
+      "artistsort": "One, Artist",
+      "tracknumber": 5,
+      "totaltracks": 9,
+      "discnumber": 2,
+      "date": "2019-03-07",
+      "originaldate": "2018-11-02",
+      "genre": "Rock",
+      "compilation": true,
+      "composer": "Composer A",
+      "bpm": 97,
+      "comment": "v2.4 comment",
+      "musicbrainz_artistid": [
+        "55555555-5555-5555-5555-555555555555",
+        "66666666-6666-6666-6666-666666666666"
+      ],
+      "replaygain_track_gain": 1.25,
+      "replaygain_track_peak": 0.5,
+      "lyrics": "Plain lyrics\nLine two",
+      "rating": 5,
+      "valence_id": "0193f0c2-2424-7bbb-8ccc-000000000024",
+      "source": "bandcamp"
+    },
+    "format": {
+      "container": "mpeg",
+      "codec": "mp3",
+      "lossless": false,
+      "bitrate": 160000,
+      "sampleRate": 48000,
+      "bitDepth": 0,
+      "channels": 2,
+      "durationMs": 1032
+    },
+    "tagTypes": [
+      "ID3v2.4"
+    ],
+    "picture": {
+      "mime": "image/jpeg",
+      "length": 224,
+      "sha256": "7ce9f59d49f6973e865298bfa3cbe78ed8229efb3d578ff96fe5a5569088fdd2"
+    }
+  },
+  "id3v1_only.mp3": {
+    "tags": {
+      "title": "Übermensch Title",
+      "artist": "V1 Artist",
+      "album": "V1 Album",
+      "tracknumber": 4,
+      "date": "2003",
+      "genre": "Rock",
+      "comment": "v1 comment"
+    },
+    "format": {
+      "container": "mpeg",
+      "codec": "mp3",
+      "lossless": false,
+      "bitrate": 64000,
+      "sampleRate": 44100,
+      "bitDepth": 0,
+      "channels": 1,
+      "durationMs": 1045
+    },
+    "tagTypes": [
+      "ID3v1"
+    ],
+    "picture": null
+  },
+  "pcm.aiff": {
+    "tags": {},
+    "format": {
+      "container": "aiff",
+      "codec": "pcm",
+      "lossless": true,
+      "bitrate": 705600,
+      "sampleRate": 44100,
+      "bitDepth": 16,
+      "channels": 1,
+      "durationMs": 500
+    },
+    "tagTypes": [],
+    "picture": null
+  },
+  "pcm.wav": {
+    "tags": {},
+    "format": {
+      "container": "wave",
+      "codec": "pcm",
+      "lossless": true,
+      "bitrate": 1411200,
+      "sampleRate": 44100,
+      "bitDepth": 16,
+      "channels": 2,
+      "durationMs": 500
+    },
+    "tagTypes": [
+      "exif"
+    ],
+    "picture": null
+  },
+  "vbr_xing.mp3": {
+    "tags": {
+      "title": "VBR",
+      "artist": "Tester",
+      "rating": 2
+    },
+    "format": {
+      "container": "mpeg",
+      "codec": "mp3",
+      "lossless": false,
+      "bitrate": 34329,
+      "sampleRate": 44100,
+      "bitDepth": 0,
+      "channels": 2,
+      "durationMs": 3030
+    },
+    "tagTypes": [
+      "ID3v2.3"
+    ],
+    "picture": null
+  }
+}

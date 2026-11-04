@@ -1,0 +1,424 @@
+{
+ "devices": {
+  "A": "aaaaaaaaaaaa0001",
+  "B": "bbbbbbbbbbbb0002",
+  "C": "cccccccccccc0003"
+ },
+ "playsReadOrder": [
+  {
+   "hlc": "0mw0rm3gl-0000-bbbbbbbbbbbb0002",
+   "deviceId": "bbbbbbbbbbbb0002",
+   "file": "plays-2026-10.jsonl"
+  },
+  {
+   "hlc": "0mw0rohgi-0000-bbbbbbbbbbbb0002",
+   "deviceId": "bbbbbbbbbbbb0002",
+   "file": "plays-2026-11.jsonl"
+  },
+  {
+   "hlc": "0mw0zzzzw-0000-bbbbbbbbbbbb0002",
+   "deviceId": "bbbbbbbbbbbb0002",
+   "file": "playsextra.jsonl"
+  },
+  {
+   "hlc": "0mw1lds8d-0000-aaaaaaaaaaaa0001",
+   "deviceId": "aaaaaaaaaaaa0001",
+   "file": "plays-2026-11.jsonl"
+  },
+  {
+   "hlc": "0mw1lds8d-0000-bbbbbbbbbbbb0002",
+   "deviceId": "bbbbbbbbbbbb0002",
+   "file": "plays-2026-11.jsonl"
+  },
+  {
+   "hlc": "0mw1lf9kd-0000-aaaaaaaaaaaa0001",
+   "deviceId": "aaaaaaaaaaaa0001",
+   "file": "plays-2026-11.jsonl"
+  },
+  {
+   "hlc": "0mw1lfa00-0000-aaaaaaaaaaaa0001",
+   "deviceId": "aaaaaaaaaaaa0001",
+   "file": "plays-2026-11.jsonl"
+  },
+  {
+   "hlc": "0mw1lfa01-0000-aaaaaaaaaaaa0001",
+   "deviceId": "aaaaaaaaaaaa0001",
+   "file": "plays-2026-11.jsonl"
+  },
+  {
+   "hlc": "0mw1lfa02-0000-aaaaaaaaaaaa0001",
+   "deviceId": "aaaaaaaaaaaa0001",
+   "file": "plays-2026-11.jsonl"
+  },
+  {
+   "hlc": "0mw1lfa03-0000-aaaaaaaaaaaa0001",
+   "deviceId": "aaaaaaaaaaaa0001",
+   "file": "plays-2026-11.jsonl"
+  },
+  {
+   "hlc": "0mw1lfa04-0000-aaaaaaaaaaaa0001",
+   "deviceId": "aaaaaaaaaaaa0001",
+   "file": "plays-2026-11.jsonl"
+  },
+  {
+   "hlc": "0mw1lfa05-0000-aaaaaaaaaaaa0001",
+   "deviceId": "aaaaaaaaaaaa0001",
+   "file": "plays-2026-11.jsonl"
+  },
+  {
+   "hlc": "0mw1lfa06-0000-aaaaaaaaaaaa0001",
+   "deviceId": "aaaaaaaaaaaa0001",
+   "file": "plays-2026-11.jsonl"
+  },
+  {
+   "hlc": "0mw1lfa08-0000-aaaaaaaaaaaa0001",
+   "deviceId": "aaaaaaaaaaaa0001",
+   "file": "plays-2026-11.jsonl"
+  },
+  {
+   "hlc": "0mw1lfa0a-0000-aaaaaaaaaaaa0001",
+   "deviceId": "aaaaaaaaaaaa0001",
+   "file": "plays-2026-11.jsonl"
+  },
+  {
+   "hlc": "0mw1lfa0b-0000-aaaaaaaaaaaa0001",
+   "deviceId": "aaaaaaaaaaaa0001",
+   "file": "plays-2026-11.jsonl"
+  },
+  {
+   "hlc": "0mw1lfa0c-0000-aaaaaaaaaaaa0001",
+   "deviceId": "aaaaaaaaaaaa0001",
+   "file": "plays-2026-11.jsonl"
+  },
+  {
+   "hlc": "0mw1lfa0d-0000-aaaaaaaaaaaa0001",
+   "deviceId": "aaaaaaaaaaaa0001",
+   "file": "plays-2026-11.jsonl"
+  },
+  {
+   "hlc": "0mw1lfa0e-0000-aaaaaaaaaaaa0001",
+   "deviceId": "aaaaaaaaaaaa0001",
+   "file": "plays-2026-11.jsonl"
+  },
+  {
+   "hlc": "0mw1lfa0f-0000-aaaaaaaaaaaa0001",
+   "deviceId": "aaaaaaaaaaaa0001",
+   "file": "plays-2026-11.jsonl"
+  },
+  {
+   "hlc": "0mw1lfa0g-0000-aaaaaaaaaaaa0001",
+   "deviceId": "aaaaaaaaaaaa0001",
+   "file": "plays-2026-11.jsonl"
+  },
+  {
+   "hlc": "0mw1lfa0h-0000-aaaaaaaaaaaa0001",
+   "deviceId": "aaaaaaaaaaaa0001",
+   "file": "plays-2026-11.jsonl"
+  },
+  {
+   "hlc": "0mw1lfa0i-0000-aaaaaaaaaaaa0001",
+   "deviceId": "aaaaaaaaaaaa0001",
+   "file": "plays-2026-11.jsonl"
+  }
+ ],
+ "nPlays": 22,
+ "nFavs": 12,
+ "plays": [
+  {
+   "device_id": "bbbbbbbbbbbb0002",
+   "hlc": "0mw0rm3gl-0000-bbbbbbbbbbbb0002",
+   "track_key": "1ff9e937-61cd-40aa-9d49-db7b7170f148",
+   "played_at": 1793714911707,
+   "ms": 113541,
+   "completed": 1,
+   "skipped": 0
+  },
+  {
+   "device_id": "bbbbbbbbbbbb0002",
+   "hlc": "0mw0rohgi-0000-bbbbbbbbbbbb0002",
+   "track_key": "3ba1c882-8bb4-451a-8fa9-64a31a398511",
+   "played_at": 1793715025412,
+   "ms": 111470,
+   "completed": 1,
+   "skipped": 0
+  },
+  {
+   "device_id": "bbbbbbbbbbbb0002",
+   "hlc": "0mw0zzzzw-0000-bbbbbbbbbbbb0002",
+   "track_key": "prefix match",
+   "played_at": 1,
+   "ms": 1,
+   "completed": 0,
+   "skipped": 0
+  },
+  {
+   "device_id": "aaaaaaaaaaaa0001",
+   "hlc": "0mw1lds8d-0000-aaaaaaaaaaaa0001",
+   "track_key": "66f343d2-8370-43c5-b699-b3315a3b995d",
+   "played_at": 1793765024371,
+   "ms": 387,
+   "completed": 0,
+   "skipped": 1
+  },
+  {
+   "device_id": "bbbbbbbbbbbb0002",
+   "hlc": "0mw1lds8d-0000-bbbbbbbbbbbb0002",
+   "track_key": "same-ms-as-A",
+   "played_at": 1,
+   "ms": 1,
+   "completed": 0,
+   "skipped": 1
+  },
+  {
+   "device_id": "aaaaaaaaaaaa0001",
+   "hlc": "0mw1lf9kd-0000-aaaaaaaaaaaa0001",
+   "track_key": "9befbb1d-59a3-48ef-87e1-5d93b4d48f0d",
+   "played_at": 1793765026093,
+   "ms": 68917,
+   "completed": 0,
+   "skipped": 0
+  },
+  {
+   "device_id": "aaaaaaaaaaaa0001",
+   "hlc": "0mw1lfa01-0000-aaaaaaaaaaaa0001",
+   "track_key": "strings",
+   "played_at": 1793765030000,
+   "ms": 1500,
+   "completed": 1,
+   "skipped": 0
+  },
+  {
+   "device_id": "aaaaaaaaaaaa0001",
+   "hlc": "0mw1lfa02-0000-aaaaaaaaaaaa0001",
+   "track_key": "nulls",
+   "played_at": 0,
+   "ms": 0,
+   "completed": 0,
+   "skipped": 0
+  },
+  {
+   "device_id": "aaaaaaaaaaaa0001",
+   "hlc": "0mw1lfa03-0000-aaaaaaaaaaaa0001",
+   "track_key": "bools",
+   "played_at": 1,
+   "ms": 0,
+   "completed": 1,
+   "skipped": 0
+  },
+  {
+   "device_id": "aaaaaaaaaaaa0001",
+   "hlc": "0mw1lfa04-0000-aaaaaaaaaaaa0001",
+   "track_key": "missing",
+   "played_at": 0,
+   "ms": 0,
+   "completed": 0,
+   "skipped": 0
+  },
+  {
+   "device_id": "aaaaaaaaaaaa0001",
+   "hlc": "0mw1lfa05-0000-aaaaaaaaaaaa0001",
+   "track_key": "extra",
+   "played_at": 5,
+   "ms": 6,
+   "completed": 0,
+   "skipped": 1
+  },
+  {
+   "device_id": "aaaaaaaaaaaa0001",
+   "hlc": "0mw1lfa06-0000-aaaaaaaaaaaa0001",
+   "track_key": "ünï 😀 x",
+   "played_at": 7,
+   "ms": 8,
+   "completed": 0,
+   "skipped": 0
+  },
+  {
+   "device_id": "aaaaaaaaaaaa0001",
+   "hlc": "0mw1lfa08-0000-aaaaaaaaaaaa0001",
+   "track_key": "crlf",
+   "played_at": 10,
+   "ms": 10,
+   "completed": 0,
+   "skipped": 0
+  },
+  {
+   "device_id": "aaaaaaaaaaaa0001",
+   "hlc": "0mw1lfa0a-0000-aaaaaaaaaaaa0001",
+   "track_key": "esc\"aped\\/A\n",
+   "played_at": 11,
+   "ms": 11,
+   "completed": 0,
+   "skipped": 0
+  },
+  {
+   "device_id": "aaaaaaaaaaaa0001",
+   "hlc": "0mw1lfa0b-0000-aaaaaaaaaaaa0001",
+   "track_key": "numstr",
+   "played_at": 12,
+   "ms": 16,
+   "completed": 0,
+   "skipped": 0
+  },
+  {
+   "device_id": "aaaaaaaaaaaa0001",
+   "hlc": "0mw1lfa0c-0000-aaaaaaaaaaaa0001",
+   "track_key": "neg",
+   "played_at": -5,
+   "ms": 0,
+   "completed": 0,
+   "skipped": 0
+  },
+  {
+   "device_id": "aaaaaaaaaaaa0001",
+   "hlc": "0mw1lfa0d-0000-aaaaaaaaaaaa0001",
+   "track_key": "exp",
+   "played_at": 1500,
+   "ms": 200,
+   "completed": 0,
+   "skipped": 1
+  },
+  {
+   "device_id": "aaaaaaaaaaaa0001",
+   "hlc": "0mw1lfa0e-0000-aaaaaaaaaaaa0001",
+   "track_key": "objs",
+   "played_at": 7,
+   "ms": 0,
+   "completed": 1,
+   "skipped": 1
+  },
+  {
+   "device_id": "aaaaaaaaaaaa0001",
+   "hlc": "0mw1lfa0f-0000-aaaaaaaaaaaa0001",
+   "track_key": "",
+   "played_at": 1,
+   "ms": 1,
+   "completed": 1,
+   "skipped": 0
+  },
+  {
+   "device_id": "aaaaaaaaaaaa0001",
+   "hlc": "0mw1lfa0g-0000-aaaaaaaaaaaa0001",
+   "track_key": "indented",
+   "played_at": 1,
+   "ms": 1,
+   "completed": 1,
+   "skipped": 0
+  },
+  {
+   "device_id": "aaaaaaaaaaaa0001",
+   "hlc": "0mw1lfa0h-0000-aaaaaaaaaaaa0001",
+   "track_key": "badnum",
+   "played_at": 0,
+   "ms": null,
+   "completed": 1,
+   "skipped": 0
+  },
+  {
+   "device_id": "aaaaaaaaaaaa0001",
+   "hlc": "0mw1lfa0i-0000-aaaaaaaaaaaa0001",
+   "track_key": "nan-ish",
+   "played_at": 0,
+   "ms": 0,
+   "completed": 0,
+   "skipped": 0
+  }
+ ],
+ "favorites": [
+  {
+   "kind": "a",
+   "item_key": "100 gecs/10,000 gecs (2023)|10 000 gecs",
+   "liked": 0,
+   "hlc": "0mw1lk9aa-0000-bbbbbbbbbbbb0002",
+   "at": 1793765328130
+  },
+  {
+   "kind": "r",
+   "item_key": "100 gecs",
+   "liked": 1,
+   "hlc": "0mw1lk9ab-0000-aaaaaaaaaaaa0001",
+   "at": 1793765328131
+  },
+  {
+   "kind": "r",
+   "item_key": "on missing",
+   "liked": 0,
+   "hlc": "0mw1lk9aj-0000-aaaaaaaaaaaa0001",
+   "at": 1793765328139
+  },
+  {
+   "kind": "r",
+   "item_key": "on string",
+   "liked": 1,
+   "hlc": "0mw1lk9ai-0000-aaaaaaaaaaaa0001",
+   "at": 1793765328138
+  },
+  {
+   "kind": "t",
+   "item_key": "387bc1bd-fd8c-495e-9230-431716b91784",
+   "liked": 0,
+   "hlc": "0mw1lk8wg-0000-aaaaaaaaaaaa0001",
+   "at": 1793765327632
+  },
+  {
+   "kind": "t",
+   "item_key": "atstr",
+   "liked": 1,
+   "hlc": "0mw1lk9af-0000-aaaaaaaaaaaa0001",
+   "at": 1793765328135
+  },
+  {
+   "kind": "t",
+   "item_key": "fracat",
+   "liked": 1,
+   "hlc": "0mw1lk9ag-0000-aaaaaaaaaaaa0001",
+   "at": 1700000000001
+  },
+  {
+   "kind": "t",
+   "item_key": "moved",
+   "liked": 1,
+   "hlc": "0mw1lk9ae-0000-aaaaaaaaaaaa0001",
+   "at": 1700000000000
+  },
+  {
+   "kind": "t",
+   "item_key": "neg at",
+   "liked": 1,
+   "hlc": "0mw1lk9al-0000-aaaaaaaaaaaa0001",
+   "at": -2
+  }
+ ],
+ "cursors": [
+  {
+   "file": "aaaaaaaaaaaa0001/favorites.jsonl",
+   "offset": 1184,
+   "size": 1184
+  },
+  {
+   "file": "aaaaaaaaaaaa0001/plays-2026-11.jsonl",
+   "offset": 1998,
+   "size": 2052
+  },
+  {
+   "file": "bbbbbbbbbbbb0002/favorites.jsonl",
+   "offset": 209,
+   "size": 209
+  },
+  {
+   "file": "bbbbbbbbbbbb0002/plays-2026-10.jsonl",
+   "offset": 128,
+   "size": 128
+  },
+  {
+   "file": "bbbbbbbbbbbb0002/plays-2026-11.jsonl",
+   "offset": 215,
+   "size": 215
+  },
+  {
+   "file": "bbbbbbbbbbbb0002/playsextra.jsonl",
+   "offset": 87,
+   "size": 87
+  }
+ ],
+ "clockAfterIngest": "0mw1lk9al-0002-ffffffffffff0009"
+}
