@@ -17,10 +17,12 @@ import {
   parseChrome,
   playbackTitle,
   TaskbarBatch,
+  thumbarSpecs,
   thumbarSvg,
   trafficLightPosition,
   validColor,
   type PlaybackChrome,
+  type ThumbarGlyph,
   type WindowChrome,
 } from './chrome-state'
 
@@ -68,7 +70,7 @@ function applyOverlay(win: BrowserWindow, symbolColor: string): void {
 
 // ---- thumbnail toolbar (Windows) ----
 
-type Glyph = 'prev' | 'play' | 'pause' | 'next'
+type Glyph = ThumbarGlyph
 const iconSets = new Map<string, Promise<Record<Glyph, NativeImage>>>()
 
 function iconSet(color: string): Promise<Record<Glyph, NativeImage>> {
@@ -92,23 +94,49 @@ function iconSet(color: string): Promise<Record<Glyph, NativeImage>> {
   return p
 }
 
-let thumbarKey = ''
+// The thumbnail is used most while the window is minimized, when isVisible() is false, so updates
+// go through in every window state. A rejected update matters: Electron drops the old buttons'
+// click handlers before it validates the new ones, so a failed call leaves buttons that show but
+// do nothing. Rejected updates are retried, and showing the window re-applies the current buttons.
+const THUMBAR_RETRY_MS = [250, 500, 1000, 2000, 4000]
+let thumbarWanted = '' // state last sent (or being sent); cleared when Windows keeps refusing it
+let thumbarGen = 0
+let thumbarRetry: NodeJS.Timeout | null = null
 
-async function applyThumbar(win: BrowserWindow, p: PlaybackChrome): Promise<void> {
-  if (!win32 || win.isDestroyed() || !win.isVisible()) return
+function refreshThumbar(win: BrowserWindow, force = false): void {
+  if (!win32 || !playback || win.isDestroyed()) return
   const color = nativeTheme.shouldUseDarkColorsForSystemIntegratedUI ? '#ffffff' : '#1a1a1a'
-  const key = `${p.hasTrack}|${p.playing}|${color}`
-  if (key === thumbarKey) return
-  thumbarKey = key
+  const key = `${playback.hasTrack}|${playback.playing}|${color}`
+  if (!force && key === thumbarWanted) return
+  thumbarWanted = key
+  const gen = ++thumbarGen
+  if (thumbarRetry) clearTimeout(thumbarRetry)
+  thumbarRetry = null
+  void attemptThumbar(win, playback, color, gen, 0)
+}
+
+async function attemptThumbar(win: BrowserWindow, p: PlaybackChrome, color: string, gen: number, tries: number): Promise<void> {
   const icons = await iconSet(color).catch(() => null)
-  if (!icons || win.isDestroyed() || thumbarKey !== key) return
-  const flags = p.hasTrack ? ['enabled'] : ['disabled']
-  const ok = win.setThumbarButtons([
-    { tooltip: 'Previous', icon: icons.prev, flags, click: () => sendPlayerCommand({ type: 'prev' }) },
-    { tooltip: p.playing ? 'Pause' : 'Play', icon: p.playing ? icons.pause : icons.play, flags, click: () => sendPlayerCommand({ type: 'toggle' }) },
-    { tooltip: 'Next', icon: icons.next, flags, click: () => sendPlayerCommand({ type: 'next' }) },
-  ])
-  if (!ok) thumbarKey = ''
+  if (gen !== thumbarGen || win.isDestroyed()) return
+  let ok = false
+  if (icons) {
+    try {
+      ok = win.setThumbarButtons(
+        thumbarSpecs(p).map((b) => ({ tooltip: b.tooltip, icon: icons[b.glyph], flags: b.flags as Electron.ThumbarButton['flags'], click: () => sendPlayerCommand({ type: b.command }) })),
+      )
+    } catch {
+      ok = false
+    }
+  }
+  if (ok) return
+  if (tries >= THUMBAR_RETRY_MS.length) {
+    thumbarWanted = ''
+    return
+  }
+  thumbarRetry = setTimeout(() => {
+    thumbarRetry = null
+    void attemptThumbar(win, p, color, gen, tries + 1)
+  }, THUMBAR_RETRY_MS[tries])
 }
 
 // ---- notifications ----
@@ -154,10 +182,9 @@ export function attachMainWindow(win: BrowserWindow): void {
   win.webContents.on('did-finish-load', () => {
     if (zoom !== 1 && !win.isDestroyed()) win.webContents.setZoomFactor(zoom)
   })
-  win.on('show', () => {
-    thumbarKey = ''
-    if (playback) void applyThumbar(win, playback)
-  })
+  // A new window, or one back from the tray, has a fresh taskbar button with no thumbnail buttons.
+  thumbarWanted = ''
+  win.on('show', () => refreshThumbar(win, true))
 }
 
 export function registerWindowChrome(deps: ChromeDeps): void {
@@ -190,12 +217,12 @@ export function registerWindowChrome(deps: ChromeDeps): void {
     playback = { playing: !!p?.playing, hasTrack: !!p?.hasTrack, title: typeof p?.title === 'string' ? p.title : undefined, artist: typeof p?.artist === 'string' ? p.artist : undefined }
     const title = playbackTitle(playback)
     if (win.getTitle() !== title) win.setTitle(title)
-    void applyThumbar(win, playback)
+    refreshThumbar(win)
   })
   onMessage('notify:track', (_sender, t) => void notifyTrack(deps, t).catch(() => {}))
   nativeTheme.on('updated', () => {
     const win = deps.mainWindow()
-    if (win && playback) void applyThumbar(win, playback)
+    if (win) refreshThumbar(win)
   })
 }
 

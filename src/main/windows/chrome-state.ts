@@ -82,6 +82,28 @@ export class TaskbarBatch {
   }
 }
 
+export type ThumbarGlyph = 'prev' | 'play' | 'pause' | 'next'
+
+export interface ThumbarSpec {
+  tooltip: string
+  glyph: ThumbarGlyph
+  command: 'prev' | 'toggle' | 'next'
+  flags: string[]
+}
+
+/**
+ * The three thumbnail-toolbar buttons for a playback state. Usable buttons get no flags: Windows
+ * rejects the whole update (setThumbarButtons returns false) when a button says 'enabled'.
+ */
+export function thumbarSpecs(p: Pick<PlaybackChrome, 'playing' | 'hasTrack'>): ThumbarSpec[] {
+  const flags = p.hasTrack ? [] : ['disabled']
+  return [
+    { tooltip: 'Previous', glyph: 'prev', command: 'prev', flags },
+    { tooltip: p.playing ? 'Pause' : 'Play', glyph: p.playing ? 'pause' : 'play', command: 'toggle', flags },
+    { tooltip: 'Next', glyph: 'next', command: 'next', flags },
+  ]
+}
+
 /** 16x16 thumbnail-toolbar glyphs. */
 export function thumbarSvg(kind: 'prev' | 'play' | 'pause' | 'next', color: string, px: number): string {
   const paths: Record<typeof kind, string> = {

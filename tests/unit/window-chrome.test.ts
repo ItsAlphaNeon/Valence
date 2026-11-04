@@ -12,6 +12,7 @@ import {
   parseChrome,
   playbackTitle,
   TaskbarBatch,
+  thumbarSpecs,
   thumbarSvg,
   trafficLightPosition,
   validColor,
@@ -65,6 +66,21 @@ describe('window chrome helpers', () => {
     expect(b.update([])).toBeNull()
     // A new burst starts from scratch.
     expect(b.update([{ id: 'c', status: 'running', progress: 0.1 }])).toBeCloseTo(0.1)
+  })
+
+  it('lays out thumbnail-toolbar buttons without the flag Windows rejects', () => {
+    const playing = thumbarSpecs({ playing: true, hasTrack: true })
+    expect(playing.map((b) => [b.tooltip, b.glyph, b.command])).toEqual([
+      ['Previous', 'prev', 'prev'],
+      ['Pause', 'pause', 'toggle'],
+      ['Next', 'next', 'next'],
+    ])
+    // Usable buttons carry no flags at all: passing 'enabled' makes setThumbarButtons fail.
+    expect(playing.every((b) => b.flags.length === 0)).toBe(true)
+    const paused = thumbarSpecs({ playing: false, hasTrack: true })
+    expect(paused[1]).toMatchObject({ tooltip: 'Play', glyph: 'play' })
+    const empty = thumbarSpecs({ playing: false, hasTrack: false })
+    expect(empty.every((b) => b.flags.length === 1 && b.flags[0] === 'disabled')).toBe(true)
   })
 
   it('renders thumbnail-toolbar glyphs', async () => {
