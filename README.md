@@ -64,8 +64,10 @@ automatically, and any computer can add music.
 
 ## Downloading Valence
 
-Builds for every platform are made on GitHub: open the latest **Build** run under the **Actions**
-tab and download the file for your system, or grab them from a release when one is published.
+Every platform is built on GitHub. The newest build is always the **Nightly** release on the
+**Releases** page: it's rebuilt each night that something changed, so it has the latest
+improvements (and occasionally the latest bugs). Numbered versions appear there as regular releases
+when they're published.
 
 | System | File |
 |---|---|

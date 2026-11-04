@@ -1,0 +1,132 @@
+# Nightly: every night that master has new commits, builds every package (via build.yml) with a
+# version like 0.1.0-nightly.20261105 and publishes them as the "Nightly" pre-release (tag
+# `nightly`), replacing the previous night's. Nights with nothing new cost only a few seconds.
+#
+# Run it by hand from the Actions tab (Nightly → Run workflow) to publish right away.
+#
+# The repository variable NIGHTLY_PLATFORMS can limit what's built, e.g. "windows,linux,android" to
+# skip the Macs, whose minutes count 10x on a private repo. Unset means everything.
+
+name: Nightly
+
+on:
+  schedule:
+    - cron: '17 10 * * *' # 10:17 UTC, the middle of the night in US time zones (off the hour, when GitHub is busiest)
+  workflow_dispatch:
+    inputs:
+      force:
+        description: Build even if master hasn't changed since the last nightly
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Anything new?
+    runs-on: ubuntu-latest
+    outputs:
+      build: ${{ steps.check.outputs.build }}
+      sha: ${{ steps.check.outputs.sha }}
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # history and tags, to compare with the last nightly
+
+      - id: check
+        env:
+          FORCE: ${{ github.event_name == 'workflow_dispatch' && inputs.force }}
+        run: |
+          sha=$(git rev-parse HEAD)
+          last=$(git rev-parse -q --verify 'refs/tags/nightly^{commit}' || true)
+          base=$(node -p "require('./package.json').version")
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "version=$base-nightly.$(date -u +%Y%m%d)" >> "$GITHUB_OUTPUT"
+          if [ "$sha" = "$last" ] && [ "$FORCE" != true ]; then
+            echo "build=false" >> "$GITHUB_OUTPUT"
+            echo "Nothing new on master since the last nightly (\`${sha:0:7}\`), so no build tonight." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  build:
+    needs: check
+    if: needs.check.outputs.build == 'true'
+    uses: ./.github/workflows/build.yml
+    permissions:
+      contents: write # build.yml's tag-only release job asks for it, though it's skipped here
+    with:
+      only: ${{ vars.NIGHTLY_PLATFORMS || 'all' }}
+      version: ${{ needs.check.outputs.version }}
+    secrets: inherit
+
+  publish:
+    name: Publish the Nightly release
+    needs: [check, build] # only when every build succeeded: no half-finished nightlies
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # move the tag, replace the release
+      actions: write # delete this run's artifacts once the release has the files
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SHA: ${{ needs.check.outputs.sha }}
+      VERSION: ${{ needs.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Write the release notes
+        run: |
+          last=$(git rev-parse -q --verify 'refs/tags/nightly^{commit}' || true)
+          {
+            echo "The newest build of master, from [\`${SHA:0:7}\`](${{ github.server_url }}/${{ github.repository }}/commit/$SHA) on $(date -u '+%B %-d, %Y'). It's replaced every night there's something new, so it can be rough around the edges."
+            echo
+            if [ -z "$last" ]; then
+              echo "### Recent changes"
+              git log --no-merges --format='- %s (%h)' -n 15 "$SHA"
+            elif [ "$last" != "$SHA" ]; then
+              echo "### Changes since the last nightly"
+              git log --no-merges --format='- %s (%h)' "$last..$SHA"
+            else
+              echo "No changes since the last nightly; rebuilt on request."
+            fi
+            echo
+            echo "### Which file?"
+            echo
+            echo "| System | File |"
+            echo "|---|---|"
+            echo "| Windows | \`Valence-Setup-$VERSION.exe\`, or \`Valence-$VERSION.msi\` |"
+            echo "| macOS | \`Valence-$VERSION-mac-arm64.zip\` (Apple Silicon) or \`-mac-x64.zip\` (Intel); unzip to get Valence.app |"
+            echo "| Linux | \`Valence-$VERSION.AppImage\` |"
+            echo "| Android | \`Valence-$VERSION-arm.apk\` for phones, \`-x86.apk\` for emulators |"
+            echo
+            echo "Valence isn't signed by Apple or Microsoft. The first time: on Windows choose **More info → Run anyway**; on macOS right-click Valence.app and choose **Open**; on Android allow your browser or file manager to install apps."
+          } > "$RUNNER_TEMP/notes.md"
+          cat "$RUNNER_TEMP/notes.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Replace the Nightly release
+        run: |
+          ls -l dist
+          gh release delete nightly --yes || true # the tag stays, and moves below
+          git tag -f nightly "$SHA"
+          git push -f origin refs/tags/nightly
+          gh release create nightly dist/* --verify-tag --prerelease --latest=false \
+            --title "Nightly $VERSION" --notes-file "$RUNNER_TEMP/notes.md"
+
+      - name: Delete this run's artifacts
+        run: |
+          for id in $(gh api "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts" -q '.artifacts[].id'); do
+            gh api -X DELETE "repos/${{ github.repository }}/actions/artifacts/$id"
+          done

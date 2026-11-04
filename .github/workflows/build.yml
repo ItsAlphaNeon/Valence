@@ -4,9 +4,10 @@
 #   Linux    AppImage
 #   Android  ARM and x86 APKs
 #
-# Runs when you start it from the Actions tab (where "Only" can limit it to one platform), and for
-# version tags (v*). A tag builds everything and gathers it into a draft GitHub release to look over
-# before publishing.
+# Runs when you start it from the Actions tab (where "Only" can limit it to one platform), for
+# version tags (v*), and as part of the Nightly workflow (nightly.yml), which calls it with a nightly
+# version. A tag builds everything and gathers it into a draft GitHub release to look over before
+# publishing.
 #
 # The repo is private, so runs use the account's Actions minutes, and macOS minutes count 10x and
 # Windows 2x. That's why this doesn't run on every push.
@@ -21,6 +22,16 @@ on:
         type: choice
         options: [all, windows, macos, linux, android]
         default: all
+  workflow_call:
+    inputs:
+      only:
+        description: '"all", or platforms separated by commas (windows, macos, linux, android)'
+        type: string
+        default: all
+      version:
+        description: Version for the packages (e.g. 0.1.0-nightly.20261105); empty keeps package.json's
+        type: string
+        default: ''
   push:
     tags: ['v*']
 
@@ -28,7 +39,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: build-${{ github.ref }}
+  # The workflow name keeps a manual Build and the Nightly's call to this file from cancelling each other.
+  group: ${{ github.workflow }}-build-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -61,8 +73,9 @@ jobs:
             {"platform": "linux", "name": "Linux (AppImage)", "os": "ubuntu-latest", "artifact": "valence-linux",
              "targets": "--linux AppImage --x64", "files": "release/*.AppImage", "fetch": ""}
           ]'
-          echo "desktop=$(jq -c --arg only "$ONLY" '[.[] | select($only == "all" or .platform == $only)]' <<< "$desktop")" >> "$GITHUB_OUTPUT"
-          if [ "$ONLY" = all ] || [ "$ONLY" = android ]; then echo "android=true" >> "$GITHUB_OUTPUT"; else echo "android=false" >> "$GITHUB_OUTPUT"; fi
+          # ONLY is "all" or a comma list such as "windows,linux,android".
+          echo "desktop=$(jq -c --arg only "$ONLY" '[.[] | select($only == "all" or (.platform as $p | $only | split(",") | any(.[]; . == $p)))]' <<< "$desktop")" >> "$GITHUB_OUTPUT"
+          case ",$ONLY," in *,all,*|*,android,*) echo "android=true" >> "$GITHUB_OUTPUT" ;; *) echo "android=false" >> "$GITHUB_OUTPUT" ;; esac
 
   desktop:
     name: ${{ matrix.name }}
@@ -100,8 +113,15 @@ jobs:
           npm_config_arch: ${{ matrix.cross }}
         run: npm ci --cpu=${{ matrix.cross }} --os=darwin
 
+      # A nightly version (0.1.0-nightly.20261105) goes into the app and the file names. Windows
+      # installers need a numeric version, so they get 0.1.0.<run number>, and each nightly MSI
+      # upgrades the last.
       - name: Package
-        run: npx electron-builder ${{ matrix.targets }} --publish never
+        shell: bash
+        env:
+          VERSION: ${{ inputs.version }}
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: npx electron-builder ${{ matrix.targets }} --publish never ${VERSION:+-c.extraMetadata.version=$VERSION}
 
       - name: Check the app's signature and CPU type
         if: runner.os == 'macOS'
@@ -119,12 +139,15 @@ jobs:
           if [ -n "$wrong" ]; then echo "::error::Binaries that aren't ${{ matrix.macArch }}:"; echo "$wrong"; exit 1; fi
           echo "$(wc -l < "$RUNNER_TEMP/macho.txt" | tr -d ' ') Mach-O files, all ${{ matrix.macArch }} apart from better-sqlite3's unused darwin-$other.node"
 
+      # Kept a week: releases hold their own copies, and artifacts count against the account's
+      # Actions storage.
       - uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact }}
           path: ${{ matrix.files }}
           if-no-files-found: error
           compression-level: 0
+          retention-days: 7
 
   android:
     name: Android (ARM, x86)
@@ -140,6 +163,7 @@ jobs:
       # key, so with it the APKs update the copy already on your phone; without it each run signs
       # with a throwaway key and Android will refuse to install over an existing copy.
       ANDROID_DEBUG_KEYSTORE: ${{ secrets.ANDROID_DEBUG_KEYSTORE }}
+      VERSION: ${{ inputs.version }}
     steps:
       - uses: actions/checkout@v7
 
@@ -159,13 +183,15 @@ jobs:
       - name: Test the shared core
         run: ./gradlew :core:test
 
+      # A nightly version only changes the version name: the version code stays put, so your own
+      # builds and nightlies keep installing over each other.
       - name: Build the APKs
         run: |
-          version=$(sed -n 's/.*versionName = "\(.*\)".*/\1/p' app/build.gradle.kts)
+          version=${VERSION:-$(sed -n 's/.*versionName = .*"\([0-9][^"]*\)".*/\1/p' app/build.gradle.kts)}
           mkdir -p dist
-          ./gradlew :app:assembleRelease -Pabis=arm64-v8a,armeabi-v7a
+          ./gradlew :app:assembleRelease -Pabis=arm64-v8a,armeabi-v7a -PversionName="$version"
           cp app/build/outputs/apk/release/app-release.apk "dist/Valence-$version-arm.apk"
-          ./gradlew :app:assembleRelease -Pabis=x86,x86_64
+          ./gradlew :app:assembleRelease -Pabis=x86,x86_64 -PversionName="$version"
           cp app/build/outputs/apk/release/app-release.apk "dist/Valence-$version-x86.apk"
           ls -l dist
 
@@ -175,6 +201,7 @@ jobs:
           path: android/dist/*.apk
           if-no-files-found: error
           compression-level: 0
+          retention-days: 7
 
   release:
     name: Draft release

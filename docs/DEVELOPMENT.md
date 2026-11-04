@@ -79,6 +79,25 @@ Windows 2×); building only what you need saves a lot.
 
   Without it, each run signs with a throwaway key, and Android won't install that over an existing
   copy.
+- Build artifacts are kept for 7 days; releases keep their own copies.
+
+### Nightly releases
+
+`.github/workflows/nightly.yml` runs at 10:17 UTC every night. If master has commits since the last
+nightly, it runs `build.yml` with a version like `0.1.0-nightly.20261105` and publishes the
+packages as the **Nightly** pre-release (tag `nightly`), replacing the previous one. The notes list
+the commits since the last nightly. Nights with nothing new end after a few seconds. Run it by hand
+(**Nightly → Run workflow**) to publish straight away, even without new commits.
+
+- **Versions:** the app and the file names carry the nightly version. Windows installers need a
+  numeric version, so they get `0.1.0.<run number>`, and each nightly MSI upgrades the last. On
+  Android only the version name changes; the version code stays put, so nightlies and your own
+  builds install over each other.
+- **Only complete nightlies are published:** if any platform fails, the previous Nightly stays.
+- **Cost:** a full nightly uses roughly 200 of the account's Actions minutes (the Macs count 10×).
+  To build less, set the repository variable `NIGHTLY_PLATFORMS` (Settings → Secrets and variables
+  → Actions → Variables) to a list such as `windows,linux,android`.
+- After publishing, the run deletes its own artifacts, since the release holds the files.
 
 ## The library on disk
 
