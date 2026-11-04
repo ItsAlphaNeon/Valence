@@ -78,6 +78,7 @@ export interface EditTagsResult {
 
 /** Everything the player needs to play a library track. */
 export interface LibraryPlayItem {
+  /** `t<trackId>`: unique per library row. */
   id: string
   trackId: number
   path: string

@@ -169,7 +169,9 @@ export class ImportService {
         trash: async (abs) => void (await shell.trashItem(abs)),
       })
       if (r.changed.length) await this.library.indexPaths(r.changed)
-      return r
+      for (const m of r.moved) this.library.playlists.pathMoved(m.from, m.to)
+      for (const k of r.rekeys) this.library.rekeyTrack(k.from, k.to)
+      return { changed: r.changed, errors: r.errors }
     })
     handle(IMPORT.archiveStatus, () => this.archive.status())
     handle(IMPORT.chooseArchiveDir, async () => {

@@ -20,7 +20,7 @@ import { embeddable, extForMime, fetchImage, loadImage, pickBest, type Image } f
 import { chooseRelPath, placeFile, toAbs } from '@main/library/organizer'
 import { pool } from '@main/library/scanner'
 import type { LibraryService } from '@main/library/service'
-import { decide, formatQuality, type DedupeDecision } from './dedupe'
+import { claimValenceId, decide, formatQuality, type DedupeDecision } from './dedupe'
 import type { Archive } from './archive'
 import type { ImportAction, Reports, ReportSummary } from './report'
 import { inferLooseCluster, mergeTags, pickGenre, type IdentifyInput, type IdentifyResult, type MetadataService, type ReleaseCandidate } from '@main/metadata'
@@ -175,6 +175,7 @@ export async function runPipeline(release: SourceRelease, deps: PipelineDeps, op
 
   // 4. Merge per track.
   const prepared: Prepared[] = []
+  const claimedIds = new Set<string>()
   const bandcampTags = ((release.raw as { tags?: string[] } | undefined)?.tags ?? []).map((name) => ({ name }))
   for (const [k, { t, probe }] of live.entries()) {
     const mbTags = ident && (mbConfident || !isLoose) ? { ...ident.albumTags, ...(ident.trackTags[k] ?? {}) } : ident?.trackTags[k] ? { ...ident.albumTags, ...ident.trackTags[k] } : null
@@ -199,7 +200,15 @@ export async function runPipeline(release: SourceRelease, deps: PipelineDeps, op
     }
     if (!tags.title) tags.title = relPaths[k].split('/').pop()?.replace(/\.[^.]+$/, '') ?? 'Untitled'
     const quality = decodeSourceQuality(tags.source_quality) ?? formatQuality(probe.format)
-    prepared.push({ index: k, src: t.file, probe, tags, decision: decide(library.db, tags, probe.format.durationMs, quality) })
+    const decision = decide(library.db, tags, probe.format.durationMs, quality)
+    if (decision.kind === 'upgrade') {
+      // A better copy replaces the track rather than starting a new one: it keeps the track's
+      // Valence ID (plays, likes and playlists follow on every device) and its rating.
+      tags.valence_id = decision.existing.valence_id ?? tags.valence_id
+      if (!tags.rating && decision.existing.rating) tags.rating = decision.existing.rating
+    }
+    if (decision.kind !== 'skip') tags.valence_id = claimValenceId(library.db, tags.valence_id, decision.kind === 'upgrade' ? decision.existing.id : null, claimedIds)
+    prepared.push({ index: k, src: t.file, probe, tags, decision })
   }
   ensureTotals(prepared)
 
@@ -337,11 +346,17 @@ export async function runPipeline(release: SourceRelease, deps: PipelineDeps, op
       const quality = p.tags.source_quality
       if (p.decision.kind === 'upgrade') {
         summary.upgraded++
+        const old = p.decision.existing
+        // Playlists point at paths, and the better copy may sit at a new one (another extension).
+        if (finalRel !== old.rel_path) library.playlists.pathMoved(old.rel_path, finalRel)
+        // A track without a Valence ID kept its plays and like under its path; move them to the ID.
+        const rekey = !old.valence_id && p.tags.valence_id ? { from: `path:${old.rel_path}`, to: p.tags.valence_id } : undefined
+        if (rekey) library.rekeyTrack(rekey.from, rekey.to)
         actions.push({
           kind: 'upgrade',
           relPath: finalRel,
-          detail: { title: p.tags.title, artist: p.tags.artist, quality, replaced: p.decision.existing.rel_path, oldQuality: p.decision.existing.source_quality },
-          undo: { removeLibrary: finalRel, removeArchive: archived ?? undefined, restore },
+          detail: { title: p.tags.title, artist: p.tags.artist, quality, replaced: old.rel_path, oldQuality: old.source_quality },
+          undo: { removeLibrary: finalRel, removeArchive: archived ?? undefined, restore, rekey },
         })
       } else {
         summary.added++

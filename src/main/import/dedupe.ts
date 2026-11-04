@@ -2,6 +2,7 @@
 // adding, upgrading (replace with better quality) and skipping. A single and the album version of
 // the same recording are different library entries (singles get their own folder).
 
+import { randomUUID } from 'node:crypto'
 import type { TrackTags, AudioFormat } from '@shared/types'
 import { decodeSourceQuality, isUpgrade, type QualityInfo } from '@shared/quality'
 import { matchKey } from '@shared/sanitize'
@@ -25,9 +26,10 @@ export interface ExistingTrack {
   artist: string
   title: string
   owner_device: string | null
+  rating: number
 }
 
-const COLS = 'id, rel_path, valence_id, source_quality, lossless, codec, bitrate, sample_rate, bit_depth, duration_ms, album, album_artist, artist, title, owner_device'
+const COLS = 'id, rel_path, valence_id, source_quality, lossless, codec, bitrate, sample_rate, bit_depth, duration_ms, album, album_artist, artist, title, owner_device, rating'
 
 export function existingQuality(t: ExistingTrack): QualityInfo {
   return decodeSourceQuality(t.source_quality) ?? { lossless: !!t.lossless, codec: t.codec ?? undefined, bitrate: t.bitrate, sampleRate: t.sample_rate, bitDepth: t.bit_depth }
@@ -49,11 +51,17 @@ function sameArtist(a: string, b: string): boolean {
   return ka === kb || matchKey(primaryArtist(a)) === matchKey(primaryArtist(b))
 }
 
+/** Lengths further apart than this are different cuts (a radio edit, an extended mix), not copies. */
+export const SAME_LENGTH_MS = 3000
+
 export function findExisting(db: DB, tags: TrackTags, durationMs: number): ExistingTrack | null {
   // Rips only ever match rips, and music only music: a rip of a song is not a copy of that song.
   const side = tags.hq_rip ? "hq_rip <> ''" : "hq_rip = ''"
-  const one = (sql: string, ...p: unknown[]) => db.prepare(`SELECT ${COLS} FROM tracks WHERE (${sql}) AND ${side} LIMIT 1`).get(...p) as ExistingTrack | undefined
   const many = (sql: string, ...p: unknown[]) => db.prepare(`SELECT ${COLS} FROM tracks WHERE (${sql}) AND ${side} LIMIT 50`).all(...p) as ExistingTrack[]
+  // An edit cut from a library file keeps that file's tags, IDs included, so even an ID match
+  // has to be about the same length to count as the same track.
+  const sameLength = (t: ExistingTrack) => !durationMs || !t.duration_ms || Math.abs(t.duration_ms - durationMs) <= SAME_LENGTH_MS
+  const one = (sql: string, ...p: unknown[]) => many(sql, ...p).find(sameLength)
   if (tags.valence_id) {
     const r = one('valence_id = ?', tags.valence_id)
     if (r) return r
@@ -84,7 +92,7 @@ export function findExisting(db: DB, tags: TrackTags, durationMs: number): Exist
   }
   const album = tags.album ?? ''
   if (tags.isrc) {
-    const r = many('isrc = ?', tags.isrc.toUpperCase()).find((t) => sameAlbum(t.album, album))
+    const r = many('isrc = ?', tags.isrc.toUpperCase()).find((t) => sameAlbum(t.album, album) && sameLength(t))
     if (r) return r
   }
   const title = matchKey(tags.title)
@@ -95,7 +103,7 @@ export function findExisting(db: DB, tags: TrackTags, durationMs: number): Exist
       (t) =>
         sameAlbum(t.album, album) &&
         (sameArtist(t.artist, artist) || sameArtist(t.album_artist, tags.albumartist ?? artist)) &&
-        (!durationMs || !t.duration_ms || Math.abs(t.duration_ms - durationMs) <= 3000),
+        sameLength(t),
     ) ?? null
   )
 }
@@ -110,4 +118,16 @@ export function decide(db: DB, tags: TrackTags, durationMs: number, incoming: Qu
   if (!existing) return { kind: 'add' }
   if (isUpgrade(incoming, existingQuality(existing))) return { kind: 'upgrade', existing }
   return { kind: 'skip', existing, reason: 'Already in library at equal or better quality' }
+}
+
+/**
+ * The Valence ID an imported file keeps: its own, unless another library track (other than the one
+ * it replaces) or another file in this import already holds it. Then it gets a fresh one.
+ */
+export function claimValenceId(db: DB, id: string | undefined, replacing: number | null, claimed: Set<string>): string {
+  const held = db.prepare('SELECT 1 FROM tracks WHERE valence_id = ? AND id IS NOT ? LIMIT 1')
+  const taken = (v: string) => claimed.has(v) || !!held.get(v, replacing)
+  const own = id && !taken(id) ? id : randomUUID()
+  claimed.add(own)
+  return own
 }

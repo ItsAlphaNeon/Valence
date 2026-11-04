@@ -22,6 +22,8 @@ export interface ImportAction {
     removeArchive?: { where: 'archive' | 'pending'; rel: string }
     /** Vault copy of a replaced file and where it lived. */
     restore?: { vault: string; relPath: string }
+    /** Plays and like moved from the replaced file's path key to the new file's Valence ID. */
+    rekey?: { from: string; to: string }
   }
 }
 
@@ -105,12 +107,15 @@ export class Reports {
   async undo(
     id: string,
     deps: { libraryRoot: string; archiveRoot: string | null; pendingRoot: string; trash: (abs: string) => Promise<void> },
-  ): Promise<{ changed: string[]; errors: string[] }> {
+  ): Promise<{ changed: string[]; errors: string[]; moved: Array<{ from: string; to: string }>; rekeys: Array<{ from: string; to: string }> }> {
     const report = this.get(id)
     if (!report) throw new Error('No such report')
-    if (report.undoneAt) return { changed: [], errors: ['Already undone'] }
+    if (report.undoneAt) return { changed: [], errors: ['Already undone'], moved: [], rekeys: [] }
     const changed: string[] = []
     const errors: string[] = []
+    // For the caller to put back: playlist entries that followed an upgrade, and moved play keys.
+    const moved: Array<{ from: string; to: string }> = []
+    const rekeys: Array<{ from: string; to: string }> = []
     for (const a of [...report.actions].reverse()) {
       const u = a.undo
       if (!u) continue
@@ -131,6 +136,8 @@ export class Reports {
           if (!existsSync(u.restore.vault)) throw new Error(`Vault copy missing for ${u.restore.relPath}`)
           const r = await placeFile(u.restore.vault, deps.libraryRoot, u.restore.relPath)
           changed.push(r.relPath)
+          if (u.removeLibrary && u.removeLibrary !== r.relPath) moved.push({ from: u.removeLibrary, to: r.relPath })
+          if (u.rekey) rekeys.push({ from: u.rekey.to, to: u.rekey.from.startsWith('path:') ? `path:${r.relPath}` : u.rekey.from })
         }
       } catch (e) {
         errors.push((e as Error).message)
@@ -138,7 +145,7 @@ export class Reports {
     }
     this.db.prepare('UPDATE import_reports SET undone_at = ? WHERE id = ?').run(Date.now(), id)
     await rm(this.vaultFor(id), { recursive: true, force: true }).catch(() => {})
-    return { changed, errors }
+    return { changed, errors, moved, rekeys }
   }
 
   /** Drops vault copies older than `days`. */

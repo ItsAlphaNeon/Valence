@@ -1,6 +1,7 @@
 // Library service: owns the index DB, scanning/watching, playlists, plays and the library IPC.
 
 import { shell } from 'electron'
+import { createHash } from 'node:crypto'
 import { existsSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import type { AppContext } from '@main/context'
@@ -43,6 +44,7 @@ export class LibraryService {
   private watcher: WatchHandle | null = null
   private scanPromise: Promise<ScanResult> | null = null
   private rescanQueued = false
+  private repairing: Promise<number> | null = null
   scanning = false
 
   constructor(private ctx: AppContext) {
@@ -167,6 +169,7 @@ export class LibraryService {
           this.ctx.broadcast(LIB.changed, { full: true })
         }
         if (r.errors.length) this.ctx.log.warn(`scan: ${r.errors.length} unreadable files`, r.errors.slice(0, 5))
+        void this.repairSharedIds()
         return r
       } finally {
         this.scanning = false
@@ -189,7 +192,70 @@ export class LibraryService {
       this.playlists.refreshMirrors()
       this.ctx.broadcast(LIB.changed, { albums: r.touchedAlbums })
     }
+    if (r.added) void this.repairSharedIds()
     return r
+  }
+
+  /**
+   * Gives each file its own Valence ID. A file that shares one with another library file is an edit
+   * cut from it (its tags came along: a radio edit made from a download), so plays, likes and the
+   * player would treat the two as one track. The original keeps the ID: the first-added track, or,
+   * for files that arrived together (one scan), the shortest name, since an edit is usually the
+   * original's name plus a suffix. The copy gets a new ID written into its tags, so every device agrees. The new ID is derived from the old ID and the
+   * path, so two desktops repairing the same file write the same bytes. Only this device's (or
+   * ownerless) files are re-tagged, and two files of the same size and length are left alone: that
+   * is one file seen at two paths, e.g. while Syncthing moves it. Returns how many were re-tagged.
+   */
+  repairSharedIds(): Promise<number> {
+    this.repairing ??= this.doRepairSharedIds()
+      .catch((e) => {
+        this.ctx.log.warn('library: shared Valence ID repair failed', e)
+        return 0
+      })
+      .finally(() => (this.repairing = null))
+    return this.repairing
+  }
+
+  private async doRepairSharedIds(): Promise<number> {
+    const shared = (this.db.prepare('SELECT valence_id FROM tracks WHERE valence_id IS NOT NULL GROUP BY valence_id HAVING count(*) > 1').all() as Array<{ valence_id: string }>).map((r) => r.valence_id)
+    if (!shared.length) return 0
+    const rowsFor = this.db.prepare('SELECT id, rel_path, size, duration_ms, owner_device, added_at FROM tracks WHERE valence_id = ? ORDER BY added_at, id')
+    const changed: string[] = []
+    for (const vid of shared) {
+      const rows = rowsFor.all(vid) as Array<{ id: number; rel_path: string; size: number; duration_ms: number; owner_device: string | null; added_at: number }>
+      const present = rows.filter((r) => existsSync(toAbs(this.root, r.rel_path)))
+      if (present.length < 2) continue
+      const first = present[0].added_at
+      const name = (r: { rel_path: string }) => r.rel_path.slice(r.rel_path.lastIndexOf('/') + 1)
+      const keep = present
+        .filter((r) => r.added_at - first < 60_000)
+        .sort((a, b) => name(a).length - name(b).length || a.rel_path.localeCompare(b.rel_path))[0]
+      for (const copy of present) {
+        if (copy === keep || (copy.owner_device && copy.owner_device !== this.ctx.env.deviceId)) continue
+        if (copy.size === keep.size && Math.abs(copy.duration_ms - keep.duration_ms) <= 1000) continue
+        const abs = toAbs(this.root, copy.rel_path)
+        try {
+          const p = await probeFile(abs, { covers: true })
+          if (p.tags.valence_id !== vid) continue // already changed on disk; the next index picks it up
+          writeTags(abs, { ...p.tags, valence_id: derivedValenceId(vid, copy.rel_path) }, { artwork: p.picture })
+          changed.push(copy.rel_path)
+          this.ctx.log.info(`library: ${copy.rel_path} shared a Valence ID with ${keep.rel_path}; gave it its own`)
+        } catch (e) {
+          this.ctx.log.warn(`library: could not give ${copy.rel_path} its own Valence ID`, e)
+        }
+      }
+    }
+    if (changed.length) await this.indexPaths(changed)
+    return changed.length
+  }
+
+  /** Moves a track's plays and like to a new key (a path-keyed file was replaced by one with an ID). */
+  rekeyTrack(from: string, to: string): void {
+    if (!from || !to || from === to) return
+    this.db.prepare('UPDATE plays SET track_key = ? WHERE track_key = ?').run(to, from)
+    // The like is logged, so other devices follow it.
+    this.favorites.moveKey('t', from, to)
+    this.ctx.broadcast(LIB.changed, { plays: true, favorites: true })
   }
 
   /** Indexes a file from an already-known probe (avoids a second read right after an import). */
@@ -202,7 +268,9 @@ export class LibraryService {
 
   playItem(t: TrackRow): LibraryPlayItem {
     return {
-      id: t.valenceId ?? `t${t.id}`,
+      // One id per library row: two files can carry the same Valence ID (an edit cut from a
+      // downloaded file keeps its tags), and the player must never confuse them.
+      id: `t${t.id}`,
       trackId: t.id,
       path: toAbs(this.root, t.relPath),
       title: t.title,
@@ -421,4 +489,13 @@ export class LibraryService {
   exists(rel: string): boolean {
     return existsSync(toAbs(this.root, rel))
   }
+}
+
+/** A UUID (version 5 layout) from the shared ID and the copy's path: the same on every device. */
+export function derivedValenceId(shared: string, relPath: string): string {
+  const h = createHash('sha1').update(`valence-id|${shared}|${relPath.normalize('NFC').toLowerCase()}`).digest()
+  h[6] = (h[6] & 0x0f) | 0x50
+  h[8] = (h[8] & 0x3f) | 0x80
+  const x = h.subarray(0, 16).toString('hex')
+  return `${x.slice(0, 8)}-${x.slice(8, 12)}-${x.slice(12, 16)}-${x.slice(16, 20)}-${x.slice(20)}`
 }
