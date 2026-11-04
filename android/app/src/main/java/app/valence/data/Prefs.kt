@@ -68,6 +68,8 @@ class Prefs(context: Context) {
     val fadeMs = int("fadeMs", 300)
     val skipSilence = bool("skipSilence", false)
     val tapBehavior = string("tapBehavior", "named") // named | replace | next | add
+    /** Shuffle mode (the Now playing toggle); new queues start shuffled while it's on. */
+    val shuffle = bool("shuffle", false)
     val rememberPosition = bool("rememberPosition", true)
     val maxQueues = int("maxQueues", 20)
     val eqEnabled = bool("eqEnabled", false)

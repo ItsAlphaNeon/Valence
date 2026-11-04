@@ -17,10 +17,12 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.ShuffleOrder
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import app.valence.ValenceApp
 import app.valence.art.ArtStore
+import app.valence.core.Shuffle
 import app.valence.data.Track
 import com.google.common.util.concurrent.ListenableFuture
 import kotlinx.coroutines.CoroutineScope
@@ -76,6 +78,9 @@ class Playback(private val app: ValenceApp) {
     val index: StateFlow<Int> = _index.asStateFlow()
     private val _repeat = MutableStateFlow(Player.REPEAT_MODE_OFF)
     val repeat: StateFlow<Int> = _repeat.asStateFlow()
+    private val _shuffle = MutableStateFlow(prefs.shuffle.value)
+    /** Shuffle mode, the desktop's toggle: on, the queue is in a random order; off, back in its own. */
+    val shuffle: StateFlow<Boolean> = _shuffle.asStateFlow()
     private val _speed = MutableStateFlow(1f)
     val speed: StateFlow<Float> = _speed.asStateFlow()
     private val _queues = MutableStateFlow<List<QueueSummary>>(emptyList())
@@ -104,6 +109,8 @@ class Playback(private val app: ValenceApp) {
     private var activeName = ""
     private val known = HashMap<Long, Track>()
     private var restored = false
+    /** The active queue's song ids before it was shuffled; null when it isn't shuffled. */
+    private var unshuffled: List<Long>? = null
 
     private val listens = Listens(app)
 
@@ -159,11 +166,8 @@ class Playback(private val app: ValenceApp) {
             }
 
             override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
-                // Shuffle reorders the queue itself (as Musicolet does), so the queue always shows play order.
-                if (shuffleModeEnabled) {
-                    player.shuffleModeEnabled = false
-                    shuffleQueue()
-                }
+                // Toggled from the notification, lock screen or a car: same as the Now playing button.
+                if (shuffleModeEnabled != _shuffle.value) setShuffle(shuffleModeEnabled)
             }
 
             override fun onPlaybackParametersChanged(playbackParameters: PlaybackParameters) {
@@ -195,6 +199,10 @@ class Playback(private val app: ValenceApp) {
                 attachEffects(audioSessionId)
             }
         })
+        // Shuffle reorders the queue itself, so the queue always shows play order. The player's own
+        // shuffle flag only mirrors the mode for the notification and Auto; its order stays the list's.
+        player.setShuffleOrder(ShuffleOrder.UnshuffledShuffleOrder(0))
+        player.shuffleModeEnabled = _shuffle.value
         player.skipSilenceEnabled = prefs.skipSilence.value
         scope.launch { prefs.pauseOnDisconnect.flow.collect { player.setHandleAudioBecomingNoisy(it) } }
         scope.launch { prefs.skipSilence.flow.collect { player.skipSilenceEnabled = it } }
@@ -248,6 +256,11 @@ class Playback(private val app: ValenceApp) {
         val index = tracks.indexOfFirst { it.relPath == wanted }.takeIf { it >= 0 } ?: min(q.index, max(tracks.size - 1, 0))
         activeId = q.id
         activeName = q.name
+        // A queue keeps its own shuffle: switching to one shows whether it's shuffled.
+        val original = q.original?.let { resolve(it) }
+        original?.forEach { known[it.id] = it }
+        unshuffled = original?.map { it.id }
+        setShuffleFlag(original != null)
         setItems(tracks, index, if (tracks.getOrNull(index)?.relPath == wanted) q.positionMs else 0L)
         if (play) player.play()
         publishQueues()
@@ -256,6 +269,7 @@ class Playback(private val app: ValenceApp) {
     private fun setItems(tracks: List<Track>, index: Int, positionMs: Long) {
         tracks.forEach { known[it.id] = it }
         player.setMediaItems(tracks.map { it.toMediaItem() }, index.coerceIn(0, max(tracks.size - 1, 0)), positionMs)
+        player.setShuffleOrder(ShuffleOrder.UnshuffledShuffleOrder(tracks.size))
         player.prepare()
     }
 
@@ -318,6 +332,7 @@ class Playback(private val app: ValenceApp) {
         paths = _queue.value.map { it.relPath },
         index = player.currentMediaItemIndex,
         positionMs = player.currentPosition,
+        original = unshuffled?.let { ids -> ids.mapNotNull { known[it]?.relPath } },
     )
 
     private var saveJob: Job? = null
@@ -340,16 +355,21 @@ class Playback(private val app: ValenceApp) {
 
     /**
      * Plays [tracks] starting at [start]. [label] names the queue ("Album name", "Liked songs").
-     * [mode] defaults to the user's tap setting.
+     * [mode] defaults to the user's tap setting. [shuffle] (a list's Shuffle button) turns shuffle
+     * on and starts from a random song, as on the desktop; while shuffle is on, a new queue starts
+     * with the tapped song and the rest in a random order.
      */
     fun play(tracks: List<Track>, start: Int = 0, label: String = "", mode: TapMode = tapMode(), shuffle: Boolean = false) {
         if (tracks.isEmpty()) return
         ensureService()
+        if (shuffle) setShuffleFlag(true)
         var list = tracks
-        var startAt = start.coerceIn(0, tracks.size - 1)
-        if (shuffle) {
-            list = tracks.shuffled()
+        var startAt = if (shuffle) kotlin.random.Random.nextInt(tracks.size) else start.coerceIn(0, tracks.size - 1)
+        var original: List<Long>? = null
+        if (_shuffle.value) {
+            list = Shuffle.order(tracks.map { artistKey(it) }, startAt).map { tracks[it] }
             startAt = 0
+            original = tracks.map { it.id }
         }
         val empty = player.mediaItemCount == 0 || activeId < 0
         when (if (empty && mode != TapMode.Named) TapMode.Replace else mode) {
@@ -357,6 +377,7 @@ class Playback(private val app: ValenceApp) {
                 if (activeId < 0) activeId = newQueueId()
                 activeName = label
                 listens.end(Listens.End.Skipped) // like the desktop's setQueue: skipped if playing, else stopped
+                unshuffled = original
                 setItems(list, startAt, 0)
                 player.play()
             }
@@ -370,6 +391,7 @@ class Playback(private val app: ValenceApp) {
                 enforceLimit()
                 if (activeId < 0) activeId = newQueueId()
                 activeName = label
+                unshuffled = original
                 setItems(list, startAt, 0)
                 player.play()
             }
@@ -433,21 +455,47 @@ class Playback(private val app: ValenceApp) {
         if (index in 0 until player.mediaItemCount) player.removeMediaItem(index)
     }
 
-    /** Musicolet's shuffle: the current song stays, everything after it is reordered at random. */
-    fun shuffleQueue() {
-        val n = player.mediaItemCount
-        if (n < 2) return
-        val cur = player.currentMediaItemIndex
-        val rest = (0 until n).filter { it != cur }.shuffled()
-        val items = listOf(cur).plus(rest).map { player.getMediaItemAt(it) }
-        val pos = player.currentPosition
-        val wasPlaying = player.playWhenReady
-        // Keep the current item playing without a glitch: move it to the top, replace the rest.
-        player.moveMediaItem(cur, 0)
-        player.replaceMediaItems(1, n, items.drop(1))
-        if (player.currentMediaItemIndex != 0) player.seekTo(0, pos)
-        player.playWhenReady = wasPlaying
-        toast("Queue shuffled")
+    fun toggleShuffle() = setShuffle(!_shuffle.value)
+
+    /**
+     * The desktop's shuffle toggle. On: the playing song moves to the top and every other song
+     * follows in a random order that keeps an artist's songs apart. Off: the queue goes back to its
+     * order from before, and carries on from the playing song.
+     */
+    fun setShuffle(on: Boolean) {
+        if (on == _shuffle.value) return
+        setShuffleFlag(on)
+        val ids = queueIds()
+        if (on) {
+            unshuffled = ids
+            if (ids.size > 1) reorderQueue(Shuffle.order(ids.map { artistKey(known[it]) }, player.currentMediaItemIndex))
+        } else {
+            val before = unshuffled
+            unshuffled = null
+            if (before != null && ids.size > 1) reorderQueue(Shuffle.restore(ids, before, player.currentMediaItemIndex))
+        }
+        persist()
+    }
+
+    private fun setShuffleFlag(on: Boolean) {
+        _shuffle.value = on
+        prefs.shuffle.value = on
+        if (player.shuffleModeEnabled != on) player.shuffleModeEnabled = on
+    }
+
+    private fun queueIds(): List<Long> = (0 until player.mediaItemCount).map { player.getMediaItemAt(it).mediaId.toLongOrNull() ?: -1L }
+
+    /** The desktop's artistKey: shuffle keeps songs with the same one apart. */
+    private fun artistKey(t: Track?): String = t?.artist?.trim()?.lowercase() ?: ""
+
+    /** A sort from the queue's menu: the queue takes that order and is no longer shuffled. */
+    fun sortQueue(order: List<Int>) {
+        reorderQueue(order)
+        if (_shuffle.value) {
+            unshuffled = null
+            setShuffleFlag(false)
+            persist()
+        }
     }
 
     fun clearUpcoming() {
@@ -505,6 +553,7 @@ class Playback(private val app: ValenceApp) {
                 player.clearMediaItems()
                 activeId = -1
                 activeName = ""
+                unshuffled = null
                 _current.value = null
                 publishQueues()
                 persist()

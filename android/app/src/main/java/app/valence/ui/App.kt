@@ -206,7 +206,7 @@ private fun TabBar(ui: UiActions, tabs: List<Tab>, pager: PagerState, nearPlayer
                             selected -> pal.text
                             else -> pal.text3
                         }
-                        IconAction(t.icon, t.label, { ui.select(t) }, Modifier.weight(1f).fillMaxHeight(), tint = tint, size = 26.dp)
+                        IconAction(t.icon, t.label, { ui.tapTab(t) }, Modifier.weight(1f).fillMaxHeight(), tint = tint, size = 26.dp)
                     }
                 }
                 // The indicator follows the swipe in the draw phase, so paging never recomposes the bar.

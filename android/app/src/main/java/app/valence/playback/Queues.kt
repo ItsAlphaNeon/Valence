@@ -18,6 +18,8 @@ data class SavedQueue(
     val index: Int,
     val positionMs: Long,
     val updatedAt: Long = System.currentTimeMillis(),
+    /** The order before the queue was shuffled (rel paths); null when it isn't shuffled. */
+    val original: List<String>? = null,
 )
 
 class QueueStore(dir: File) {
@@ -39,6 +41,7 @@ class QueueStore(dir: File) {
                 index = q.optInt("index"),
                 positionMs = q.optLong("pos"),
                 updatedAt = q.optLong("updatedAt"),
+                original = q.optJSONArray("original")?.let { o -> (0 until o.length()).map { o.getString(it) } },
             )
         }
         Snapshot(queues, o.optLong("active", -1))
@@ -58,6 +61,7 @@ class QueueStore(dir: File) {
                 put("index", q.index)
                 put("pos", q.positionMs)
                 put("updatedAt", q.updatedAt)
+                q.original?.let { put("original", JSONArray(it)) }
             })
         })
         val out = file.startWrite()

@@ -18,6 +18,7 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -138,6 +139,23 @@ class UiActions(val app: ValenceApp, val scope: CoroutineScope) {
     }
 
     fun openPlayer() = select(Tab.Player)
+
+    /** Counts taps on a tab's button while it was already showing; pages without a back stack (Queues) reset on it. */
+    val reselects = mutableStateMapOf<Tab, Int>()
+
+    /**
+     * A tap on a tab's button: goes to the tab, or, when it's already showing, back to its first
+     * page (the albums list from an album, the playing queue from another queue).
+     */
+    fun tapTab(tab: Tab) {
+        val i = tabs.indexOf(tab)
+        if (i < 0) return
+        if (overlays.isEmpty() && pager.currentPage == i && !pager.isScrollInProgress) {
+            stack(tab).clear()
+            reselects[tab] = (reselects[tab] ?: 0) + 1
+            menu = null
+        } else select(tab)
+    }
 
     /** Opens [route] in the tab it belongs to (or the current one when that tab is turned off). */
     fun open(route: Route) {

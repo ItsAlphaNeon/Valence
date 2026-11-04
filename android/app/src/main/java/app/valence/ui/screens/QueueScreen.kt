@@ -57,6 +57,7 @@ import androidx.compose.ui.zIndex
 import app.valence.data.Track
 import app.valence.playback.QueueSummary
 import app.valence.ui.LocalUi
+import app.valence.ui.Tab
 import app.valence.ui.MenuTarget
 import app.valence.ui.components.DialogButtons
 import app.valence.ui.components.DialogTitle
@@ -88,6 +89,10 @@ fun QueuesPage() {
     val queues by pb.queues.collectAsState()
     val playing by pb.isPlaying.collectAsState()
     var viewing by rememberSaveable { mutableStateOf<Long?>(null) }
+    // Tapping the Queues tab while on it goes back to the playing queue (this tab's first page).
+    val reselect = ui.reselects[Tab.Queues] ?: 0
+    val seenReselect = remember { reselect }
+    LaunchedEffect(reselect) { if (reselect != seenReselect) viewing = null }
     var picking by remember { mutableStateOf(false) }
     var sorting by remember { mutableStateOf(false) }
     val active = queues.firstOrNull { it.active }
@@ -154,7 +159,7 @@ fun QueuesPage() {
         val sorted = sortTracks(queue.withIndex().map { it.value }, key)
         // Map back to positions (songs can repeat in a queue).
         val left = queue.withIndex().groupBy({ it.value.id }, { it.index }).mapValues { ArrayDeque(it.value) }
-        pb.reorderQueue(sorted.map { left.getValue(it.id).removeFirst() })
+        pb.sortQueue(sorted.map { left.getValue(it.id).removeFirst() })
     }) { sorting = false }
 }
 

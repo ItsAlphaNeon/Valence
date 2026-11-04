@@ -246,6 +246,7 @@ private fun QuickRow(t: Track) {
     val fresh by remember(t.id) { ui.library.watchTrack(t.id) }.collectAsState(t)
     val liked = fresh?.liked ?: t.liked
     val repeat by pb.repeat.collectAsState()
+    val shuffle by pb.shuffle.collectAsState()
     Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         IconAction(if (liked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder, if (liked) "Remove from favorites" else "Add to favorites", { ui.app.sync.setTrackLiked(t, !liked) }, tint = if (liked) Color.White else Dim)
         IconAction(Icons.Rounded.Info, "Song info", { ui.info = t }, tint = Dim)
@@ -258,7 +259,7 @@ private fun QuickRow(t: Track) {
             pb::cycleRepeat,
             tint = if (repeat == Player.REPEAT_MODE_OFF) Faint else Dim,
         )
-        IconAction(Icons.Rounded.Shuffle, "Shuffle the queue", pb::shuffleQueue, tint = Dim)
+        IconAction(Icons.Rounded.Shuffle, if (shuffle) "Shuffle on" else "Shuffle off", pb::toggleShuffle, tint = if (shuffle) Dim else Faint)
     }
 }
 
