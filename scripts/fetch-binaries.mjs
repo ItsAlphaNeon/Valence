@@ -1,6 +1,6 @@
 // Downloads the chromaprint `fpcalc` binary for this platform (or all with --all)
 // into resources/bin/<platform>-<arch>/. ffmpeg comes from the ffmpeg-static package.
-import { mkdir, writeFile, readdir, rename, rm, chmod, stat } from 'node:fs/promises'
+import { mkdir, writeFile, readdir, copyFile, rm, chmod, stat } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -58,7 +58,8 @@ for (const target of wanted) {
   const found = await findFile(work, exe)
   if (!found) throw new Error(`${exe} not found in ${asset}`)
   await mkdir(outDir, { recursive: true })
-  await rename(found, outFile)
+  // Copy, not rename: the temp folder can be on another drive (C: vs D: on CI runners).
+  await copyFile(found, outFile)
   if (!target.startsWith('win32')) await chmod(outFile, 0o755)
   await rm(work, { recursive: true, force: true })
   console.log(`[fetch-binaries] ${target}: ${outFile}`)
