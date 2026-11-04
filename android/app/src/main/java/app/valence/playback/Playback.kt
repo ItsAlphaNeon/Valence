@@ -467,17 +467,34 @@ class Playback(private val app: ValenceApp) {
         player.playbackParameters = PlaybackParameters(speed.coerceIn(0.25f, 3f), pitch.coerceIn(0.5f, 2f))
     }
 
-    fun switchQueue(id: Long) {
-        if (id == activeId) return
+    /**
+     * Makes saved queue [id] the playing one, where it left off, or from song [at] (and playing)
+     * when given (a tap on a song in a queue that isn't playing).
+     */
+    fun switchQueue(id: Long, at: Int? = null) {
+        if (id == activeId) { if (at != null) playAt(at); return }
         val target = saved.firstOrNull { it.id == id } ?: return
         listens.end(Listens.End.Skipped)
         val wasPlaying = player.playWhenReady
         activeSnapshot()?.let { saved.add(it.copy(updatedAt = System.currentTimeMillis())) }
         saved.remove(target)
+        ensureService()
         scope.launch {
-            loadQueue(target, play = wasPlaying)
+            loadQueue(if (at != null) target.copy(index = at, positionMs = 0) else target, play = wasPlaying || at != null)
             persist()
         }
+    }
+
+    /** Reorders the queue: [order] lists the old positions in their new order. The playing song keeps playing. */
+    fun reorderQueue(order: List<Int>) {
+        val n = player.mediaItemCount
+        if (n < 2 || order.size != n || order.toSet().size != n) return
+        val cur = player.currentMediaItemIndex
+        val items = order.map { player.getMediaItemAt(it) }
+        val newCur = order.indexOf(cur)
+        player.moveMediaItem(cur, newCur)
+        if (newCur > 0) player.replaceMediaItems(0, newCur, items.subList(0, newCur))
+        if (newCur + 1 < n) player.replaceMediaItems(newCur + 1, n, items.subList(newCur + 1, n))
     }
 
     fun deleteQueue(id: Long) {

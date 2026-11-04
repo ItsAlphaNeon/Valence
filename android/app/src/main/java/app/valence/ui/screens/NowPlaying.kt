@@ -1,16 +1,20 @@
 package app.valence.ui.screens
 
-import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
+import android.content.Context
+import android.media.AudioManager
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.foundation.indication
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,8 +25,6 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -31,18 +33,16 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.QueueMusic
-import androidx.compose.material.icons.rounded.Bedtime
-import androidx.compose.material.icons.rounded.BedtimeOff
+import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
+import androidx.compose.material.icons.automirrored.rounded.VolumeUp
+import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
-import androidx.compose.material.icons.rounded.KeyboardArrowDown
-import androidx.compose.material.icons.rounded.Lyrics
-import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Repeat
@@ -50,353 +50,319 @@ import androidx.compose.material.icons.rounded.RepeatOne
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
-import androidx.compose.material.icons.rounded.Speed
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.media3.common.Player
+import app.valence.art.TrackArt
 import app.valence.data.Track
 import app.valence.tags.TagReader
 import app.valence.ui.LocalUi
 import app.valence.ui.MenuTarget
-import app.valence.ui.components.Art
+import app.valence.ui.Overlay
+import app.valence.ui.Tab
+import app.valence.ui.components.IconAction
+import app.valence.ui.components.OptionsButton
 import app.valence.ui.components.formatDuration
+import coil3.compose.AsyncImage
+import coil3.memory.MemoryCache
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.text.DateFormat
-import java.util.Date
 import kotlin.math.abs
-import kotlin.math.roundToInt
 
+private val Dim = Color.White.copy(alpha = 0.78f)
+private val Faint = Color.White.copy(alpha = 0.45f)
+
+/** Playback position, refreshed 4×/s while playing (and [active]); read it in draw code where possible. */
 @Composable
-private fun rememberPosition(): Long {
+private fun rememberPosition(active: Boolean): State<Long> {
     val pb = LocalUi.current.playback
     val playing by pb.isPlaying.collectAsState()
     val current by pb.current.collectAsState()
-    val pos by produceState(pb.positionMs, playing, current) {
+    return produceState(pb.positionMs, playing, current?.id, active) {
         value = pb.positionMs
-        while (isActive) {
-            delay(if (playing) 200 else 1000)
+        while (isActive && playing && active) {
+            delay(250)
             value = pb.positionMs
         }
     }
-    return pos
 }
 
-/** Horizontal swipe = next / previous song (on the mini player and the big art). */
-private fun Modifier.swipeToSkip(onNext: () -> Unit, onPrevious: () -> Unit, onDrag: (Float) -> Unit = {}) = pointerInput(Unit) {
-    var total = 0f
-    detectHorizontalDragGestures(
-        onDragStart = { total = 0f },
-        onDragEnd = {
-            if (total < -120) onNext() else if (total > 120) onPrevious()
-            total = 0f; onDrag(0f)
-        },
-        onDragCancel = { total = 0f; onDrag(0f) },
-    ) { change, amount ->
-        change.consume()
-        total += amount
-        onDrag(total)
-    }
-}
-
+/** Musicolet's Now playing tab. Drawn over the blurred cover the shell paints behind it. */
 @Composable
-fun MiniPlayer(modifier: Modifier = Modifier) {
+fun PlayerPage() {
     val ui = LocalUi.current
     val pb = ui.playback
     val track by pb.current.collectAsState()
-    val playing by pb.isPlaying.collectAsState()
-    val t = track ?: return
-    val pos = rememberPosition()
-    var drag by remember { mutableFloatStateOf(0f) }
-    Surface(
-        modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .clickable { ui.playerOpen = true }
-            .pointerInput(Unit) { detectVerticalDragGestures { _, dy -> if (dy < -12) ui.playerOpen = true } },
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        tonalElevation = 2.dp,
-    ) {
-        Column {
-            Row(
-                Modifier.padding(6.dp).swipeToSkip(pb::next, pb::previous) { drag = it }.offset { IntOffset((drag / 3).roundToInt(), 0) },
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Art(if (t.hasArt) t.id else null, Modifier.size(44.dp), RoundedCornerShape(8.dp))
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(t.title, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
-                    Text(if (t.isRip) (t.ripGame ?: t.artist) else t.artist, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                IconButton(onClick = pb::toggle) { Icon(if (playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, if (playing) "Pause" else "Play", Modifier.size(30.dp)) }
-                IconButton(onClick = pb::next) { Icon(Icons.Rounded.SkipNext, "Next") }
-            }
-            val d = pb.durationMs
-            LinearProgressIndicator(
-                progress = { if (d > 0) (pos.toFloat() / d).coerceIn(0f, 1f) else 0f },
-                modifier = Modifier.fillMaxWidth().height(2.dp).padding(horizontal = 12.dp),
-                drawStopIndicator = {},
-                gapSize = 0.dp,
-            )
-        }
-    }
-}
-
-@Composable
-fun NowPlayingScreen() {
-    val ui = LocalUi.current
-    val pb = ui.playback
-    val track by pb.current.collectAsState()
-    val t = track
-    BackHandler { ui.playerOpen = false }
-    if (t == null) {
-        LaunchedEffect(Unit) { ui.playerOpen = false }
-        return
-    }
+    val active = ui.currentTab == Tab.Player
     val keepOn by ui.app.prefs.keepScreenOn.flow.collectAsState()
     val view = LocalView.current
-    LaunchedEffect(keepOn) { view.keepScreenOn = keepOn }
-    var lyrics by remember { mutableStateOf(false) }
-    var dragDown by remember { mutableFloatStateOf(0f) }
-    val scheme = MaterialTheme.colorScheme
+    LaunchedEffect(keepOn, active) { view.keepScreenOn = keepOn && active }
+    val t = track
+    if (t == null) {
+        Column(Modifier.fillMaxSize().statusBarsPadding().padding(32.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(Icons.Rounded.MusicNote, null, Modifier.size(64.dp), tint = Faint)
+            Spacer(Modifier.height(12.dp))
+            Text("Nothing playing", style = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.Bold), color = Color.White)
+            Spacer(Modifier.height(6.dp))
+            Text("Pick a song in Albums, Artists, Folders or Playlists.", style = TextStyle(fontSize = 15.sp), color = Dim, textAlign = TextAlign.Center)
+        }
+        return
+    }
+    val artTap by ui.app.prefs.artTap.flow.collectAsState()
+    var lyrics by rememberSaveable { mutableStateOf(false) }
+    val position = rememberPosition(active)
+    Column(Modifier.fillMaxSize().statusBarsPadding()) {
+        Box(Modifier.weight(1f).fillMaxWidth().padding(start = 24.dp, end = 24.dp, top = 10.dp, bottom = 6.dp), contentAlignment = Alignment.Center) {
+            if (lyrics) LyricsView(t, position, Modifier.fillMaxSize()) { lyrics = false }
+            else BigArt(t) {
+                when (artTap) {
+                    "lyrics" -> lyrics = true
+                    "play" -> pb.toggle()
+                }
+            }
+        }
+        TitleBlock(t)
+        QuickRow(t)
+        SeekRow(position)
+        Controls()
+        Spacer(Modifier.height(10.dp))
+    }
+}
+
+@Composable
+private fun BigArt(t: Track, onTap: () -> Unit) {
+    val pb = LocalUi.current.playback
+    val ctx = LocalContext.current
+    val offset = remember { Animatable(0f) }
+    val scope = rememberCoroutineScope()
+    // Show the last cover until the new one is decoded, then crossfade (no flash of grey).
+    var lastKey by remember { mutableStateOf<MemoryCache.Key?>(null) }
+    val request = remember(t.id, t.hasArt) {
+        if (!t.hasArt) null else ImageRequest.Builder(ctx).data(TrackArt(t.id)).placeholderMemoryCacheKey(lastKey).crossfade(220).build()
+    }
     Box(
         Modifier
-            .fillMaxSize()
-            .offset { IntOffset(0, dragDown.roundToInt().coerceAtLeast(0)) }
-            .background(Brush.verticalGradient(listOf(scheme.primaryContainer, scheme.background, scheme.background)))
+            .aspectRatio(1f)
+            .graphicsLayer {
+                translationX = offset.value
+                alpha = 1f - (abs(offset.value) / (size.width.coerceAtLeast(1f))) * 0.7f
+            }
             .pointerInput(Unit) {
-                detectVerticalDragGestures(
-                    onDragEnd = { if (dragDown > 300) ui.playerOpen = false; dragDown = 0f },
-                    onDragCancel = { dragDown = 0f },
-                ) { change, dy -> change.consume(); dragDown += dy }
-            },
-    ) {
-        Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { ui.playerOpen = false }) { Icon(Icons.Rounded.KeyboardArrowDown, "Close", Modifier.size(30.dp)) }
-                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                    val queues by pb.queues.collectAsState()
-                    val active = queues.firstOrNull { it.active }
-                    Text("PLAYING FROM", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(active?.name?.ifBlank { null } ?: "Queue", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-                IconButton(onClick = { ui.menu = MenuTarget.Song(t, queueIndex = pb.index.value) }) { Icon(Icons.Rounded.MoreVert, "More") }
-            }
-            Box(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 24.dp, vertical = 12.dp), contentAlignment = Alignment.Center) {
-                AnimatedContent(lyrics, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "lyrics") { showLyrics ->
-                    if (showLyrics) LyricsView(t, Modifier.fillMaxSize())
-                    else {
-                        var drag by remember { mutableFloatStateOf(0f) }
-                        val scale by animateFloatAsState(if (pb.isPlaying.collectAsState().value) 1f else 0.92f, label = "artScale")
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Art(
-                                if (t.hasArt) t.id else null,
-                                Modifier
-                                    .fillMaxWidth()
-                                    .aspectRatio(1f)
-                                    .offset { IntOffset((drag / 2).roundToInt(), 0) }
-                                    .let { m -> m.then(Modifier.padding(((1 - scale) * 120).dp)) }
-                                    .swipeToSkip(pb::next, pb::previous) { drag = it },
-                                RoundedCornerShape(14.dp),
-                                iconSize = 96.dp,
-                            )
+                detectHorizontalDragGestures(
+                    onDragEnd = {
+                        val w = size.width.toFloat()
+                        val x = offset.value
+                        scope.launch {
+                            when {
+                                x < -w * 0.22f -> { pb.next(); offset.snapTo(w * 0.35f); offset.animateTo(0f, tween(180)) }
+                                x > w * 0.22f -> { pb.previous(); offset.snapTo(-w * 0.35f); offset.animateTo(0f, tween(180)) }
+                                else -> offset.animateTo(0f, tween(160))
+                            }
                         }
-                    }
+                    },
+                    onDragCancel = { scope.launch { offset.animateTo(0f, tween(160)) } },
+                ) { change, dx ->
+                    change.consume()
+                    scope.launch { offset.snapTo(offset.value + dx) }
                 }
             }
-            TrackTitle(t)
-            SeekBar()
-            Controls()
-            BottomActions(lyrics, onLyrics = { lyrics = !lyrics })
-        }
+            .pointerInput(onTap) { detectTapGestures(onTap = { onTap() }) }
+            .clip(RoundedCornerShape(2.dp))
+            .background(Color.Black.copy(alpha = 0.25f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (request == null) Icon(Icons.Rounded.MusicNote, null, Modifier.size(96.dp), tint = Faint)
+        else AsyncImage(
+            request, contentDescription = "Album art", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize(),
+            onSuccess = { lastKey = it.result.memoryCacheKey },
+        )
     }
 }
 
 @Composable
-private fun TrackTitle(t: Track) {
+private fun TitleBlock(t: Track) {
     val ui = LocalUi.current
+    val artistLine = if (t.isRip) t.ripGame?.takeIf { it.isNotBlank() } ?: t.artist else t.artist
+    Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            t.title, style = TextStyle(fontSize = 22.sp, fontWeight = FontWeight.Bold), color = Color.White, maxLines = 1,
+            modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE, initialDelayMillis = 2000),
+        )
+        Text(
+            artistLine, style = TextStyle(fontSize = 17.sp), color = Dim, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.clickable { if (t.isRip && !t.ripGame.isNullOrBlank()) ui.game(t.ripGame) else ui.artist(t.artist, "track") }.padding(vertical = 3.dp),
+        )
+        if (t.album.isNotBlank()) Text(
+            t.album, style = TextStyle(fontSize = 17.sp), color = Dim, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.clickable { ui.album(t.albumId) }.padding(vertical = 3.dp),
+        )
+    }
+}
+
+@Composable
+private fun QuickRow(t: Track) {
+    val ui = LocalUi.current
+    val pb = ui.playback
     val fresh by remember(t.id) { ui.library.watchTrack(t.id) }.collectAsState(t)
     val liked = fresh?.liked ?: t.liked
-    Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp), verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) {
-            Text(t.title, style = MaterialTheme.typography.headlineSmall, maxLines = 1, modifier = Modifier.basicMarquee())
-            Text(
-                if (t.isRip) listOfNotNull(t.ripGame, t.album.takeIf { it.isNotBlank() }).joinToString(" · ").ifEmpty { t.artist } else t.artist,
-                style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.clickable { if (t.isRip && t.ripGame != null) ui.game(t.ripGame) else ui.artist(t.albumArtist) },
-            )
-        }
-        IconButton(onClick = { ui.app.sync.setTrackLiked(t, !liked) }) {
-            Icon(if (liked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder, if (liked) "Unlike" else "Like", Modifier.size(28.dp), tint = if (liked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
-        }
+    val repeat by pb.repeat.collectAsState()
+    Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        IconAction(if (liked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder, if (liked) "Remove from favorites" else "Add to favorites", { ui.app.sync.setTrackLiked(t, !liked) }, tint = if (liked) Color.White else Dim)
+        IconAction(Icons.Rounded.Info, "Song info", { ui.info = t }, tint = Dim)
+        IconAction(Icons.AutoMirrored.Rounded.PlaylistAdd, "Add to playlists", { ui.addToPlaylist = listOf(t) }, tint = Dim)
+        OptionsButton({ ui.menu = MenuTarget.Song(t, queueIndex = pb.index.value) }, color = Dim)
+        Spacer(Modifier.weight(1f))
+        IconAction(
+            if (repeat == Player.REPEAT_MODE_ONE) Icons.Rounded.RepeatOne else Icons.Rounded.Repeat,
+            when (repeat) { Player.REPEAT_MODE_ONE -> "Repeat song"; Player.REPEAT_MODE_ALL -> "Repeat queue"; else -> "No repeat" },
+            pb::cycleRepeat,
+            tint = if (repeat == Player.REPEAT_MODE_OFF) Faint else Dim,
+        )
+        IconAction(Icons.Rounded.Shuffle, "Shuffle the queue", pb::shuffleQueue, tint = Dim)
     }
 }
 
 @Composable
-private fun SeekBar() {
+private fun SeekRow(position: State<Long>) {
     val pb = LocalUi.current.playback
-    val pos = rememberPosition()
-    val dur = pb.durationMs
+    val current by pb.current.collectAsState()
     var seeking by remember { mutableStateOf<Float?>(null) }
-    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp)) {
-        Slider(
-            value = seeking ?: if (dur > 0) (pos.toFloat() / dur).coerceIn(0f, 1f) else 0f,
-            onValueChange = { seeking = it },
-            onValueChangeFinished = { seeking?.let { pb.seekTo((it * dur).toLong()) }; seeking = null },
+    var remaining by rememberSaveable { mutableStateOf(false) }
+    val dur = pb.durationMs.takeIf { it > 0 } ?: current?.durationMs ?: 0L
+    val shownSec by remember(dur) { derivedStateOf { (seeking?.let { (it * dur).toLong() } ?: position.value) / 1000 } }
+    val time = TextStyle(fontSize = 15.sp, textAlign = TextAlign.Center)
+    Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp).height(48.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            if (remaining) "-" + formatDuration((dur - shownSec * 1000).coerceAtLeast(0)) else formatDuration(shownSec * 1000),
+            style = time, color = Color.White, maxLines = 1,
+            modifier = Modifier.width(60.dp).clickable { remaining = !remaining },
         )
-        Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
-            Text(formatDuration(seeking?.let { (it * dur).toLong() } ?: pos), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(Modifier.weight(1f))
-            Text("-" + formatDuration((dur - (seeking?.let { (it * dur).toLong() } ?: pos)).coerceAtLeast(0)), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
+        Box(
+            Modifier
+                .weight(1f)
+                .height(40.dp)
+                .pointerInput(dur) {
+                    detectTapGestures { o -> if (dur > 0) pb.seekTo(((o.x / size.width).coerceIn(0f, 1f) * dur).toLong()) }
+                }
+                .pointerInput(dur) {
+                    detectHorizontalDragGestures(
+                        onDragStart = { o -> seeking = (o.x / size.width).coerceIn(0f, 1f) },
+                        onDragEnd = { seeking?.let { if (dur > 0) pb.seekTo((it * dur).toLong()) }; seeking = null },
+                        onDragCancel = { seeking = null },
+                    ) { change, _ ->
+                        change.consume()
+                        seeking = (change.position.x / size.width).coerceIn(0f, 1f)
+                    }
+                }
+                .drawBehind {
+                    // Drawn, not composed: the 4×/s position updates only redraw this strip.
+                    val f = seeking ?: if (dur > 0) (position.value.toFloat() / dur).coerceIn(0f, 1f) else 0f
+                    val h = 3.dp.toPx()
+                    val r = 9.dp.toPx()
+                    val y = size.height / 2
+                    val left = r
+                    val w = size.width - 2 * r
+                    drawRoundRect(Color.White.copy(alpha = 0.28f), Offset(left, y - h / 2), Size(w, h), CornerRadius(h / 2))
+                    drawRoundRect(Color.White.copy(alpha = 0.9f), Offset(left, y - h / 2), Size(w * f, h), CornerRadius(h / 2))
+                    drawCircle(Color.White, r, Offset(left + w * f, y))
+                },
+        )
+        Text(formatDuration(dur), style = time, color = Color.White, maxLines = 1, modifier = Modifier.width(60.dp))
     }
 }
 
 @Composable
 private fun Controls() {
-    val pb = LocalUi.current.playback
-    val playing by pb.isPlaying.collectAsState()
-    val repeat by pb.repeat.collectAsState()
-    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = pb::shuffleQueue) { Icon(Icons.Rounded.Shuffle, "Shuffle queue") }
-        IconButton(onClick = pb::previous, Modifier.size(56.dp)) { Icon(Icons.Rounded.SkipPrevious, "Previous", Modifier.size(40.dp)) }
-        FilledIconButton(onClick = pb::toggle, Modifier.size(76.dp), shape = CircleShape, colors = IconButtonDefaults.filledIconButtonColors()) {
-            Icon(if (playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, if (playing) "Pause" else "Play", Modifier.size(44.dp))
-        }
-        IconButton(onClick = pb::next, Modifier.size(56.dp)) { Icon(Icons.Rounded.SkipNext, "Next", Modifier.size(40.dp)) }
-        IconButton(onClick = pb::cycleRepeat) {
-            Icon(
-                if (repeat == Player.REPEAT_MODE_ONE) Icons.Rounded.RepeatOne else Icons.Rounded.Repeat,
-                when (repeat) { Player.REPEAT_MODE_ONE -> "Repeat one"; Player.REPEAT_MODE_ALL -> "Repeat all"; else -> "Repeat off" },
-                tint = if (repeat == Player.REPEAT_MODE_OFF) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary,
-            )
-        }
-    }
-}
-
-@Composable
-private fun BottomActions(lyrics: Boolean, onLyrics: () -> Unit) {
     val ui = LocalUi.current
     val pb = ui.playback
-    val sleepAt by pb.sleepAt.collectAsState()
-    val songsLeft by pb.sleepSongs.collectAsState()
-    val afterSong = songsLeft > 0
-    val speed by pb.speed.collectAsState()
-    var sleepDialog by remember { mutableStateOf(false) }
-    var speedDialog by remember { mutableStateOf(false) }
-    val on = MaterialTheme.colorScheme.primary
-    val off = MaterialTheme.colorScheme.onSurfaceVariant
-    Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = { sleepDialog = true }) {
-            Icon(if (sleepAt != null || afterSong) Icons.Rounded.Bedtime else Icons.Rounded.BedtimeOff, "Sleep timer", tint = if (sleepAt != null || afterSong) on else off)
-        }
-        TextButton(onClick = { speedDialog = true }) {
-            Icon(Icons.Rounded.Speed, null, tint = if (speed != 1f) on else off)
-            Text(" ${"%.2f".format(speed).trimEnd('0').trimEnd('.')}×", color = if (speed != 1f) on else off)
-        }
-        IconButton(onClick = onLyrics) { Icon(Icons.Rounded.Lyrics, "Lyrics", tint = if (lyrics) on else off) }
-        IconButton(onClick = { ui.queueOpen = true }) { Icon(Icons.AutoMirrored.Rounded.QueueMusic, "Queue") }
+    val ctx = LocalContext.current
+    val playing by pb.isPlaying.collectAsState()
+    Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp).height(84.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+        IconAction(Icons.AutoMirrored.Rounded.VolumeUp, "Volume", {
+            (ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager).adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_SAME, AudioManager.FLAG_SHOW_UI)
+        }, tint = Dim, size = 22.dp)
+        HoldButton(Icons.Rounded.SkipPrevious, "Previous song (hold to rewind)", 46.dp, onTap = pb::previous, onHold = { pb.seekTo((pb.positionMs - 5000).coerceAtLeast(0)) })
+        HoldButton(if (playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, if (playing) "Pause (hold to stop)" else "Play", 72.dp, onTap = pb::toggle, onHoldStart = {
+            if (pb.isPlaying.value) pb.toggle()
+            pb.seekTo(0)
+        })
+        HoldButton(Icons.Rounded.SkipNext, "Next song (hold to fast-forward)", 46.dp, onTap = pb::next, onHold = { pb.seekTo(pb.positionMs + 5000) })
+        IconAction(Icons.Rounded.BarChart, "Equalizer", { ui.show(Overlay.Equalizer) }, tint = Dim, size = 22.dp)
     }
-    if (sleepDialog) SleepDialog { sleepDialog = false }
-    if (speedDialog) SpeedDialog { speedDialog = false }
 }
 
+/** Tap = [onTap]; hold = [onHoldStart] once, then [onHold] every 200 ms until released (Musicolet's rewind / fast-forward). */
 @Composable
-private fun SleepDialog(onDismiss: () -> Unit) {
-    val pb = LocalUi.current.playback
-    val sleepAt by pb.sleepAt.collectAsState()
-    val songsLeft by pb.sleepSongs.collectAsState()
-    var minutes by remember { mutableFloatStateOf(30f) }
-    var finishSong by remember { mutableStateOf(false) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Sleep timer") },
-        text = {
-            Column {
-                Text(
-                    when {
-                        sleepAt != null -> "Playback pauses at ${DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(sleepAt!!))}."
-                        songsLeft == 1 -> "Playback pauses at the end of this song."
-                        songsLeft > 1 -> "Playback pauses after $songsLeft more songs."
-                        else -> "Fade out and pause after a while."
-                    },
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(Modifier.height(12.dp))
-                Text("After ${minutes.roundToInt()} minutes", style = MaterialTheme.typography.titleMedium)
-                Slider(minutes, { minutes = it }, valueRange = 5f..120f, steps = 22)
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { finishSong = !finishSong }) {
-                    androidx.compose.material3.Checkbox(finishSong, { finishSong = it })
-                    Text("Let the last song finish")
+private fun HoldButton(icon: ImageVector, description: String, size: Dp, onTap: () -> Unit, onHold: (() -> Unit)? = null, onHoldStart: (() -> Unit)? = null) {
+    val scope = rememberCoroutineScope()
+    val source = remember { MutableInteractionSource() }
+    Box(
+        Modifier
+            .size(size + 20.dp)
+            .indication(source, ripple(bounded = false, radius = (size + 20.dp) / 2))
+            .pointerInput(onTap, onHold, onHoldStart) {
+                awaitEachGesture {
+                    val down = awaitFirstDown()
+                    val press = PressInteraction.Press(down.position)
+                    scope.launch { source.emit(press) }
+                    val up = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) { waitForUpOrCancellation() }
+                    if (up != null) {
+                        scope.launch { source.emit(PressInteraction.Release(press)) }
+                        onTap()
+                    } else {
+                        onHoldStart?.invoke()
+                        var job: Job? = null
+                        if (onHold != null) job = scope.launch { while (isActive) { onHold(); delay(200) } }
+                        waitForUpOrCancellation()
+                        job?.cancel()
+                        scope.launch { source.emit(PressInteraction.Release(press)) }
+                    }
                 }
-                Spacer(Modifier.height(8.dp))
-                Text("After songs", style = MaterialTheme.typography.titleMedium)
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    TextButton(onClick = { pb.sleepAfterCurrent(); onDismiss() }) { Text("This one") }
-                    for (n in listOf(3, 5, 10)) TextButton(onClick = { pb.sleepAfterSongs(n); onDismiss() }) { Text("$n") }
-                }
-            }
-        },
-        confirmButton = { TextButton(onClick = { pb.sleepIn(minutes.roundToInt(), finishSong); onDismiss() }) { Text("Start") } },
-        dismissButton = {
-            if (sleepAt != null || songsLeft > 0) TextButton(onClick = { pb.cancelSleep(); onDismiss() }) { Text("Turn off") }
-            else TextButton(onClick = onDismiss) { Text("Cancel") }
-        },
-    )
-}
-
-@Composable
-private fun SpeedDialog(onDismiss: () -> Unit) {
-    val pb = LocalUi.current.playback
-    val speed by pb.speed.collectAsState()
-    var value by remember { mutableFloatStateOf(speed) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Playback speed") },
-        text = {
-            Column {
-                Text("${"%.2f".format(value)}×", style = MaterialTheme.typography.titleMedium)
-                Slider(value, { value = (it * 20).roundToInt() / 20f; pb.setSpeed(value) }, valueRange = 0.5f..2f)
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    for (s in listOf(0.75f, 1f, 1.25f, 1.5f)) TextButton(onClick = { value = s; pb.setSpeed(s) }) { Text("$s×") }
-                }
-            }
-        },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Done") } },
-    )
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(icon, description, Modifier.size(size), tint = Color.White)
+    }
 }
 
 // ---- Lyrics ------------------------------------------------------------------------------------
@@ -428,7 +394,7 @@ fun parseLrc(text: String): List<LyricLine>? {
 }
 
 @Composable
-fun LyricsView(t: Track, modifier: Modifier = Modifier) {
+fun LyricsView(t: Track, position: State<Long>, modifier: Modifier = Modifier, onClose: () -> Unit) {
     val ui = LocalUi.current
     val pb = ui.playback
     val size by ui.app.prefs.lyricsSize.flow.collectAsState()
@@ -436,35 +402,35 @@ fun LyricsView(t: Track, modifier: Modifier = Modifier) {
         value = withContext(Dispatchers.IO) { runCatching { TagReader.read(ui.library.fileOf(t)).tags.lyrics }.getOrNull() } ?: ""
     }
     val lyrics = text ?: return
+    val close = Modifier.pointerInput(Unit) { detectTapGestures(onDoubleTap = { onClose() }, onLongPress = { onClose() }) }
     if (lyrics.isBlank()) {
-        Box(modifier, contentAlignment = Alignment.Center) {
-            Text("No lyrics in this song's tags", color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+        Box(modifier.clickable(onClick = onClose), contentAlignment = Alignment.Center) {
+            Text("No lyrics in this song's tags", color = Dim, textAlign = TextAlign.Center, style = TextStyle(fontSize = 16.sp))
         }
         return
     }
     val synced = remember(lyrics) { parseLrc(lyrics) }
     if (synced == null) {
-        Text(lyrics, modifier.verticalScroll(rememberScrollState()), fontSize = (size - 4).sp, lineHeight = (size + 4).sp, textAlign = TextAlign.Center)
+        Text(
+            lyrics, modifier.then(close).verticalScroll(rememberScrollState()),
+            style = TextStyle(fontSize = (size - 4).sp, lineHeight = (size + 4).sp, textAlign = TextAlign.Center), color = Color.White,
+        )
         return
     }
-    val pos = rememberPosition()
-    val current = synced.indexOfLast { it.timeMs <= pos + 150 }
+    val current by remember(synced) { derivedStateOf { synced.indexOfLast { it.timeMs <= position.value + 150 } } }
     val state = rememberLazyListState()
     LaunchedEffect(current) {
         if (current >= 0 && !state.isScrollInProgress) state.animateScrollToItem((current - 2).coerceAtLeast(0))
     }
-    LazyColumn(modifier, state = state, contentPadding = PaddingValues(vertical = 80.dp)) {
+    LazyColumn(modifier.then(close), state = state, contentPadding = PaddingValues(vertical = 60.dp)) {
         itemsIndexed(synced) { i, line ->
-            val active = i == current
+            val on = i == current
             Text(
                 line.text.ifBlank { "♪" },
-                fontSize = size.sp,
-                lineHeight = (size + 8).sp,
-                fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
-                color = if (active) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = if (abs(i - current) <= 3) 0.7f else 0.45f),
+                style = TextStyle(fontSize = size.sp, lineHeight = (size + 8).sp, fontWeight = if (on) FontWeight.Bold else FontWeight.Medium, textAlign = TextAlign.Center),
+                color = if (on) Color.White else Color.White.copy(alpha = if (abs(i - current) <= 3) 0.6f else 0.38f),
                 modifier = Modifier.fillMaxWidth().clickable { pb.seekTo(line.timeMs) }.padding(vertical = 8.dp),
             )
         }
     }
 }
-

@@ -1,0 +1,4 @@
+# Compile all of Valence's own code ahead of time (Compose and the other libraries bring their own
+# profiles, merged in by the build). Without this a fresh install runs the UI on the JIT and stutters.
+HSPLapp/valence/**;->**(**)**
+Lapp/valence/**;

@@ -1,8 +1,5 @@
 package app.valence.ui.components
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -14,10 +11,10 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.systemGestureExclusion
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -28,147 +25,150 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import app.valence.ui.theme.LocalPalette
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
+/** Width of the strip lists leave free on their right for the scroll bar (as Musicolet does). */
+val ScrollStrip = 16.dp
+
+private class ScrollSource(
+    val total: () -> Int,
+    val visible: () -> Int,
+    val first: () -> Int,
+    val firstOffset: () -> Int,
+    val firstSize: () -> Int,
+    val canScroll: () -> Boolean,
+    val jump: (Int) -> Unit,
+)
+
 /**
- * Musicolet-style fast scroller: a thumb on the right edge you can drag through a long list, with a
- * bubble showing where you are (first letter, year...). Shown while scrolling or dragging.
+ * Musicolet's always-visible scroll bar: a thin thumb in a strip on the right. Drag it to fly
+ * through the list; a bubble shows where you are. The thumb moves in the draw phase only, so
+ * scrolling never recomposes it.
  */
 @Composable
-fun BoxScope.FastScroller(
-    state: LazyListState,
-    count: Int,
-    label: (Int) -> String,
-    topPadding: Int = 0,
-) {
-    FastScrollerImpl(
-        count = count,
-        first = { state.firstVisibleItemIndex },
-        visible = { state.layoutInfo.visibleItemsInfo.size },
-        scrolling = { state.isScrollInProgress },
-        scrollTo = { state.scrollToItem(it) },
-        label = label,
-        topPadding = topPadding,
-    )
+fun BoxScope.FastScroller(state: LazyListState, label: (Int) -> String = { "" }) {
+    val src = remember(state) {
+        ScrollSource(
+            total = { state.layoutInfo.totalItemsCount },
+            visible = { state.layoutInfo.visibleItemsInfo.size },
+            first = { state.firstVisibleItemIndex },
+            firstOffset = { state.firstVisibleItemScrollOffset },
+            firstSize = { state.layoutInfo.visibleItemsInfo.firstOrNull()?.size ?: 1 },
+            canScroll = { state.canScrollForward || state.canScrollBackward },
+            jump = { state.requestScrollToItem(it) },
+        )
+    }
+    Scroller(src, label)
 }
 
 @Composable
-fun BoxScope.FastScroller(state: LazyGridState, count: Int, label: (Int) -> String) {
-    FastScrollerImpl(
-        count = count,
-        first = { state.firstVisibleItemIndex },
-        visible = { state.layoutInfo.visibleItemsInfo.size },
-        scrolling = { state.isScrollInProgress },
-        scrollTo = { state.scrollToItem(it) },
-        label = label,
-        topPadding = 0,
-    )
+fun BoxScope.FastScroller(state: LazyGridState, columns: Int, label: (Int) -> String = { "" }) {
+    val src = remember(state, columns) {
+        ScrollSource(
+            total = { (state.layoutInfo.totalItemsCount + columns - 1) / columns },
+            visible = { (state.layoutInfo.visibleItemsInfo.size + columns - 1) / columns },
+            first = { state.firstVisibleItemIndex / columns },
+            firstOffset = { state.firstVisibleItemScrollOffset },
+            firstSize = { state.layoutInfo.visibleItemsInfo.firstOrNull()?.size?.height ?: 1 },
+            canScroll = { state.canScrollForward || state.canScrollBackward },
+            jump = { state.requestScrollToItem(it * columns) },
+        )
+    }
+    Scroller(src, { label(it * columns) })
 }
 
 @Composable
-private fun BoxScope.FastScrollerImpl(
-    count: Int,
-    first: () -> Int,
-    visible: () -> Int,
-    scrolling: () -> Boolean,
-    scrollTo: suspend (Int) -> Unit,
-    label: (Int) -> String,
-    topPadding: Int,
-) {
-    if (count < 40) return
-    val scope = rememberCoroutineScope()
+private fun BoxScope.Scroller(src: ScrollSource, label: (Int) -> String) {
+    val show by remember(src) { derivedStateOf { src.canScroll() } }
+    if (!show) return
+    val pal = LocalPalette.current
+    val density = LocalDensity.current
+    val thumbH = with(density) { 44.dp.toPx() }
     var height by remember { mutableIntStateOf(1) }
     var dragging by remember { mutableStateOf(false) }
     var dragY by remember { mutableFloatStateOf(0f) }
-    var shown by remember { mutableStateOf(false) }
-    val isScrolling by remember { derivedStateOf { scrolling() } }
-    LaunchedEffect(isScrolling, dragging) {
-        if (isScrolling || dragging) shown = true else { delay(1200); shown = false }
+
+    fun track() = (height - thumbH).coerceAtLeast(1f)
+    fun fraction(): Float {
+        val span = (src.total() - src.visible()).coerceAtLeast(1)
+        val partial = src.firstOffset().toFloat() / src.firstSize().coerceAtLeast(1)
+        return ((src.first() + partial) / span).coerceIn(0f, 1f)
     }
-    val density = LocalDensity.current
-    val thumbH = with(density) { 44.dp.toPx() }
-    val fraction by remember(count) {
-        derivedStateOf {
-            val span = (count - visible()).coerceAtLeast(1)
-            (first().toFloat() / span).coerceIn(0f, 1f)
-        }
+    fun indexAt(y: Float): Int {
+        val n = src.total()
+        return ((y / track()) * (n - src.visible()).coerceAtLeast(0)).roundToInt().coerceIn(0, (n - 1).coerceAtLeast(0))
     }
-    val y = if (dragging) dragY else fraction * (height - thumbH)
-    val targetIndex = ((y / (height - thumbH).coerceAtLeast(1f)) * (count - 1)).roundToInt().coerceIn(0, count - 1)
-    val input = Modifier
-        .pointerInput(count) {
-            detectDragGestures(
-                onDragStart = { o -> dragging = true; dragY = (o.y - thumbH / 2).coerceIn(0f, height - thumbH) },
-                onDragEnd = { dragging = false },
-                onDragCancel = { dragging = false },
-            ) { change, amount ->
-                change.consume()
-                dragY = (dragY + amount.y).coerceIn(0f, height - thumbH)
-                val idx = ((dragY / (height - thumbH).coerceAtLeast(1f)) * (count - 1)).roundToInt()
-                scope.launch { scrollTo(idx) }
-            }
-        }
-        .pointerInput(count) {
-            detectTapGestures { o ->
-                val yy = (o.y - thumbH / 2).coerceIn(0f, height - thumbH)
-                scope.launch { scrollTo(((yy / (height - thumbH).coerceAtLeast(1f)) * (count - 1)).roundToInt()) }
-            }
-        }
 
     Box(
         Modifier
             .align(Alignment.TopEnd)
-            .padding(top = with(density) { topPadding.toDp() })
             .fillMaxHeight()
-            .width(28.dp)
+            .width(ScrollStrip)
             .onSizeChanged { height = it.height }
-            // The strip sits on top of the rows' menu buttons, so it only takes touches while the thumb shows.
-            .then(if (shown || dragging) input else Modifier),
+            .pointerInput(src) {
+                detectDragGestures(
+                    onDragStart = { o -> dragging = true; dragY = (o.y - thumbH / 2).coerceIn(0f, track()); src.jump(indexAt(dragY)) },
+                    onDragEnd = { dragging = false },
+                    onDragCancel = { dragging = false },
+                ) { change, amount ->
+                    change.consume()
+                    dragY = (dragY + amount.y).coerceIn(0f, track())
+                    src.jump(indexAt(dragY))
+                }
+            }
+            .pointerInput(src) {
+                detectTapGestures { o -> src.jump(indexAt((o.y - thumbH / 2).coerceIn(0f, track()))) }
+            },
     ) {
-        AnimatedVisibility(shown, enter = fadeIn(), exit = fadeOut()) {
-            Box(Modifier.offset { IntOffset(0, y.roundToInt()) }.padding(end = 4.dp).size(width = 6.dp, height = 44.dp).clip(RoundedCornerShape(3.dp)).background(MaterialTheme.colorScheme.primary))
-        }
+        Box(
+            Modifier
+                .align(Alignment.TopCenter)
+                // Placed (not drawn) where it is, so the system's edge back gesture leaves it alone.
+                .offset { IntOffset(0, (if (dragging) dragY else fraction() * track()).roundToInt()) }
+                .systemGestureExclusion()
+                .size(width = 8.dp, height = 44.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(if (dragging) pal.accent else pal.thumb),
+        )
     }
     if (dragging) {
-        val text = label(targetIndex)
+        val text = label(indexAt(dragY))
         if (text.isNotEmpty()) Box(
             Modifier
                 .align(Alignment.TopEnd)
-                .offset { IntOffset(-with(density) { 44.dp.roundToPx() }, (y + topPadding - thumbH / 2).roundToInt()) }
-                .clip(RoundedCornerShape(16.dp))
-                .background(MaterialTheme.colorScheme.primaryContainer)
-                .padding(horizontal = 18.dp, vertical = 10.dp),
+                .offset { IntOffset(-with(density) { 40.dp.roundToPx() }, (dragY - thumbH / 2).roundToInt().coerceAtLeast(0)) }
+                .size(72.dp)
+                .clip(RoundedCornerShape(50))
+                .background(pal.accent),
+            contentAlignment = Alignment.Center,
         ) {
-            Text(text, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
+            Text(text.take(4), style = TextStyle(fontSize = if (text.length > 2) 20.sp else 30.sp, fontWeight = FontWeight.Bold), color = pal.onAccent, maxLines = 1)
         }
     }
 }
 
-/** First letter for the fast-scroll bubble ("#" for digits and symbols). */
-fun indexLetter(s: String): String {
-    val c = s.trimStart().firstOrNull() ?: return ""
-    return if (c.isLetter()) c.uppercaseChar().toString() else "#"
-}
-
 /**
- * Drag-to-reorder for a LazyColumn: long-press (or drag the handle) to pick an item up; it swaps
- * with neighbours as it passes them and the list scrolls at the edges.
+ * Drag-to-reorder for a LazyColumn: drag a row's handle; it swaps with neighbours as it passes
+ * them and the list scrolls at the edges.
  */
 @Stable
-class ReorderState(val list: LazyListState, private val onMove: (Int, Int) -> Unit) {
+class ReorderState(val list: LazyListState, private val onMove: (Int, Int) -> Unit, private val onEnd: () -> Unit = {}) {
     var dragging by mutableIntStateOf(-1)
         private set
     var offset by mutableFloatStateOf(0f)
@@ -193,8 +193,10 @@ class ReorderState(val list: LazyListState, private val onMove: (Int, Int) -> Un
     }
 
     fun end() {
+        val was = dragging
         dragging = -1
         offset = 0f
+        if (was >= 0) onEnd()
     }
 
     /** Scroll speed (px/frame) while the dragged item is near the top or bottom edge. */
@@ -214,8 +216,8 @@ class ReorderState(val list: LazyListState, private val onMove: (Int, Int) -> Un
 }
 
 @Composable
-fun rememberReorderState(list: LazyListState, onMove: (Int, Int) -> Unit): ReorderState {
-    val state = remember(list) { ReorderState(list, onMove) }
+fun rememberReorderState(list: LazyListState, onEnd: () -> Unit = {}, onMove: (Int, Int) -> Unit): ReorderState {
+    val state = remember(list) { ReorderState(list, onMove, onEnd) }
     LaunchedEffect(state) {
         while (isActive) {
             val v = state.edgeSpeed()

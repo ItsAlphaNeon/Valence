@@ -4,23 +4,24 @@ The port works on the emulator (a generic Android 17 image), using your sample l
 
 ## Do this first (only you can)
 1. **Syncthing on the phone:** remove `/.valence` from the Music folder's ignore patterns. Without that, plays, likes and playlists can't sync between the phone and the desktops.
-2. **Install** `android/app/build/outputs/apk/release/app-release.apk` (4.9 MB, minified):
+2. **Install** the release build together with its baseline profile, so Android compiles it at install time (a plain `adb install` leaves it on the JIT, which stutters for the first minutes):
    ```
-   adb install -r android/app/build/outputs/apk/release/app-release.apk
+   adb install-multiple -r android/app/build/outputs/apk/release/app-release.apk android/app/build/outputs/apk/release/baselineProfiles/0/app-release.dm
    ```
+   Running it from Android Studio does the same.
    To rebuild it: `cd android`, then `./gradlew :app:assembleRelease` with Android Studio's JBR as `JAVA_HOME`. It's signed with the debug key, so it installs over a debug build and keeps the data. Builds signed with a real release key later need an uninstall first.
 3. On first launch, grant **All files access** and pick the Syncthing music folder.
 
 ## What works (checked on the emulator)
 - **Library**
   - Onboarding and the first scan, reading tags from MP3 (ID3v2.2/2.3/2.4), FLAC, Ogg/Opus, M4A (AAC/ALAC), WAV and AIFF with embedded art. The tag reader is a pure-Kotlin port that matches the desktop's reader file for file on your real library, with the exceptions listed under Known issues.
-  - Tabs: **Songs, Albums, Artists, Genres, Folders** (Musicolet-style folder browser with breadcrumbs).
+  - Musicolet's layout: swipeable tabs along the bottom (**Queues, Now playing, Albums, Artists, SiivaGunner, Playlists**; Folders and Genres can be turned on in Settings → Arrange tabs), search and the main menu at the end of the bar.
   - Album, artist and genre pages.
   - Search across songs, albums and artists.
   - Re-indexing when the app comes back to the foreground (at most every 30 s), plus *Rescan now*. This also works in the minified release build; I copied an m4a and an opus in, rescanned, checked tags and art, then removed them.
 - **SiivaGunner:** a separate tab with seasons and games, separate from the library.
 - **Playlists tab**
-  - Liked, Recently added, History, your static `.m3u8` playlists, and read-only TIDAL mirrors.
+  - Built-in lists (All songs, Favorites, Recently added, Recently played, Most played, Not played, Listening history) and every playlist, TIDAL mirrors included.
   - On the phone you can create a playlist, add songs to it, remove them, and rename or delete it (long-press it, or use ⋮ on its page).
   - Each change is written to `Playlists/*.m3u8` with an atomic rename, so Syncthing carries it to the desktops. **A delete on the phone deletes it everywhere.**
 - **Playback** (Media3)
@@ -49,7 +50,7 @@ The port works on the emulator (a generic Android 17 image), using your sample l
 - A real phone, real Bluetooth or headset buttons, and real headphone unplugging. The emulator has none of these.
 - **The Syncthing round trip:**
   - whether a desktop picks up the phone's plays, likes and `.m3u8` edits;
-  - whether conflict copies of a playlist are handled. Such playlists show as read-only on the phone, but none existed to try.
+  - whether conflict copies of a playlist are handled. The phone shows their union, and editing such a playlist settles the conflict; none existed to try.
 - **Android Auto:** the media browse tree is implemented but has never been connected to a car or the DHU.
 - **Smart playlists:** the desktop's SQL is ported, but your library has none.
 - **A library much bigger than about 900 songs**, and the very first scan of your full library on a phone.
@@ -78,7 +79,7 @@ The port works on the emulator (a generic Android 17 image), using your sample l
 - **Android 11+ only (minSdk 30).** All-files access exists only from Android 11. The phone's SQLite also needs the upsert syntax the desktop uses.
 - **Tapping a song works like Musicolet:** the list becomes a queue named after it ("Album name", "Songs", "Liked"…). An existing queue with that name is replaced, and up to 20 queues are kept. Settings → Playback → *Tapping a song* switches this to replace / play next / add.
 - **Shuffle reorders the queue** (Musicolet-style), so the queue always shows play order.
-- **Read-only playlists:** mirrors (TIDAL playlist copies) and playlists with a Syncthing conflict copy can't be edited on the phone. The desktop owns and rewrites them.
+- **The phone only plays and organises; the PC adds music.** Playlists (TIDAL mirrors included), favorites and queues are managed on the phone and sync back: add, remove, reorder, rename, delete. Only a smart playlist's rules are PC-only. Note that the desktop re-fills a TIDAL mirror with songs it's missing after an import, so a song removed from a mirror can come back.
 - **Renaming a playlist renames its file byte for byte**, so the desktop sees a rename rather than a new playlist. A name already taken gets a suffix, the same way the desktop's `freeName` does it.
 - The phone never writes to audio files or tags.
 - It writes only:

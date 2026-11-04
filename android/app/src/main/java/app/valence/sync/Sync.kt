@@ -21,6 +21,7 @@ import app.valence.data.Db
 import app.valence.data.Track
 import app.valence.data.cv
 import app.valence.data.mapAll
+import app.valence.data.str
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,9 +45,11 @@ data class SyncState(
 /**
  * Everything shared with the other devices through the synced folder:
  * - reads every device's `.valence/devices/<id>/` plays and likes logs (this phone's too),
- * - appends this phone's own plays and likes (the only `.valence` files it ever writes, plus device.json),
- * - indexes `Playlists/<name>.m3u8` and the desktop's smart/mirror docs, and edits static playlists the
- *   way the desktop does (re-read, change, atomic rewrite with relative paths).
+ * - appends this phone's own plays and likes (plus device.json) in its own device folder,
+ * - indexes `Playlists/<name>.m3u8` and the desktop's smart/mirror docs, and manages playlists the way
+ *   the desktop does: create, add, remove, reorder, rename, delete (re-read, change, atomic rewrite
+ *   with relative paths; a mirror's or smart playlist's doc in `.valence/playlists` follows a rename
+ *   or delete). Only the PC adds music; everything you organise syncs both ways.
  * Audio files are never touched.
  *
  * All file and DB work runs on one background thread, in order.
@@ -395,7 +398,26 @@ class Sync(private val app: ValenceApp) {
         entries.filterNot { it.relPath.equals(track.relPath, ignoreCase = true) }
     }
 
-    /** Renames a static playlist's file (the desktop does the same and re-indexes); reports the new id. */
+    /**
+     * Puts the songs the phone lists in [order] (their rel paths, top to bottom). Entries the phone
+     * can't play stay where they are; if the file changed underneath, nothing moves.
+     */
+    fun setPlaylistOrder(id: String, order: List<String>) = editPlaylist(id) { entries ->
+        val wanted = order.map { it.lowercase() }
+        val set = wanted.toHashSet()
+        val slots = entries.indices.filter { entries[it].relPath.lowercase() in set }
+        if (slots.size != wanted.size) return@editPlaylist entries
+        val byPath = entries.groupBy { it.relPath.lowercase() }.mapValues { ArrayDeque(it.value) }
+        val out = entries.toMutableList()
+        slots.forEachIndexed { k, slot -> out[slot] = byPath[wanted[k]]?.removeFirstOrNull() ?: return@editPlaylist entries }
+        out
+    }
+
+    /**
+     * Renames a playlist. Its file is renamed (the desktop sees a rename, not a new list); a
+     * mirrored TIDAL playlist keeps its link to the source, and a smart one just changes its name.
+     * Reports the playlist's id afterwards (a regular playlist's id follows its file name).
+     */
     fun renamePlaylist(id: String, name: String, done: (String?) -> Unit) {
         app.scope.launch(io) {
             val newId = try {
@@ -410,54 +432,118 @@ class Sync(private val app: ValenceApp) {
 
     private fun renamePlaylistNow(id: String, name: String): String? {
         val root = root() ?: return null
-        val rel = staticPlaylistPath(id) ?: return null
-        val target = freeName(root, name, except = rel)
-        if (target == rel) return id
-        val old = File(root, rel)
-        // A plain rename keeps the file byte for byte. Shared storage ignores letter case, so a
-        // case-only change goes through a temporary name.
-        val ok = if (Keys.foldKey(target) == Keys.foldKey(rel)) {
-            val tmp = File(old.parentFile, old.name + ".valence-tmp")
-            old.renameTo(tmp) && tmp.renameTo(File(root, target))
-        } else {
-            old.renameTo(File(root, target))
+        val row = playlistRow(id) ?: return null
+        val docs = File(root, ".valence/playlists")
+        if (row.kind == "smart") {
+            for ((f, doc) in docFiles(docs, "smart-").filter { it.second.optString("id") == id }) {
+                writeDoc(f, doc.put("name", name).put("updatedAt", System.currentTimeMillis()))
+            }
+            indexPlaylistsNow()
+            return id
         }
-        if (!ok) throw java.io.IOException("the file couldn't be renamed")
+        val rel = row.relPath ?: return null
+        settleConflicts(root, rel)
+        val target = freeName(root, name, except = rel)
+        if (target != rel) {
+            val old = File(root, rel)
+            // A plain rename keeps the file byte for byte. Shared storage ignores letter case, so a
+            // case-only change goes through a temporary name.
+            val ok = if (Keys.foldKey(target) == Keys.foldKey(rel)) {
+                val tmp = File(old.parentFile, old.name + ".valence-tmp")
+                old.renameTo(tmp) && tmp.renameTo(File(root, target))
+            } else {
+                old.renameTo(File(root, target))
+            }
+            if (!ok) throw java.io.IOException("the file couldn't be renamed")
+        }
+        if (row.kind == "mirror") {
+            val shown = target.substringAfterLast('/').replace(M3U, "")
+            for ((f, doc) in docFiles(docs, "mirror-").filter { it.second.optString("id") == id }) {
+                writeDoc(f, doc.put("name", shown).put("relPath", target).put("updatedAt", System.currentTimeMillis()))
+            }
+        }
         indexPlaylistsNow()
-        return staticId(target)
+        return if (row.kind == "mirror") id else staticId(target)
     }
 
-    /** Deletes a static playlist's file; Syncthing then removes it on the other devices too, like a desktop delete. */
+    /**
+     * Deletes a playlist everywhere: its file (and any conflict copies) and, for mirrored and
+     * smart playlists, their document in .valence/playlists. Syncthing carries the delete over.
+     */
     fun deletePlaylist(id: String, done: () -> Unit) {
         app.scope.launch(io) {
             val root = root()
-            val rel = staticPlaylistPath(id)
-            if (root != null && rel != null) {
-                val f = File(root, rel)
-                if (f.exists() && !f.delete()) toast("Couldn't delete the playlist") else toast("Playlist deleted")
+            val row = playlistRow(id)
+            if (root != null && row != null) {
+                var ok = true
+                row.relPath?.let { rel ->
+                    val f = File(root, rel)
+                    conflictCopies(f).forEach { it.delete() }
+                    if (f.exists() && !f.delete()) ok = false
+                }
+                if (row.kind == "mirror" || row.kind == "smart") {
+                    for ((f, doc) in docFiles(File(root, ".valence/playlists"), row.kind + "-")) if (doc.optString("id") == id) f.delete()
+                }
+                toast(if (ok) "Playlist deleted" else "Couldn't delete the playlist")
                 indexPlaylistsNow()
             }
             withContext(Dispatchers.Main) { done() }
         }
     }
 
-    /** The file of a playlist the phone may change, or null (with a note) for desktop-managed ones. */
-    private fun staticPlaylistPath(id: String): String? {
-        val row = db.readableDatabase.rawQuery("SELECT rel_path, kind FROM playlists WHERE id = ?", arrayOf(id))
-            .use { if (it.moveToFirst()) it.getString(0) to it.getString(1) else null } ?: return null
-        if (row.second != "static" || row.first == null) {
-            toast("This playlist is managed on your computer")
-            return null
+    private class Row(val relPath: String?, val kind: String)
+
+    private fun playlistRow(id: String): Row? =
+        db.readableDatabase.rawQuery("SELECT rel_path, kind FROM playlists WHERE id = ?", arrayOf(id))
+            .use { if (it.moveToFirst()) Row(it.str(0), it.getString(1)) else null }
+
+    private fun conflictCopies(file: File): List<File> =
+        file.parentFile?.listFiles { f -> f.name.contains(".sync-conflict-") && f.name.replace(CONFLICT_PART, "") == file.name }.orEmpty().toList()
+
+    /** Folds Syncthing conflict copies into the playlist (the union the phone shows) and removes them. */
+    private fun settleConflicts(root: File, rel: String) {
+        val file = File(root, rel)
+        val copies = conflictCopies(file)
+        if (copies.isEmpty()) return
+        var entries = M3u8.read(file, root)
+        for (c in copies) {
+            val seen = entries.mapTo(HashSet()) { it.relPath.lowercase() }
+            entries = entries + M3u8.read(c, root).filter { seen.add(it.relPath.lowercase()) }
         }
-        return row.first
+        M3u8.write(file, root, entries)
+        copies.forEach { it.delete() }
     }
 
-    /** Re-reads the file right before writing (never a stale copy) and keeps entries the phone can't resolve. */
+    private fun docFiles(dir: File, prefix: String): List<Pair<File, JSONObject>> =
+        dir.listFiles { f -> f.isFile && f.name.startsWith(prefix) && f.name.endsWith(".json") && !f.name.contains(".sync-conflict-") }
+            .orEmpty().mapNotNull { f -> runCatching { f to JSONObject(f.readText()) }.getOrNull() }
+
+    /** Writes a desktop playlist document in place (temp file + rename, like the desktop). */
+    private fun writeDoc(f: File, doc: JSONObject) {
+        val tmp = File(f.path + ".valence-tmp")
+        tmp.writeText(doc.toString(1).replace("\\/", "/")) // org.json escapes "/"; the desktop writes it plain
+        if (!tmp.renameTo(f)) {
+            f.delete()
+            if (!tmp.renameTo(f)) throw java.io.IOException("couldn't save " + f.name)
+        }
+    }
+
+    /**
+     * Edits a playlist's file: re-read right before writing (never a stale copy), entries the
+     * phone can't resolve kept. A playlist with Syncthing conflict copies starts from their
+     * union, as shown, and the edit settles the conflict. Smart playlists have rules, not songs.
+     */
     private fun editPlaylist(id: String, change: (List<M3u8.Entry>) -> List<M3u8.Entry>) {
         app.scope.launch(io) {
             val root = root() ?: return@launch
-            val rel = staticPlaylistPath(id) ?: return@launch
+            val row = playlistRow(id) ?: return@launch
+            val rel = row.relPath
+            if (row.kind == "smart" || rel == null) {
+                toast("A smart playlist's songs come from its rules")
+                return@launch
+            }
             try {
+                settleConflicts(root, rel)
                 val file = File(root, rel)
                 val before = M3u8.read(file, root)
                 val after = change(before)

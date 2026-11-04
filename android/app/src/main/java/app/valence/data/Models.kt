@@ -75,13 +75,17 @@ data class FolderEntry(val name: String, val relPath: String, val trackCount: In
 data class Playlist(
     val id: String,
     val name: String,
-    /** "static" (an .m3u8 the phone may edit), "mirror" (desktop-owned copy of a TIDAL/Bandcamp list), "smart". */
+    /**
+     * "static" (an .m3u8), "mirror" (an .m3u8 the desktop fills from a TIDAL/Bandcamp playlist),
+     * "conflict" (an .m3u8 with Syncthing conflict copies) or "smart" (rules, edited on the PC).
+     */
     val kind: String,
     val relPath: String?,
     val itemCount: Int,
     val artTrackId: Long?,
 ) {
-    val editable get() = kind == "static"
+    /** Songs can be added, removed and reordered (every kind but smart). Any playlist can be renamed or deleted. */
+    val editable get() = kind != "smart"
 }
 
 /** Built-in playlists computed from the library (like Musicolet's and the desktop's). */

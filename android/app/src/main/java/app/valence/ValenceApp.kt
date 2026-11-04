@@ -15,11 +15,11 @@ import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import coil3.memory.MemoryCache
-import coil3.request.crossfade
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -57,9 +57,8 @@ class ValenceApp : Application(), SingletonImageLoader.Factory {
             add(TrackArtKeyer())
             add(TrackArtFetcher.Factory())
         }
-        .memoryCache { MemoryCache.Builder().maxSizePercent(context, 0.2).build() }
-        .diskCache(null) // art is read straight from the files, which is already fast
-        .crossfade(150)
+        .memoryCache { MemoryCache.Builder().maxSizePercent(context, 0.25).build() }
+        .diskCache(null) // list art comes from ArtStore's own small thumbnails; covers straight from the files
         .build()
 
     private var refreshJob: Job? = null
@@ -94,6 +93,19 @@ class ValenceApp : Application(), SingletonImageLoader.Factory {
                 Log.w("Valence", "Refresh failed", e)
             }
             launch(Dispatchers.Main) { playback.restore() }
+            prefetchThumbs()
+        }
+    }
+
+    private var thumbJob: Job? = null
+
+    /** Fills in list thumbnails in the background after a scan (see ArtStore.prefetchThumbs). */
+    private fun prefetchThumbs() {
+        if (thumbJob?.isActive == true) return
+        thumbJob = scope.launch(Dispatchers.IO) {
+            delay(3_000) // let the first screen settle
+            val job = coroutineContext[Job]
+            ArtStore.prefetchThumbs { job?.isActive == true }
         }
     }
 

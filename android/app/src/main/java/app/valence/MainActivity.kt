@@ -18,7 +18,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.valence.ui.ValenceRoot
-import app.valence.ui.rememberArtColor
 import app.valence.ui.screens.Onboarding
 import app.valence.ui.screens.hasStorageAccess
 import app.valence.ui.theme.ValenceTheme
@@ -34,17 +33,14 @@ class MainActivity : ComponentActivity() {
         if (intent?.getBooleanExtra(EXTRA_OPEN_PLAYER, false) == true) openPlayer++
         setContent {
             val theme by app.prefs.theme.flow.collectAsStateWithLifecycle()
-            val dynamic by app.prefs.dynamicColor.flow.collectAsStateWithLifecycle()
-            val tint by app.prefs.artTint.flow.collectAsStateWithLifecycle()
+            val accent by app.prefs.accent.flow.collectAsStateWithLifecycle()
             val root by app.prefs.musicRoot.flow.collectAsStateWithLifecycle()
-            val current by app.playback.current.collectAsStateWithLifecycle()
             var access by remember { mutableStateOf(hasStorageAccess(this)) }
             LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
                 access = hasStorageAccess(this@MainActivity)
                 if (access) app.refresh()
             }
-            val art = rememberArtColor(current?.takeIf { tint && it.hasArt }?.id)
-            ValenceTheme(theme, dynamic, art = art) {
+            ValenceTheme(theme, accent) {
                 if (!access || root.isEmpty()) {
                     Onboarding(
                         access, root,

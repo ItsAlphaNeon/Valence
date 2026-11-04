@@ -41,12 +41,17 @@ class Prefs(context: Context) {
         get() = sp.getString("deviceId", null) ?: newDeviceId().also { sp.edit().putString("deviceId", it).apply() }
 
     // Appearance
-    val theme = string("theme", "system") // system | light | dark | black
-    val dynamicColor = bool("dynamicColor", false) // Material You instead of album-art tint
-    val artTint = bool("artTint", true)
+    val theme = string("theme", "dark") // system | light | dark | black
+    val accent = string("accent", "#65FFA0")
+    /** Enabled tabs, in order (Musicolet's "Arrange tabs"); see ui.Tab. */
+    val tabs = string("tabs", "queues,player,albums,artists,rips,playlists")
+    val lastTab = string("lastTab", "player")
     val gridAlbums = bool("gridAlbums", true)
-    val libraryTab = int("libraryTab", 0)
+    val albumColumns = int("albumColumns", 3)
+    val artistMode = string("artistMode", "album") // album | track | composer
     val ripsTab = int("ripsTab", 0)
+    /** Tapping the big album art in Now playing: lyrics | play | nothing. */
+    val artTap = string("artTap", "lyrics")
 
     // Library
     val songSort = string("songSort", "title")

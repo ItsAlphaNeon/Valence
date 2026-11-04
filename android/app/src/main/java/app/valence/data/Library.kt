@@ -95,6 +95,58 @@ class Library(private val db: Db, private val rootPath: () -> String) {
         }
     }
 
+    /**
+     * Musicolet's three artist lists: "album" = album artists (above), "track" = the artists on
+     * each song (features split out), "composer" = composers.
+     */
+    fun artistsBy(mode: String, c: Collection, sort: String = "name"): Flow<List<Artist>> {
+        if (mode == "album") {
+            val base = artists(c, sort)
+            return if (sort == "tracks" || sort == "albums") base else base.mapLatest { l -> l.sortedBy { Scanner.fold(it.name) } }
+        }
+        return watch(Db.Topic.Tracks, Db.Topic.Favorites) {
+            val counts = HashMap<String, IntArray>() // songs
+            val albums = HashMap<String, HashSet<Long>>()
+            val art = HashMap<String, Long>()
+            val names = HashMap<String, String>() // folded -> first spelling seen
+            val sql = if (mode == "composer") "SELECT t.composer, NULL, t.album_id, CASE WHEN t.pic_length > 0 THEN t.id END FROM tracks t WHERE ${c.where()} AND t.composer IS NOT NULL AND t.composer <> ''"
+            else "SELECT t.artist, t.artists, t.album_id, CASE WHEN t.pic_length > 0 THEN t.id END FROM tracks t WHERE ${c.where()}"
+            q(sql).use { cur ->
+                while (cur.moveToNext()) {
+                    val list = (cur.str(1)?.split("; ")?.filter { it.isNotBlank() }?.takeIf { it.isNotEmpty() } ?: listOf(cur.str(0).orEmpty()))
+                        .map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+                    for (n in list) {
+                        val k = n.lowercase()
+                        names.putIfAbsent(k, n)
+                        counts.getOrPut(k) { IntArray(1) }[0]++
+                        if (!cur.isNull(2)) albums.getOrPut(k) { HashSet() }.add(cur.getLong(2))
+                        if (!cur.isNull(3)) art.putIfAbsent(k, cur.getLong(3))
+                    }
+                }
+            }
+            val liked = likedKeys("r")
+            val list = names.map { (k, n) -> Artist(n, albums[k]?.size ?: 0, counts.getValue(k)[0], art[k], Keys.artistFavoriteKey(n) in liked) }
+            when (sort) {
+                "tracks" -> list.sortedWith(compareByDescending<Artist> { it.trackCount }.thenBy { Scanner.fold(it.name) })
+                "albums" -> list.sortedWith(compareByDescending<Artist> { it.albumCount }.thenBy { Scanner.fold(it.name) })
+                else -> list.sortedBy { Scanner.fold(it.name) }
+            }
+        }
+    }
+
+    /** Songs for an artist page; see [artistsBy] for [mode]. */
+    fun artistTracksBy(name: String, mode: String): Flow<List<Track>> = when (mode) {
+        "composer" -> watch(*trackTopics) { tracks("t.composer = ?", "t.sort_album, coalesce(t.disc_no, 1), coalesce(t.track_no, 9999)", name) }
+        "track" -> watch(*trackTopics) {
+            tracks(
+                "t.artist = ? OR (t.artists IS NOT NULL AND ('; ' || t.artists || '; ') LIKE ?)",
+                "t.sort_album, coalesce(t.disc_no, 1), coalesce(t.track_no, 9999)",
+                name, "%; ${likeEscape(name)}; %",
+            )
+        }
+        else -> artistTracks(name)
+    }
+
     fun artistAlbums(name: String): Flow<List<Album>> = watch(Db.Topic.Tracks, Db.Topic.Favorites) {
         albumsWhere("a.album_artist = ?", "a.year IS NULL, a.year DESC, a.sort_title", name)
     }
