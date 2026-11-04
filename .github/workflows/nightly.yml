@@ -68,7 +68,11 @@ jobs:
 
   publish:
     name: Publish the Nightly release
-    needs: [check, build] # only when every build succeeded: no half-finished nightlies
+    needs: [check, build]
+    # Publishes even when a platform didn't build (GitHub's Mac runners are sometimes unavailable):
+    # that platform's files carry over from the previous Nightly and the notes say so. The run still
+    # shows as failed, so it doesn't go unnoticed. Nothing is published if nothing built.
+    if: ${{ !cancelled() && needs.check.outputs.build == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write # move the tag, replace the release
@@ -83,9 +87,37 @@ jobs:
           fetch-depth: 0
 
       - uses: actions/download-artifact@v8
+        continue-on-error: true # a run where nothing built has no artifacts
         with:
           path: dist
           merge-multiple: true
+
+      - name: Carry over anything that didn't build
+        run: |
+          mkdir -p dist
+          if [ -z "$(ls -A dist)" ]; then echo "::error::Nothing built, so the Nightly stays as it was."; exit 1; fi
+          previous=$(gh release view nightly --json name -q .name 2>/dev/null || true)
+          declare -A files=(
+            [Windows]='Valence-Setup-*.exe Valence-*.msi'
+            [macOS]='Valence-*-mac-*.zip'
+            [Linux]='Valence-*.AppImage'
+            [Android]='Valence-*-arm.apk Valence-*-x86.apk'
+          )
+          : > "$RUNNER_TEMP/carried.md"
+          for system in Windows macOS Linux Android; do
+            read -ra patterns <<< "${files[$system]}"
+            built=no
+            for p in "${patterns[@]}"; do compgen -G "dist/$p" > /dev/null && built=yes; done
+            [ $built = yes ] && continue
+            carried=no
+            for p in "${patterns[@]}"; do gh release download nightly -p "$p" -D dist 2>/dev/null && carried=yes; done
+            if [ $carried = yes ]; then
+              echo "- **$system** didn't build tonight; its files are from ${previous:-the previous nightly}." >> "$RUNNER_TEMP/carried.md"
+            else
+              echo "- **$system** didn't build tonight, and there's no earlier nightly to take it from." >> "$RUNNER_TEMP/carried.md"
+            fi
+          done
+          ls -l dist
 
       - name: Write the release notes
         run: |
@@ -93,6 +125,11 @@ jobs:
           {
             echo "The newest build of master, from [\`${SHA:0:7}\`](${{ github.server_url }}/${{ github.repository }}/commit/$SHA) on $(date -u '+%B %-d, %Y'). It's replaced every night there's something new, so it can be rough around the edges."
             echo
+            if [ -s "$RUNNER_TEMP/carried.md" ]; then
+              echo "### Not rebuilt tonight"
+              cat "$RUNNER_TEMP/carried.md"
+              echo
+            fi
             if [ -z "$last" ]; then
               echo "### Recent changes"
               git log --no-merges --format='- %s (%h)' -n 15 "$SHA"
@@ -107,10 +144,10 @@ jobs:
             echo
             echo "| System | File |"
             echo "|---|---|"
-            echo "| Windows | \`Valence-Setup-$VERSION.exe\`, or \`Valence-$VERSION.msi\` |"
-            echo "| macOS | \`Valence-$VERSION-mac-arm64.zip\` (Apple Silicon) or \`-mac-x64.zip\` (Intel); unzip to get Valence.app |"
-            echo "| Linux | \`Valence-$VERSION.AppImage\` |"
-            echo "| Android | \`Valence-$VERSION-arm.apk\` for phones, \`-x86.apk\` for emulators |"
+            echo "| Windows | \`Valence-Setup-….exe\`, or the \`.msi\` |"
+            echo "| macOS | \`…-mac-arm64.zip\` for Apple Silicon, \`…-mac-x64.zip\` for Intel; unzip to get Valence.app |"
+            echo "| Linux | \`Valence-….AppImage\` |"
+            echo "| Android | \`…-arm.apk\` for phones, \`…-x86.apk\` for emulators |"
             echo
             echo "Valence isn't signed by Apple or Microsoft. The first time: on Windows choose **More info → Run anyway**; on macOS right-click Valence.app and choose **Open**; on Android allow your browser or file manager to install apps."
           } > "$RUNNER_TEMP/notes.md"
@@ -118,7 +155,6 @@ jobs:
 
       - name: Replace the Nightly release
         run: |
-          ls -l dist
           gh release delete nightly --yes || true # the tag stays, and moves below
           git tag -f nightly "$SHA"
           git push -f origin refs/tags/nightly

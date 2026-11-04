@@ -62,11 +62,13 @@ Windows 2×); building only what you need saves a lot.
 
 - Each platform builds on its own runner, because the native modules (better-sqlite3, sharp,
   ffmpeg-static) install for the machine doing the build.
-- **macOS:** both Mac builds run on GitHub's Intel runner (`macos-15-intel`); its Apple Silicon
-  runners are short on capacity and dropped queued jobs. The Apple Silicon build reinstalls the
-  native packages for arm64 after building the code, then checks every binary in the app is arm64.
-  `macos-15-intel` is GitHub's last Intel image; when it retires, swap the roles (build on Apple
-  Silicon, cross-build Intel).
+- **macOS:** one job on GitHub's Intel runner (`macos-15-intel`) builds both apps, so a run needs a
+  single Mac runner. GitHub's Apple Silicon runners never picked our jobs up (capacity), and in US
+  daytime even Intel ones can take 10+ minutes or drop a job after 15. The job packages the Intel
+  app, reinstalls the native packages for arm64, packages the Apple Silicon app, and checks each with
+  `scripts/ci-mac-check.sh` (signature, and every binary for the right CPU). `macos-15-intel` is
+  GitHub's last Intel image; when it retires, swap the roles (build on Apple Silicon, cross-build
+  Intel).
 - The app is ad-hoc signed, not notarized. Apple Silicon needs at least that to launch it. The first
   time, right-click it and choose **Open**, or run `xattr -dr com.apple.quarantine Valence.app`.
 - **Android:** `-Pabis=…` limits an APK to one CPU family; local builds stay universal. Release APKs
@@ -93,7 +95,9 @@ the commits since the last nightly. Nights with nothing new end after a few seco
   numeric version, so they get `0.1.0.<run number>`, and each nightly MSI upgrades the last. On
   Android only the version name changes; the version code stays put, so nightlies and your own
   builds install over each other.
-- **Only complete nightlies are published:** if any platform fails, the previous Nightly stays.
+- **A platform that didn't build** (most often a Mac runner GitHub couldn't supply) doesn't hold up
+  the rest: its files carry over from the previous Nightly, the notes say which, and the run shows as
+  failed. If nothing built, the previous Nightly stays as it was.
 - **Cost:** a full nightly uses roughly 200 of the account's Actions minutes (the Macs count 10×).
   To build less, set the repository variable `NIGHTLY_PLATFORMS` (Settings → Secrets and variables
   → Actions → Variables) to a list such as `windows,linux,android`.

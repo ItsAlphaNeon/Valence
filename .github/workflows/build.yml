@@ -58,18 +58,17 @@ jobs:
           # One entry per desktop build. The native modules (better-sqlite3, sharp, ffmpeg-static)
           # install for the machine doing the build, so each platform builds on its own runner.
           #
-          # Both Mac builds run on Intel: GitHub's Apple Silicon runners are short on capacity and
-          # dropped the job after 15 minutes in the queue ("not acquired by Runner ... after multiple
-          # attempts"). The Apple Silicon build swaps in the arm64 native modules before packaging
-          # ("cross") and checks that every binary in the app is arm64. macos-15-intel is GitHub's
-          # last Intel image; when it retires, flip this around (arm64 runner, cross-build Intel).
+          # Both Macs build in one job on Intel, so a run needs one Mac runner: GitHub's Apple Silicon
+          # runners never picked our jobs up (capacity), and in US daytime even Intel ones can take
+          # 10+ minutes, or drop a job after 15. The job packages the Intel app, then swaps in the
+          # arm64 native modules ("cross") and packages the Apple Silicon one, checking that each has
+          # only binaries for its CPU. macos-15-intel is GitHub's last Intel image; when it retires,
+          # flip this around (arm64 runner, cross-build Intel).
           desktop='[
             {"platform": "windows", "name": "Windows (EXE, MSI)", "os": "windows-latest", "artifact": "valence-windows",
              "targets": "--win nsis msi --x64", "files": "release/*-Setup-*.exe\nrelease/*.msi", "fetch": ""},
-            {"platform": "macos", "name": "macOS Apple Silicon (.app)", "os": "macos-15-intel", "artifact": "valence-macos-arm64",
-             "targets": "--mac zip --arm64", "files": "release/*.zip", "fetch": "--all", "cross": "arm64", "macArch": "arm64"},
-            {"platform": "macos", "name": "macOS Intel (.app)", "os": "macos-15-intel", "artifact": "valence-macos-x64",
-             "targets": "--mac zip --x64", "files": "release/*.zip", "fetch": "", "macArch": "x86_64"},
+            {"platform": "macos", "name": "macOS (Apple Silicon, Intel)", "os": "macos-15-intel", "artifact": "valence-macos",
+             "targets": "--mac zip --x64", "files": "release/*.zip", "fetch": "--all", "cross": "arm64"},
             {"platform": "linux", "name": "Linux (AppImage)", "os": "ubuntu-latest", "artifact": "valence-linux",
              "targets": "--linux AppImage --x64", "files": "release/*.AppImage", "fetch": ""}
           ]'
@@ -104,15 +103,6 @@ jobs:
       - name: Build the app
         run: npm run build
 
-      # The app's code is built; now reinstall the native packages for the target CPU. npm's --cpu
-      # picks sharp's arm64 build, npm_config_arch makes ffmpeg-static download its arm64 binary, and
-      # electron-builder rebuilds better-sqlite3 for arm64 itself.
-      - name: Swap in ${{ matrix.cross }} native modules
-        if: matrix.cross
-        env:
-          npm_config_arch: ${{ matrix.cross }}
-        run: npm ci --cpu=${{ matrix.cross }} --os=darwin
-
       # A nightly version (0.1.0-nightly.20261105) goes into the app and the file names. Windows
       # installers need a numeric version, so they get 0.1.0.<run number>, and each nightly MSI
       # upgrades the last.
@@ -123,21 +113,29 @@ jobs:
           BUILD_NUMBER: ${{ github.run_number }}
         run: npx electron-builder ${{ matrix.targets }} --publish never ${VERSION:+-c.extraMetadata.version=$VERSION}
 
-      - name: Check the app's signature and CPU type
+      - name: Check the Intel app
         if: runner.os == 'macOS'
-        run: |
-          app=$(find release -maxdepth 2 -name 'Valence.app' -type d | head -1)
-          codesign --verify --deep --strict --verbose=2 "$app"
-          codesign -dv "$app" 2>&1 | grep -E 'Signature|Identifier|Format'
-          # Every executable and native module must run on ${{ matrix.macArch }} (universal ones count).
-          # Only the file type is checked: the app's own path can contain "arm64". better-sqlite3 ships
-          # a binary per platform and loads the one for the CPU it runs on, so the other Mac's is skipped.
-          other=$([ '${{ matrix.macArch }}' = arm64 ] && echo x64 || echo arm64)
-          find "$app" -type f -print0 | xargs -0 file -F $'\t' | awk -F'\t' '$2 ~ /Mach-O/' > "$RUNNER_TEMP/macho.txt"
-          wrong=$(awk -F'\t' -v arch='${{ matrix.macArch }}' -v skip="/prebuilds/darwin-$other.node" \
-            'index($2, arch) == 0 && substr($1, length($1) - length(skip) + 1) != skip' "$RUNNER_TEMP/macho.txt")
-          if [ -n "$wrong" ]; then echo "::error::Binaries that aren't ${{ matrix.macArch }}:"; echo "$wrong"; exit 1; fi
-          echo "$(wc -l < "$RUNNER_TEMP/macho.txt" | tr -d ' ') Mach-O files, all ${{ matrix.macArch }} apart from better-sqlite3's unused darwin-$other.node"
+        run: scripts/ci-mac-check.sh release/mac/Valence.app x86_64
+
+      # Now the Apple Silicon app: reinstall the native packages for arm64. npm's --cpu picks sharp's
+      # arm64 build, npm_config_arch makes ffmpeg-static download its arm64 binary, and electron-builder
+      # rebuilds better-sqlite3 for arm64 itself. The code built above is reused.
+      - name: Swap in ${{ matrix.cross }} native modules
+        if: matrix.cross
+        env:
+          npm_config_arch: ${{ matrix.cross }}
+        run: npm ci --cpu=${{ matrix.cross }} --os=darwin
+
+      - name: Package for ${{ matrix.cross }}
+        if: matrix.cross
+        env:
+          VERSION: ${{ inputs.version }}
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: npx electron-builder --mac zip --${{ matrix.cross }} --publish never ${VERSION:+-c.extraMetadata.version=$VERSION}
+
+      - name: Check the Apple Silicon app
+        if: matrix.cross
+        run: scripts/ci-mac-check.sh release/mac-arm64/Valence.app arm64
 
       # Kept a week: releases hold their own copies, and artifacts count against the account's
       # Actions storage.
