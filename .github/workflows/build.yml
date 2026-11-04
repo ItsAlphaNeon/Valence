@@ -110,9 +110,14 @@ jobs:
           codesign --verify --deep --strict --verbose=2 "$app"
           codesign -dv "$app" 2>&1 | grep -E 'Signature|Identifier|Format'
           # Every executable and native module must run on ${{ matrix.macArch }} (universal ones count).
-          wrong=$(find "$app" -type f -print0 | xargs -0 file | grep 'Mach-O' | grep -v '${{ matrix.macArch }}' || true)
+          # Only the file type is checked: the app's own path can contain "arm64". better-sqlite3 ships
+          # a binary per platform and loads the one for the CPU it runs on, so the other Mac's is skipped.
+          other=$([ '${{ matrix.macArch }}' = arm64 ] && echo x64 || echo arm64)
+          find "$app" -type f -print0 | xargs -0 file -F $'\t' | awk -F'\t' '$2 ~ /Mach-O/' > "$RUNNER_TEMP/macho.txt"
+          wrong=$(awk -F'\t' -v arch='${{ matrix.macArch }}' -v skip="/prebuilds/darwin-$other.node" \
+            'index($2, arch) == 0 && substr($1, length($1) - length(skip) + 1) != skip' "$RUNNER_TEMP/macho.txt")
           if [ -n "$wrong" ]; then echo "::error::Binaries that aren't ${{ matrix.macArch }}:"; echo "$wrong"; exit 1; fi
-          echo "Mach-O files: $(find "$app" -type f -print0 | xargs -0 file | grep -c 'Mach-O'), all ${{ matrix.macArch }}"
+          echo "$(wc -l < "$RUNNER_TEMP/macho.txt" | tr -d ' ') Mach-O files, all ${{ matrix.macArch }} apart from better-sqlite3's unused darwin-$other.node"
 
       - uses: actions/upload-artifact@v7
         with:
