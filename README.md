@@ -1,163 +1,86 @@
 # Valence
 
-A personal, iTunes-style music library manager and player. It downloads your TIDAL picks and
-Bandcamp purchases, adopts loose files, fills in metadata the way Picard does, and keeps one clean
-folder tree in `~/Music` that Syncthing carries to every device: Windows, macOS, Linux and an
-Android phone.
+Valence is a music app for your own collection. It brings music in from where you get it, keeps it
+neatly organized in one folder, and plays it on your computers and your Android phone, with your
+favorites, playlists and listening history following you everywhere.
 
-The morning-after checklist is in [MORNING.md](MORNING.md).
+It runs on **Windows, macOS and Linux**, with a companion **Android** app for listening on the go.
 
-## What it does
+## Getting music in
 
-**Sources**
-- **TIDAL:**
-  - Browse favorites (albums, tracks, playlists), search the catalog, open artist pages, or paste any `tidal.com` link.
-  - One click downloads a whole album, track or playlist at LOSSLESS (16/44.1).
-  - Badges everywhere show ✓ in library, ◐ partial or ↓ missing.
-  - Nothing downloads in bulk on its own.
-- **Bandcamp:** your purchased collection (hidden items included) in FLAC, with the same badges and a manual "Download all missing".
-- **Loose files:** drag them onto the window, use Import Folder, or drop them into the per-machine Inbox at `~/Valence Inbox`. Files are copied in and the originals are never touched.
+- **TIDAL:** browse your favorites, search, or paste a link, and download albums, songs or
+  playlists in lossless quality.
+- **Bandcamp:** see everything you've bought and download what's missing.
+- **SiIvaGunner rips:** download the official "High Quality Rips" album collections, or follow a
+  YouTube playlist and pick up new rips automatically. Rips get their own section, kept apart from
+  the rest of your music.
+- **Your own files:** drag them onto the window, pick a folder, or drop them into the Valence Inbox
+  folder. Your originals are never touched.
 
-**Library**
-- **Layout:** `Album Artist/Album (Year)/Title.mp3`, with no track numbers in filenames (they live in the tags). Singles get their own folder, collaborations go under the primary artist, and compilations go under `Various Artists/`.
-- **Lossless sources:** transcoded to MP3 320 CBR for the library. The FLAC master goes to an archive folder you choose, which isn't synced and can be on another drive (exFAT/FAT32 external drives work). While that drive is offline, TIDAL, Bandcamp and lossless imports wait in the queue and continue when it returns, so masters never pile up on the main drive. Turn off Settings → Lossless Archive → "Wait for the drive" to keep importing instead, with masters waiting in a pending folder until the drive is back.
-- **Lossy sources:** kept as they are (no lossy→lossy), except WMA/RealAudio-type formats, which become MP3 320.
-- **Tags:**
-  - MP3 is ID3v2.3 with Picard-compatible frames: MusicBrainz IDs, ISRC, barcode, label, catalog number, ReplayGain.
-  - Ratings are stored in POPM, which Windows, MusicBee and Android players read.
-  - Synced lyrics are stored as LRC in USLT.
-- **Artwork:** embedded only, at most 2000×2000. The original full-size image goes to the archive.
-- **Identification:** MusicBrainz, matched by ISRC/barcode, existing IDs, AcoustID fingerprints (needs a free key) or text search with release scoring. Unsure matches land in Import → Needs Review.
-- **Duplicates:** a better copy (lossless, or higher bitrate) replaces the old one, which goes to the OS trash. Anything else is skipped. Every import writes a report with Undo.
+Valence shows at a glance what you already have, what's partly there and what's missing, and it
+never downloads anything in bulk without you asking.
 
-**Player**
-- **Engine:** gapless AudioWorklet engine fed by ffmpeg, so any codec plays. Optional crossfade, skipped inside albums.
-- **Sound:** ReplayGain (track/album/auto), a 10-band EQ and output device selection.
-- **System integration:** the Media Session shows up in Windows media controls, macOS Now Playing and Linux MPRIS.
-- **Queue:** Up Next, history, shuffle and repeat. The queue resumes after a restart.
-- **Extras:** synced-lyrics karaoke view, mini player (Ctrl/⌘+Alt+M), tray, Discord Rich Presence (optional).
-- **Organization:** smart playlists, and a Get Info tag editor that re-paths files when you edit them. Its MusicBrainz tab re-identifies songs and previews every changed field before writing.
+## Keeping it tidy
 
-**Look**
-- Liquid Glass UI that follows system light/dark and is tinted by the playing album's art.
-- Four performance tiers (full refraction → blur → flat → minimal). The tier is picked automatically and steps down if frames drop.
-- **Your own themes:** JSON files in `~/Music/.valence/themes/` sync to every device and reload live. To get a starting file, go to Settings → Appearance → Your themes → Create example.
+- Every song is filed into your Music folder as **Artist / Album / Song**.
+- Song details, cover art and lyrics are looked up and filled in for you. When Valence isn't sure
+  about a match, it asks you instead of guessing.
+- Lossless downloads become high-quality MP3s for everyday listening, and the lossless originals go
+  to a separate archive folder, which can be on an external drive.
+- If you add a better copy of a song you already have, it replaces the old one. Every import can be
+  undone.
 
-  ```json
-  {
-    "name": "Midnight Ember",
-    "scheme": "auto",
-    "maxTier": "glass",
-    "artTint": false,
-    "accent": "#ff7a45",
-    "tokens": { "r-lg": "16px" },
-    "light": { "bg-solid": "#f6f1ec" },
-    "dark": { "bg-solid": "#141010" },
-    "css": [".sidebar { letter-spacing: 0.01em; }"]
-  }
-  ```
+## Listening
 
-  The fields:
-  - `scheme` is `light`, `dark` or `auto`.
-  - `maxTier` optionally caps the effects tier.
-  - `artTint: false` turns off album-art tinting.
-  - `tokens` applies in both modes; `light` and `dark` apply in one mode only.
-  - `css` is extra CSS.
+- Gapless playback of any format, with optional crossfade, volume leveling and an equalizer.
+- Synced lyrics that follow along with the song.
+- Favorites, playlists, smart playlists that fill themselves, and ready-made lists like Recently
+  played, Most played and Not played.
+- A queue you can rearrange, a sleep timer, a mini player, keyboard shortcuts, and a command palette
+  (Ctrl+K) that finds any song or action.
+- Listening stats: how much you've listened, your top songs and artists, and when you listen.
+- Optional Discord status showing what you're playing.
 
-  Token names are any CSS custom property from `src/renderer/theme/theme.css`. A broken file shows its error under Your themes instead of applying.
+## How it looks
 
-## SiIvaGunner High Quality Rips
+A clean, flat design modelled on the Musicolet Android player, the same on desktop and phone. The
+Now playing screen sits on a blurred copy of the album cover. Pick a palette (Dark, Black, Light,
+Midnight, Ember or Paper), choose an accent color, let the playing album color the app, or make
+your own theme.
 
-Rips live in their own section of the library (sidebar → SiIvaGunner: Seasons, Rip Albums, Rip Songs, Get Rips) and in their own folder, `~/Music/High Quality Rips/<Album>/<Title>`. The normal views, search, smart playlists, dedupe and TIDAL/Bandcamp badges leave them out.
+## The phone app
 
-- **Marker:** every rip carries `HIGH QUALITY RIP` = `SiIvaGunner` / `SGFR` / `YouTube` and the genre `High Quality Rip`, so phone players can separate them too. Get Info → High Quality Rip moves songs you already have in or out.
-- **Rip albums:** Get Rips → Albums / SGFR list the official Google Drive mirrors from highquality.rip and sgfr.highquality.rip, with in-library badges. Downloads use the FLAC folders: MP3 320 for the library, FLAC masters to the archive. Drive quota pages back off and retry; a CAPTCHA pauses the source for you.
-- **YouTube seasons:** set a public playlist of SiIvaGunner uploads (Get Rips → YouTube, or Settings → SiIvaGunner). Valence syncs it on startup and every 6 hours, downloads new uploads from the SiIvaGunner channel with yt-dlp (best audio, kept as-is), and files each into one album per channel season, numbered by upload time. An older rip added later slots in where it was released.
-- **Seasons:** the table (names, start dates) lives in `~/Music/.valence/rips/seasons.json` and is editable in Settings → SiIvaGunner. Covers start as placeholders; setting one embeds it into every rip of that season.
-- **yt-dlp** is downloaded on first use from its official GitHub release (SHA-256 checked) into Valence's data folder and updated daily. Valence's own Electron serves as its JavaScript runtime.
-- MusicBrainz, AcoustID and lyrics lookups are skipped for rips (they'd match the real soundtracks).
+The Android app is for listening. It plays the library your computers keep, with Musicolet-style
+tabs for albums, artists, playlists, folders and SiIvaGunner rips, several queues, an equalizer and
+a sleep timer. Favorites and playlists you change on the phone sync back to your computers.
+Downloading and importing music stay on the desktop.
 
-## Multi-device model (Syncthing)
+## Across your devices
 
-- **Files are the truth.** Every file carries its identity in its tags (`VALENCE_ID`, source IDs, ISRC, MBIDs), so any device can rebuild its database from a scan.
-- **Shared app state** lives in `~/Music/.valence/`. Each device writes only its own logs (plays, ledger, ratings), so Syncthing never sees a conflict. Shared settings merge newest-wins per key.
-- **Any desktop can import.** Background reorganizing only touches files that device imported. An explicit edit renames the file on the device where you made it.
-- **Phone:** regular playlists are `~/Music/Playlists/*.m3u8` with relative paths. On the phone, ignore `/.valence` in Syncthing.
-- **Syncthing safety:** Valence maintains a marked block in `~/Music/.stignore`. Files are placed atomically via `*.valence-tmp` and a rename, so Syncthing never syncs half-written files.
+Your music lives in one folder (`Music` in your home folder), and [Syncthing](https://syncthing.net)
+keeps that folder the same on every computer and on your phone. Valence stores everything it needs
+(favorites, playlists, play counts, settings) alongside the music, so each device picks it up
+automatically, and any computer can add music.
 
-## Development
+## Downloading Valence
 
-Requires Node 24.
+Builds for every platform are made on GitHub: open the latest **Build** run under the **Actions**
+tab and download the file for your system, or grab them from a release when one is published.
 
-```bash
-npm ci
-npm run fetch-binaries   # fpcalc for this platform (ffmpeg comes from ffmpeg-static)
-npm run dev              # electron-vite dev server
-npm test                 # vitest: unit + integration (generated audio, fixtures, sandbox library)
-npm run typecheck
-```
-
-End-to-end scripts (run from PowerShell on Windows):
-
-```bash
-node scripts/e2e-ui.mjs         # every view light/dark/tiers, playback, lyrics, mini player → test-results/ui/
-node scripts/e2e-playback.mjs   # gapless continuity, seek accuracy, SMTC registration
-npm run smoke                   # native modules + binaries load inside Electron
-node scripts/smoke-packaged.mjs # after dist:win: packaged exe imports + plays in a sandbox, opens ~/Music
-node scripts/real-import.mjs <folder>...   # import real folders into ~/Music, summary → test-results/
-```
-
-Useful environment overrides:
-
-| Variable | Effect |
+| System | File |
 |---|---|
-| `VALENCE_LIBRARY_ROOT` | Library folder instead of `~/Music` |
-| `VALENCE_DATA_DIR` | App data (database, caches, tokens) |
-| `VALENCE_ARCHIVE_DIR` | Lossless archive, overriding the setting |
-| `VALENCE_INBOX` | Inbox folder instead of `~/Valence Inbox` |
-| `VALENCE_MUTE=1` | Engine renders silence (tests) |
-| `VALENCE_NO_MICA=1` | Opaque window instead of Mica on Windows 11 |
+| Windows | `Valence-Setup-….exe` (or the `.msi`) |
+| macOS | `Valence-…-mac-arm64.zip` for Apple Silicon, `-mac-x64.zip` for Intel; unzip to get Valence.app |
+| Linux | `Valence-….AppImage` |
+| Android | `Valence-…-arm.apk` for almost every phone; `-x86.apk` for emulators and x86 devices |
 
-## Packaging
+Valence isn't signed by Apple or Microsoft, so your system may warn you the first time:
 
-```bash
-npm run dist:win     # NSIS installer + portable exe → release/
-npm run dist:mac     # arm64 dmg (run on the Mac; ad-hoc signed, no Developer ID)
-npm run dist:linux   # AppImage, rpm, pacman (run on Linux)
-```
+- **Windows:** if "Windows protected your PC" appears, choose **More info → Run anyway**.
+- **macOS:** right-click Valence.app and choose **Open**, then confirm.
+- **Android:** allow your browser or file manager to install apps when asked.
 
-### CI builds
+## For developers
 
-`.github/workflows/build.yml` builds everything on GitHub Actions: the Windows setup `.exe` and `.msi`, `Valence.app` zipped for Apple Silicon and Intel, a Linux AppImage, and Android APKs for ARM and x86. Start it from the Actions tab (**Build → Run workflow**), or push a version tag (`git tag v0.2.0 && git push origin v0.2.0`), which also collects the files into a draft release. Each run's files are under **Artifacts** on its summary page.
-
-- **macOS:** the app is ad-hoc signed, not notarized. The first time, right-click it and choose **Open**, or run `xattr -dr com.apple.quarantine Valence.app`.
-- **Android signing:** release APKs are signed with the debug key. To make CI's APKs install over the copy already on your phone, add this PC's debug keystore as a repository secret named `ANDROID_DEBUG_KEYSTORE`:
-
-  ```bash
-  base64 -w0 ~/.android/debug.keystore | gh secret set ANDROID_DEBUG_KEYSTORE
-  ```
-
-  Without it, each run signs with a throwaway key, and Android won't install that over an existing copy.
-
-## Code map
-
-```
-src/shared/      types, IPC channel contracts, path template + sanitizer, tag schema, quality
-src/preload/     generic channel bridge (window.valence)
-src/main/
-  library/       scanner, watcher, indexer, organizer, queries, art cache (valence-art://), playlists
-  import/        persistent job queue, pipeline stages, dedupe/upgrade, archive + pending, Inbox, reports/undo
-  metadata/      MusicBrainz, AcoustID, Cover Art Archive, LRCLIB, filename heuristics, merge, scoring
-  tags/ media/   tag read/write (music-metadata / node-taglib-sharp), ffmpeg transcode, ReplayGain, artwork
-  sources/       tidal/ (PKCE auth, browse, BTS/DASH downloader), bandcamp/ (session, collection, FLAC)
-  sync/          device logs, plays, claims, HLC settings merge, m3u8, .stignore
-  audio/         ffmpeg decode host → MessagePort PCM streams, media protocol, player relay
-  integrations/  tray, Discord RPC, media keys
-  windows/       mini player
-src/renderer/
-  audio/         Player, queue, worklet + <audio> engines, EQ/RG graph, Media Session
-  shell/         App, sidebar, toolbar, player bar, drawer (queue/lyrics), backdrop
-  views/         library/, settings/, import/, tidal/, bandcamp/
-  theme/         tokens, Liquid Glass recipe, tiers, themes, art-derived accent
-  mini/          mini player window
-```
+Building from source, testing, packaging and how the code is laid out are covered in
+[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md). The Android app lives in [android/](android/).
