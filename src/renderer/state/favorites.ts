@@ -66,7 +66,7 @@ export async function setLiked(req: SetLikedRequest, liked: boolean, opts: { qui
     await invoke(LIB.setLiked, req, liked)
     if (!opts.quiet) {
       const n = req.kind === 'artist' ? req.names.length : req.ids.length
-      const what = req.kind === 'track' ? (n === 1 ? 'Liked Songs' : `Liked Songs (${n})`) : req.kind === 'album' ? 'your albums' : 'your artists'
+      const what = req.kind === 'track' ? (n === 1 ? 'Favorites' : `Favorites (${n})`) : req.kind === 'album' ? 'your favorite albums' : 'your favorite artists'
       toast(liked ? `Added to ${what}` : `Removed from ${what}`, 'ok')
     }
   } catch (e) {

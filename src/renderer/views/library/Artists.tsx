@@ -24,8 +24,8 @@ export function artistMenu(e: React.MouseEvent, a: Pick<ArtistRow, 'name' | 'lik
     { label: 'Shuffle', icon: 'shuffle', onClick: () => void playQuery({ artist: a.name }, undefined, artistSource(a.name), true) },
     { separator: true },
     a.liked
-      ? { label: 'Remove from your library', icon: 'heart', onClick: () => void setLiked({ kind: 'artist', names: [a.name] }, false) }
-      : { label: 'Save to your library', icon: 'heart', onClick: () => void setLiked({ kind: 'artist', names: [a.name] }, true) },
+      ? { label: 'Remove from Favorites', icon: 'heart', onClick: () => void setLiked({ kind: 'artist', names: [a.name] }, false) }
+      : { label: 'Add to Favorites', icon: 'heart', onClick: () => void setLiked({ kind: 'artist', names: [a.name] }, true) },
   ])
 }
 
@@ -65,7 +65,7 @@ export function ArtistsView() {
         </div>
         <div className="view-actions">
           <button className={cx('pill', onlyLiked && 'on')} onClick={() => setOnlyLiked(!onlyLiked)}>
-            <Icon name="heart" size={13} filled={onlyLiked} /> Liked
+            <Icon name="heart" size={13} filled={onlyLiked} /> Favorites
           </button>
           <label className="filter-input">
             <Icon name="search" size={15} />
@@ -78,9 +78,9 @@ export function ArtistsView() {
           <Spinner />
         </div>
       ) : !shown.length ? (
-        <Empty icon="artists" title={filter ? 'No artists match' : onlyLiked ? 'No liked artists yet' : 'No artists yet'} />
+        <Empty icon="artists" title={filter ? 'No artists match' : onlyLiked ? 'No favorite artists yet' : 'No artists yet'} />
       ) : (
-        <VirtualGrid items={shown} keyOf={(a) => a.name} extraH={66} render={(a) => <ArtistTile a={a} sub={plural(a.albumCount, 'album')} />} />
+        <VirtualGrid items={shown} keyOf={(a) => a.name} extraH={51} render={(a) => <ArtistTile a={a} sub={plural(a.albumCount, 'album')} />} />
       )}
     </div>
   )

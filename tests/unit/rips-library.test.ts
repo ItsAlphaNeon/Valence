@@ -9,7 +9,7 @@ import Database from 'better-sqlite3'
 import { kvGet, migrate, openDb } from '@main/db/db'
 import { MIGRATIONS } from '@main/db/schema'
 import { Indexer } from '@main/library/indexer'
-import { libraryStats, queryAlbums, queryArtists, queryGenres, queryTracks } from '@main/library/queries'
+import { libraryStats, queryAlbums, queryArtists, queryGenres, queryTracks, ripGames } from '@main/library/queries'
 import { smartSql } from '@main/library/playlists'
 import { createLibraryLookup } from '@main/library/lookup'
 import { chooseRelPath } from '@main/library/organizer'
@@ -53,6 +53,11 @@ describe('rips stay out of the main library', () => {
     expect(queryTracks(db, { collection: 'rips', ripKinds: ['YouTube'] }).rows).toMatchObject([{ ripGame: 'UNDERTALE', composer: 'Toby Fox', youtubeVideoId: 'abc123' }])
     expect(queryTracks(db, { collection: 'all' }).total).toBe(3)
     expect(queryTracks(db, { search: 'megalovania' }).total).toBe(1)
+  })
+
+  it('lists the games that have rips, and the rips of one game (SiivaGunner → Games)', () => {
+    expect(ripGames(db)).toEqual([{ name: 'UNDERTALE', trackCount: 1, artHash: null }])
+    expect(queryTracks(db, { ripGame: 'undertale' }).rows.map((r) => r.relPath)).toEqual(['High Quality Rips/SiIvaGunner: Season 2/MEGALOVANIA.opus'])
   })
 
   it('album pages still open for rip albums', () => {

@@ -40,6 +40,8 @@ export const LIB = {
   albumsPage: 'library:albumsPage',
   /** (StatsRange) → ListeningStats */
   listeningStats: 'library:listeningStats',
+  history: 'library:history',
+  ripGames: 'library:ripGames',
   /** (seedTrackIds: number[], excludeIds: number[], n: number) → number[] track ids (main library), for autoplay. */
   similar: 'library:similar',
   /** (albumId) → ArtOriginal | null: the archived cover-original if there is one, else the full-size embedded art. */

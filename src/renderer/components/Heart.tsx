@@ -11,7 +11,7 @@ export function HeartButton({ target, liked: server, size = 16, className, quiet
   // Hooks can't branch on the overload, so resolve the key first.
   const liked = useLiked(target.kind as 'track', (target.kind === 'artist' ? target.name : target.id) as never, server)
   const [pop, setPop] = useState(0)
-  const title = liked ? (target.kind === 'track' ? 'Remove from Liked Songs' : 'Remove from your library') : target.kind === 'track' ? 'Add to Liked Songs' : 'Save to your library'
+  const title = liked ? 'Remove from Favorites' : 'Add to Favorites'
   return (
     <IconButton
       key={pop}

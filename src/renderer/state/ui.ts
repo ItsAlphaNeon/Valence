@@ -9,6 +9,8 @@ export type Route =
   /** `rip` remembers which SiIvaGunner list the album belongs to, so the sidebar highlights it. */
   | { view: 'album'; id: number; rip?: RipTab }
   | { view: 'rips'; tab?: RipTab }
+  /** A game's rips (SiivaGunner → Games). */
+  | { view: 'game'; game: string }
   | { view: 'hqrip'; tab?: 'albums' | 'sgfr' | 'youtube' }
   | { view: 'artists' }
   | { view: 'artist'; artist: string }
@@ -20,13 +22,20 @@ export type Route =
   | { view: 'playlist'; id: string }
   | { view: 'smart'; id?: string }
   | { view: 'nowplaying' }
+  /** The phone's Queues page: what's playing and what's next. */
+  | { view: 'queue' }
+  /** The phone's Playlists tab: built-in lists, then yours. */
+  | { view: 'playlists' }
+  /** A built-in list from the Playlists page. */
+  | { view: 'auto'; list: AutoList }
   | { view: 'search'; q: string }
   | { view: 'settings'; section?: string }
   | { view: 'import'; tab?: 'queue' | 'review' | 'reports'; reportId?: string }
   | { view: 'tidal'; tab?: string; id?: string }
   | { view: 'bandcamp'; id?: string }
 
-export type RipTab = 'seasons' | 'albums' | 'songs'
+export type RipTab = 'seasons' | 'albums' | 'games' | 'songs'
+export type AutoList = 'recentlyPlayed' | 'mostPlayed' | 'notPlayed' | 'history'
 export type { StatsRange }
 export type Panel = 'info' | 'queue' | 'lyrics'
 
@@ -129,11 +138,11 @@ interface Layout {
   sidebarW: number
   rightW: number
 }
-const layout = read<Layout>(LAYOUT, { drawer: null, collapsed: false, sidebarW: 300, rightW: 340 })
+const layout = read<Layout>(LAYOUT, { drawer: null, collapsed: false, sidebarW: 260, rightW: 340 })
 const saveLayout = (s: Pick<UiState, 'drawer' | 'sidebarCollapsed' | 'sidebarW' | 'rightW'>) =>
   write(LAYOUT, { drawer: s.drawer, collapsed: s.sidebarCollapsed, sidebarW: s.sidebarW, rightW: s.rightW } satisfies Layout)
 
-export const SIDEBAR_MIN = 240
+export const SIDEBAR_MIN = 200
 export const SIDEBAR_MAX = 460
 export const RIGHT_MIN = 280
 export const RIGHT_MAX = 480
@@ -148,7 +157,7 @@ export const useUi = create<UiState>((set, get) => ({
   getInfo: null,
   toasts: [],
   sidebarCollapsed: !!layout.collapsed,
-  sidebarW: Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, layout.sidebarW || 300)),
+  sidebarW: Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, layout.sidebarW || 260)),
   rightW: Math.min(RIGHT_MAX, Math.max(RIGHT_MIN, layout.rightW || 340)),
   header: { color: null },
   artView: null,

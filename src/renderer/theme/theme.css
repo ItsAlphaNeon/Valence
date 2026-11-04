@@ -1,5 +1,5 @@
-/* Valence design tokens.
- * Dark-first, panel-based look: a near-black window base, rounded content panels, flat cards.
+/* Valence design tokens: the Android app's (Musicolet's) look.
+ * Flat greys: bars on --base, content on --panel, menus and dialogs on --elev, hairlines between.
  * html[data-theme] picks a palette, html[data-scheme] is the resolved light/dark, html[data-art]
  * is album-art theming (off | accent | full). The accent arrives as --tint-r/g/b, the playing
  * album's color as --art-r/g/b (registered, so palette changes animate). */
@@ -22,25 +22,26 @@
 
 :root {
   color-scheme: dark;
-  --font: 'Figtree Variable', 'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, 'Noto Sans', 'Noto Sans CJK JP', sans-serif;
+  --font: 'Roboto Variable', Roboto, 'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, 'Noto Sans', 'Noto Sans CJK JP', sans-serif;
   --font-display: var(--font);
   --font-mono: ui-monospace, 'Cascadia Mono', 'SF Mono', Consolas, monospace;
   --font-scale: 1;
 
-  --r-xs: 4px;
-  --r-sm: 6px;
-  --r-md: 8px;
-  --r-lg: 12px;
-  --r-xl: 16px;
+  /* Musicolet's shapes: small radii, flat surfaces. */
+  --r-xs: 3px;
+  --r-sm: 4px;
+  --r-md: 6px;
+  --r-lg: 8px;
+  --r-xl: 8px;
   --r-pill: 999px;
 
-  --gap: 8px;
-  --topbar-h: 64px;
-  --playerbar-h: 76px;
-  --sidebar-w: 300px;
+  --gap: 0px;
+  --topbar-h: 56px;
+  --playerbar-h: 80px;
+  --sidebar-w: 260px;
   --right-w: 340px;
   /* Height of the sticky header inside the main panel; sticky table heads sit below it. */
-  --sticky-top: 64px;
+  --sticky-top: 56px;
   --toolbar-h: var(--sticky-top);
   --drawer-w: var(--right-w);
   --row-h: 56px;
@@ -49,43 +50,47 @@
   --ease: cubic-bezier(0.3, 0, 0, 1);
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
   --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
-  --dur: 200ms;
-  --dur-slow: 420ms;
+  --dur: 160ms;
+  --dur-slow: 360ms;
 
-  --tint-r: 167;
-  --tint-g: 139;
-  --tint-b: 250;
+  --tint-r: 101;
+  --tint-g: 255;
+  --tint-b: 160;
   --accent: rgb(var(--tint-r) var(--tint-g) var(--tint-b));
   --accent-fg: #000;
   --accent-soft: rgb(var(--tint-r) var(--tint-g) var(--tint-b) / 0.18);
-  --accent-hover: color-mix(in oklab, var(--accent) 82%, #fff);
+  --accent-hover: color-mix(in oklab, var(--accent) 85%, #fff);
   --art: rgb(var(--art-r) var(--art-g) var(--art-b));
 
-  /* Palette: dark */
-  --base: #000;
-  --panel: #121212;
-  --panel-2: #181818;
+  /* Palette: Dark (Musicolet). Bars (top bar, sidebar, player bar) on --base, content on --panel,
+     menus and dialogs on --elev, thin --sep / --border lines. */
+  --base: #212121;
+  --panel: #181818;
+  --panel-2: #1c1c1c;
   --panel-border: transparent;
-  --card-hover: #1f1f1f;
-  --elev: #282828;
-  --elev-2: #3e3e3e;
-  --surface: #1f1f1f;
-  --surface-2: rgb(255 255 255 / 0.07);
-  --surface-hover: rgb(255 255 255 / 0.1);
-  --surface-active: rgb(255 255 255 / 0.2);
+  --card-hover: #222;
+  --elev: #323232;
+  --elev-2: #424242;
+  --surface: #181818;
+  --surface-2: rgb(255 255 255 / 0.055);
+  --surface-hover: rgb(255 255 255 / 0.085);
+  --surface-active: rgb(255 255 255 / 0.15);
   --fg: #fff;
   --fg-2: #b3b3b3;
-  --fg-3: #7a7a7a;
-  --sep: rgb(255 255 255 / 0.1);
-  --border: #727272;
-  --danger: #f3727f;
-  --ok: #4cc38a;
-  --warn: #ffa42b;
+  --fg-3: #909090;
+  --sep: #383838;
+  --line: #2c2c2c;
+  --border: #474747;
+  --menu-sep: #575757;
+  --danger: #ff8a80;
+  --ok: #65ffa0;
+  --warn: #ffab40;
   --hdr-mix: 62%;
-  --shadow-art: 0 8px 24px rgb(0 0 0 / 0.5);
-  --shadow-pop: 0 16px 24px rgb(0 0 0 / 0.3), 0 6px 8px rgb(0 0 0 / 0.2);
-  --shadow-card: 0 8px 24px rgb(0 0 0 / 0.5);
-  --scrollbar: rgb(255 255 255 / 0.3);
+  --shadow-art: none;
+  --shadow-pop: 0 8px 24px rgb(0 0 0 / 0.45);
+  --shadow-card: none;
+  --scrollbar: #424242;
+  --scrollbar-hover: #5a5a5a;
 
   /* Compatibility aliases for view stylesheets written against the old tokens. */
   --bg: var(--base);
@@ -102,97 +107,115 @@
 }
 
 /* ---- Palettes ---- */
+:root[data-theme='black'] {
+  --base: #0f0f0f;
+  --panel: #000;
+  --panel-2: #080808;
+  --card-hover: #121212;
+  --elev: #1e1e1e;
+  --elev-2: #2c2c2c;
+  --surface: #000;
+  --sep: #262626;
+  --line: #1c1c1c;
+  --border: #353535;
+  --menu-sep: #3a3a3a;
+  --scrollbar: #333;
+}
 :root[data-theme='midnight'] {
-  --base: #04060c;
+  --base: #121729;
   --panel: #0d1120;
-  --panel-2: #121729;
-  --card-hover: #181e33;
-  --elev: #1c2238;
-  --elev-2: #2a3150;
-  --surface: #161b2e;
+  --panel-2: #10152a;
+  --card-hover: #161c33;
+  --elev: #222a45;
+  --elev-2: #2e3757;
+  --surface: #0d1120;
   --fg-2: #a8b0c8;
-  --fg-3: #6e7591;
-  --border: #6b7290;
+  --fg-3: #7d84a0;
+  --sep: #262d48;
+  --line: #1b2136;
+  --border: #3a4363;
+  --menu-sep: #444d6e;
+  --scrollbar: #323a58;
 }
 :root[data-theme='ember'] {
-  --base: #0b0806;
+  --base: #1c1611;
   --panel: #16110d;
-  --panel-2: #1c1611;
-  --card-hover: #241c16;
-  --elev: #2b221b;
-  --elev-2: #3d3128;
-  --surface: #211a14;
+  --panel-2: #1a140f;
+  --card-hover: #211a14;
+  --elev: #30261e;
+  --elev-2: #3f3329;
+  --surface: #16110d;
   --fg: #fbf3ea;
   --fg-2: #c4b4a3;
-  --fg-3: #85766a;
-  --border: #7d6e62;
-}
-:root[data-theme='oled'] {
-  --base: #000;
-  --panel: #000;
-  --panel-2: #0a0a0a;
-  --panel-border: rgb(255 255 255 / 0.09);
-  --card-hover: #141414;
-  --elev: #161616;
-  --elev-2: #262626;
-  --surface: #111;
+  --fg-3: #95867a;
+  --sep: #33291f;
+  --line: #261e17;
+  --border: #4a3d32;
+  --menu-sep: #54463a;
+  --scrollbar: #43372c;
 }
 :root[data-scheme='light'] {
   color-scheme: light;
-  --base: #e6e6ea;
-  --panel: #fff;
-  --panel-2: #f6f6f8;
-  --card-hover: #efeff2;
+  --base: #eeeeee;
+  --panel: #fafafa;
+  --panel-2: #f4f4f4;
+  --card-hover: #f0f0f0;
   --elev: #fff;
-  --elev-2: #ececf0;
-  --surface: #f0f0f3;
+  --elev-2: #ececec;
+  --surface: #fafafa;
   --surface-2: rgb(0 0 0 / 0.045);
   --surface-hover: rgb(0 0 0 / 0.06);
   --surface-active: rgb(0 0 0 / 0.12);
-  --fg: #121212;
-  --fg-2: #5b5b61;
-  --fg-3: #8e8e95;
-  --sep: rgb(0 0 0 / 0.09);
-  --border: #8f8f96;
+  --fg: #1a1a1a;
+  --fg-2: #5f5f5f;
+  --fg-3: #8a8a8a;
+  --sep: #dadada;
+  --line: #e0e0e0;
+  --border: #c8c8c8;
+  --menu-sep: #dddddd;
   --danger: #d6334a;
   --ok: #1f9d63;
   --warn: #c77600;
   --hdr-mix: 34%;
-  --shadow-art: 0 8px 22px rgb(0 0 0 / 0.18);
-  --shadow-pop: 0 12px 28px rgb(0 0 0 / 0.16), 0 3px 8px rgb(0 0 0 / 0.08);
-  --shadow-card: 0 8px 22px rgb(0 0 0 / 0.14);
-  --scrollbar: rgb(0 0 0 / 0.28);
+  --shadow-pop: 0 8px 24px rgb(0 0 0 / 0.16), 0 2px 6px rgb(0 0 0 / 0.08);
+  --scrollbar: #c4c4c4;
+  --scrollbar-hover: #a8a8a8;
 }
 :root[data-theme='paper'] {
-  --base: #e9e2d6;
-  --panel: #fbf8f2;
+  --base: #ece4d7;
+  --panel: #faf6ef;
   --panel-2: #f4eee5;
-  --card-hover: #efe8dd;
+  --card-hover: #f1eadf;
   --elev: #fffdf8;
   --elev-2: #ece4d7;
-  --surface: #f1ebe1;
+  --surface: #faf6ef;
   --fg: #2b241e;
   --fg-2: #6d6157;
   --fg-3: #9a8d81;
-  --border: #9a8d81;
+  --sep: #e2d8c9;
+  --line: #e4dbcd;
+  --border: #cbbfae;
+  --menu-sep: #ddd2c2;
+  --scrollbar: #cfc3b2;
+  --scrollbar-hover: #b7aa97;
 }
 
 /* ---- Album-art theming: the whole window takes on the playing album's color ---- */
 :root[data-art='full'] {
-  --base: color-mix(in oklab, var(--art) 20%, #000);
-  --panel: color-mix(in oklab, var(--art) 11%, #121212);
-  --panel-2: color-mix(in oklab, var(--art) 13%, #181818);
-  --card-hover: color-mix(in oklab, var(--art) 16%, #1f1f1f);
-  --elev: color-mix(in oklab, var(--art) 15%, #282828);
-  --surface: color-mix(in oklab, var(--art) 12%, #1f1f1f);
+  --base: color-mix(in oklab, var(--art) 16%, #212121);
+  --panel: color-mix(in oklab, var(--art) 11%, #181818);
+  --panel-2: color-mix(in oklab, var(--art) 12%, #1c1c1c);
+  --card-hover: color-mix(in oklab, var(--art) 14%, #222);
+  --elev: color-mix(in oklab, var(--art) 14%, #323232);
+  --surface: color-mix(in oklab, var(--art) 11%, #181818);
 }
 :root[data-art='full'][data-scheme='light'] {
-  --base: color-mix(in oklab, var(--art) 22%, #e6e6ea);
-  --panel: color-mix(in oklab, var(--art) 7%, #fff);
-  --panel-2: color-mix(in oklab, var(--art) 9%, #f6f6f8);
-  --card-hover: color-mix(in oklab, var(--art) 12%, #efeff2);
+  --base: color-mix(in oklab, var(--art) 16%, #eeeeee);
+  --panel: color-mix(in oklab, var(--art) 7%, #fafafa);
+  --panel-2: color-mix(in oklab, var(--art) 9%, #f4f4f4);
+  --card-hover: color-mix(in oklab, var(--art) 11%, #f0f0f0);
   --elev: color-mix(in oklab, var(--art) 5%, #fff);
-  --surface: color-mix(in oklab, var(--art) 9%, #f0f0f3);
+  --surface: color-mix(in oklab, var(--art) 7%, #fafafa);
 }
 :root[data-art='full'] {
   transition:
@@ -241,7 +264,6 @@ body {
   color: var(--fg);
   background: var(--base);
   -webkit-font-smoothing: antialiased;
-  font-feature-settings: 'ss01';
   overflow: hidden;
   user-select: none;
   cursor: default;
@@ -276,21 +298,18 @@ a {
   border-radius: var(--r-xs);
 }
 ::-webkit-scrollbar {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
 }
 ::-webkit-scrollbar-thumb {
-  background: transparent;
-  border: 3px solid transparent;
-  border-radius: 6px;
+  background-color: var(--scrollbar);
+  border: 2px solid transparent;
+  border-radius: 5px;
   background-clip: padding-box;
   min-height: 40px;
 }
-:hover::-webkit-scrollbar-thumb {
-  background-color: var(--scrollbar);
-}
 ::-webkit-scrollbar-thumb:hover {
-  background-color: color-mix(in srgb, var(--scrollbar) 100%, var(--fg) 30%);
+  background-color: var(--scrollbar-hover);
 }
 ::-webkit-scrollbar-track,
 ::-webkit-scrollbar-corner {

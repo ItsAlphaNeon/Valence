@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import { createRoot } from 'react-dom/client'
-import '@fontsource-variable/figtree'
+import '@fontsource-variable/roboto'
 import '../theme/theme.css'
 import '../app.css'
 import './mini.css'
@@ -84,16 +84,16 @@ function Mini() {
             <div className="mini-sub">{cur ? [cur.artist, cur.album].filter(Boolean).join(' — ') : 'Pick something in Valence'}</div>
           </div>
           <div className="mini-win">
-            <IconButton icon="expand" size={14} title="Show Valence" onClick={() => send('app:showMain')} />
-            <IconButton icon="close" size={14} title="Close mini player" onClick={() => send('mini:close')} />
+            <IconButton icon="expand" size={16} title="Show Valence" onClick={() => send('app:showMain')} />
+            <IconButton icon="close" size={16} title="Close mini player" onClick={() => send('mini:close')} />
           </div>
         </div>
         <div className="mini-controls">
-          <IconButton icon="prev" size={18} title="Previous" disabled={!cur} onClick={() => cmd({ type: 'prev' })} />
-          <IconButton className="mini-play" icon={s?.playing ? 'pause' : 'play'} size={24} filled title={s?.playing ? 'Pause' : 'Play'} disabled={!cur} onClick={() => cmd({ type: 'toggle' })} />
-          <IconButton icon="next" size={18} title="Next" disabled={!cur} onClick={() => cmd({ type: 'next' })} />
+          <IconButton icon="prev" size={24} title="Previous" disabled={!cur} onClick={() => cmd({ type: 'prev' })} />
+          <IconButton className="mini-play" icon={s?.playing ? 'pause' : 'play'} size={32} title={s?.playing ? 'Pause' : 'Play'} disabled={!cur} onClick={() => cmd({ type: 'toggle' })} />
+          <IconButton icon="next" size={24} title="Next" disabled={!cur} onClick={() => cmd({ type: 'next' })} />
           <div className="mini-spacer" />
-          <IconButton icon={muted || volume === 0 ? 'mute' : volume < 0.5 ? 'volumeLow' : 'volume'} size={15} title={muted ? 'Unmute' : 'Mute'} onClick={() => cmd({ type: 'setMuted', muted: !muted })} />
+          <IconButton icon={muted || volume === 0 ? 'mute' : volume < 0.5 ? 'volumeLow' : 'volume'} size={18} title={muted ? 'Unmute' : 'Mute'} onClick={() => cmd({ type: 'setMuted', muted: !muted })} />
           <div className="mini-volume" onWheel={(e) => cmd({ type: 'setVolume', volume: Math.min(1, Math.max(0, volume - Math.sign(e.deltaY) * 0.05)) })}>
             <Slider value={muted ? 0 : volume} max={1} label="Volume" onChange={(v) => cmd({ type: 'setVolume', volume: v })} onCommit={(v) => cmd({ type: 'setVolume', volume: v })} />
           </div>

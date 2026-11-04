@@ -25,7 +25,7 @@ function apply(): void {
   root.dataset.density = settings['ui.density'] === 'compact' ? 'compact' : 'comfortable'
   const motion = settings['ui.motion']
   root.dataset.motion = motion === 'off' || motion === 'on' ? motion : 'system'
-  root.dataset.headers = settings['ui.headerColors'] === false ? 'off' : 'on'
+  root.dataset.headers = settings['ui.headerColors'] === true ? 'on' : 'off'
   root.style.setProperty('--font-scale', String(TEXT_SCALE[String(settings['ui.textSize'] ?? 'default')] ?? 1))
   root.style.setProperty('--lyrics-scale', String(LYRICS_SCALE[String(settings['ui.lyrics.size'] ?? 'default')] ?? 1))
   const zoom = Number(settings['ui.zoom'] ?? 1)

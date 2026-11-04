@@ -11,7 +11,7 @@ import { cx, duration, quality, relativeTime } from '../lib/format'
 import { useLib } from '../state/library'
 import { addToQueue, cmd, playQuery, playNext, playTracks, usePlayer } from '../state/player'
 import { setLiked } from '../state/favorites'
-import { Artwork, Stars, showMenu, type MenuItem } from './ui'
+import { Artwork, IconButton, Stars, showMenu, type MenuItem } from './ui'
 import { Icon } from './Icon'
 import { HeartButton } from './Heart'
 import { albumRoute, navigate, toast, useUi } from '../state/ui'
@@ -45,7 +45,7 @@ const COLUMNS: Record<ColumnKey, Column> = {
   rating: { key: 'rating', label: 'Rating', width: '86px', sort: 'rating' },
   plays: { key: 'plays', label: 'Plays', width: '56px', align: 'right', sort: 'playCount' },
   added: { key: 'added', label: 'Added', width: '96px', sort: 'addedAt' },
-  likedAt: { key: 'likedAt', label: 'Liked', width: '104px', sort: 'likedAt' },
+  likedAt: { key: 'likedAt', label: 'Added to Favorites', width: '136px', sort: 'likedAt' },
   lastPlayed: { key: 'lastPlayed', label: 'Last Played', width: '104px', sort: 'lastPlayed' },
   quality: { key: 'quality', label: 'Format', width: '104px', sort: 'bitrate' },
 }
@@ -240,8 +240,8 @@ export function TrackTable(props: TrackTableProps) {
       { label: 'Add to queue', onClick: () => void addToQueue(chosen) },
       { separator: true },
       n === 1 && r?.liked
-        ? { label: 'Remove from Liked Songs', icon: 'heart', onClick: () => void setLiked({ kind: 'track', ids: chosen }, false) }
-        : { label: n > 1 ? `Add ${n} to Liked Songs` : 'Add to Liked Songs', icon: 'heart', onClick: () => void setLiked({ kind: 'track', ids: chosen }, true) },
+        ? { label: 'Remove from Favorites', icon: 'heart', onClick: () => void setLiked({ kind: 'track', ids: chosen }, false) }
+        : { label: n > 1 ? `Add ${n} to Favorites` : 'Add to Favorites', icon: 'heart', onClick: () => void setLiked({ kind: 'track', ids: chosen }, true) },
       {
         label: 'Add to playlist',
         icon: 'playlist',
@@ -322,7 +322,8 @@ export function TrackTable(props: TrackTableProps) {
     }
   }
 
-  const grid = columns.map((c) => COLUMNS[c].width).join(' ')
+  // The last column holds each row's options button (Musicolet's "•••" square).
+  const grid = [...columns.map((c) => COLUMNS[c].width), '40px'].join(' ')
   const sort = props.sort
   const header = (
     <div className="tt-head" style={{ gridTemplateColumns: grid }}>
@@ -337,10 +338,11 @@ export function TrackTable(props: TrackTableProps) {
             onClick={() => props.onSort?.(active && sort?.dir === 'asc' ? { key: col.sort!, dir: 'desc' } : { key: col.sort!, dir: 'asc' })}
           >
             {col.label}
-            {active && <Icon name="chevronDown" size={10} style={{ transform: sort?.dir === 'asc' ? 'rotate(180deg)' : undefined }} />}
+            {active && <Icon name="chevronDown" size={14} style={{ transform: sort?.dir === 'asc' ? 'rotate(180deg)' : undefined }} />}
           </button>
         )
       })}
+      <span />
     </div>
   )
 
@@ -408,21 +410,23 @@ export function TrackTable(props: TrackTableProps) {
                   onRate={(s) => void invoke(LIB.setRating, [r.id], s)}
                 />
               ))}
+              <span className="tt-cell al-center">
+                <IconButton
+                  icon="more"
+                  size={20}
+                  title="Options"
+                  className="tt-more"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    void menuFor(e, i)
+                  }}
+                />
+              </span>
             </div>
           )
         })}
       </div>
     </div>
-  )
-}
-
-function NowBars({ playing }: { playing: boolean }) {
-  return (
-    <span className={cx('now-bars', playing && 'on')}>
-      <i />
-      <i />
-      <i />
-    </span>
   )
 }
 
@@ -452,7 +456,7 @@ function Cell({
     case 'index':
       return (
         <span className={cls}>
-          <span className="tt-num">{isCur && playing ? <NowBars playing /> : num}</span>
+          <span className="tt-num">{isCur && playing ? <Icon name="volume" size={16} /> : num}</span>
           <button
             className="tt-play"
             title={isCur && playing ? 'Pause' : `Play ${r.title}`}
@@ -477,7 +481,7 @@ function Cell({
         <span className={cls}>
           {showArt && (
             <span className="tt-art">
-              <Artwork hash={r.artHash} px={96} size={40} radius={4} title={r.album} />
+              <Artwork hash={r.artHash} px={96} size={40} radius={2} title={r.album} />
             </span>
           )}
           <span className="tt-title">

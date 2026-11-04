@@ -5,7 +5,7 @@ import { useContext, useLayoutEffect, useRef, useState, type ReactNode } from 'r
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { ScrollParent } from './TrackTable'
 
-const GAP = 24
+const GAP = 16
 
 export function VirtualGrid<T>({ items, minTile = 176, extraH, render, keyOf }: { items: T[]; minTile?: number; extraH: number; render: (item: T) => ReactNode; keyOf: (item: T) => string | number }) {
   const scrollRef = useContext(ScrollParent)

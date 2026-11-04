@@ -104,13 +104,13 @@ export function thumbarSpecs(p: Pick<PlaybackChrome, 'playing' | 'hasTrack'>): T
   ]
 }
 
-/** 16x16 thumbnail-toolbar glyphs. */
+/** Thumbnail-toolbar glyphs: the same Material Icons (Rounded) the app and the phone use. */
 export function thumbarSvg(kind: 'prev' | 'play' | 'pause' | 'next', color: string, px: number): string {
   const paths: Record<typeof kind, string> = {
-    prev: 'M3 3h1.8v10H3zM13 3.3v9.4L5.9 8z',
-    play: 'M4.6 2.6v10.8L13.2 8z',
-    pause: 'M3.8 3h2.9v10H3.8zM9.3 3h2.9v10H9.3z',
-    next: 'M11.2 3H13v10h-1.8zM3 3.3v9.4L10.1 8z',
+    prev: 'M7 6c.55 0 1 .45 1 1v10c0 .55-.45 1-1 1s-1-.45-1-1V7c0-.55.45-1 1-1zm3.66 6.82 5.77 4.07c.66.47 1.58-.01 1.58-.82V7.93c0-.81-.91-1.28-1.58-.82l-5.77 4.07a1 1 0 0 0 0 1.64z',
+    play: 'M8 6.82v10.36c0 .79.87 1.27 1.54.84l8.14-5.18a1 1 0 0 0 0-1.69L9.54 5.98A.998.998 0 0 0 8 6.82z',
+    pause: 'M8 19c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2s-2 .9-2 2v10c0 1.1.9 2 2 2zm6-12v10c0 1.1.9 2 2 2s2-.9 2-2V7c0-1.1-.9-2-2-2s-2 .9-2 2z',
+    next: 'm7.58 16.89 5.77-4.07c.56-.4.56-1.24 0-1.63L7.58 7.11C6.91 6.65 6 7.12 6 7.93v8.14c0 .81.91 1.28 1.58.82zM16 7v10c0 .55.45 1 1 1s1-.45 1-1V7c0-.55-.45-1-1-1s-1 .45-1 1z',
   }
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${px}" height="${px}" viewBox="0 0 16 16"><path fill="${color}" d="${paths[kind]}"/></svg>`
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${px}" height="${px}" viewBox="0 0 24 24"><path fill="${color}" d="${paths[kind]}"/></svg>`
 }

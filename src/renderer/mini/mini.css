@@ -1,4 +1,5 @@
-/* Mini player (400×124, frameless). The whole window drags except its controls. */
+/* Mini player (400×124, frameless), with the phone's flat controls. The whole window drags except
+ * its controls. */
 
 .mini {
   position: relative;
@@ -36,10 +37,9 @@
   height: 96px;
   padding: 0;
   border: 0;
-  border-radius: var(--r-sm);
+  border-radius: 2px;
   background: none;
   overflow: hidden;
-  box-shadow: var(--shadow-art);
   cursor: pointer;
 }
 .mini-art .art {
@@ -69,15 +69,15 @@
 }
 .mini-title {
   font-family: var(--font-display);
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 15px;
+  font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .mini-sub {
-  margin-top: 1px;
-  font-size: 12px;
+  margin-top: 2px;
+  font-size: 12.5px;
   color: var(--fg-2);
   white-space: nowrap;
   overflow: hidden;
@@ -111,20 +111,14 @@
   margin-top: auto;
 }
 .mini-controls .icon-btn {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
+  color: var(--fg);
 }
+/* The phone's plain play button: just a bigger glyph. */
 .mini-controls .mini-play {
-  width: 34px;
-  height: 34px;
-  margin: 0 2px;
-  border-radius: 50%;
-  background: var(--fg);
-  color: var(--base);
-}
-.mini-controls .mini-play:hover:not(:disabled) {
-  background: var(--fg);
-  transform: scale(1.06);
+  width: 40px;
+  height: 40px;
 }
 .mini-spacer {
   flex: 1;

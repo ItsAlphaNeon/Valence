@@ -20,6 +20,7 @@ export interface AccentPreset {
 }
 
 export const ACCENTS: AccentPreset[] = [
+  { id: 'oganesson', name: 'Oganesson', hex: '#65ffa0', note: 'Mint, like Musicolet' },
   { id: 'argon', name: 'Argon', hex: '#a78bfa', note: 'Soft lavender' },
   { id: 'neon', name: 'Neon', hex: '#ff6b4a', note: 'Warm red-orange' },
   { id: 'helium', name: 'Helium', hex: '#ffb45c', note: 'Peach gold' },

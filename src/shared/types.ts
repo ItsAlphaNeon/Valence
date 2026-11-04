@@ -182,7 +182,14 @@ export interface FavoriteCounts {
 }
 
 /** Height (px, at zoom 1) of the renderer's top bar; the native window controls overlay matches it. */
-export const TOPBAR_HEIGHT = 64
+export const TOPBAR_HEIGHT = 56
+
+/** A game that has rips, with how many (SiivaGunner → Games). */
+export interface RipGameRow {
+  name: string
+  trackCount: number
+  artHash: string | null
+}
 
 export interface GenreRow {
   name: string
@@ -207,11 +214,26 @@ export interface TrackQuery {
   collection?: LibraryCollection
   /** With collection 'rips': only these rip collections (e.g. ['YouTube'] for season albums). */
   ripKinds?: string[]
+  /** Only rips of this game (SiivaGunner → Games). */
+  ripGame?: string
   /**
    * Only liked tracks (collection defaults to 'all', like album/playlist lookups). Without an
    * explicit sort, most recently liked first.
    */
   liked?: boolean
+  /**
+   * The phone's built-in lists: 'recent' = recently played (latest first), 'most' = most played,
+   * 'never' = not played yet. Recent and most are capped at 100 songs, as on the phone.
+   */
+  played?: 'recent' | 'most' | 'never'
+}
+
+/** One play from the listening history (every device's synced plays), newest first. */
+export interface HistoryEntry {
+  track: TrackRow
+  playedAt: number
+  /** Device that played it (this computer, another computer or the phone). */
+  deviceId: string
 }
 
 export interface LibraryStats {

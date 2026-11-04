@@ -1,35 +1,47 @@
-// Left panel ("Your Library"): browse links, SiIvaGunner and sources, then the user's collection —
-// Liked Songs, playlists and liked albums/artists with their art. Resizable; collapses to a rail.
+// Left sidebar: the Android app's (Musicolet's) tabs, top to bottom (Queue, Now playing, Albums,
+// Artists, Genres, SiivaGunner, Playlists), then the desktop's sources, then your playlists by name
+// (Favorites first). Drop songs on a playlist to add them. Resizable; collapses to an icon rail.
 
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { LIB } from '@shared/ipc/library'
-import type { AlbumRow, ArtistRow } from '@shared/types'
 import { errorMessage, invoke } from '../lib/ipc'
 import { cx, plural } from '../lib/format'
 import { useLib } from '../state/library'
 import { useFavorites, setLiked } from '../state/favorites'
-import { albumRoute, navigate, toast, useUi, SIDEBAR_MIN, type Route } from '../state/ui'
-import { playQuery, playTracks, usePlayer } from '../state/player'
+import { navigate, toast, useUi, SIDEBAR_MIN, type Route } from '../state/ui'
+import { playTracks, usePlayer } from '../state/player'
 import { Icon, type IconName } from '../components/Icon'
-import { Artwork, IconButton, ProgressBar, showMenu, usePrompt } from '../components/ui'
-import { albumMenu } from '../components/AlbumGrid'
+import { IconButton, ProgressBar, showMenu, usePrompt } from '../components/ui'
 import type { PlaylistInfo } from '@main/library/playlists'
 
 export const TRACKS_MIME = 'application/x-valence-tracks'
-const RAIL_W = 72
+const RAIL_W = 64
 
-function same(a: Route, b: Route): boolean {
-  // Rip albums highlight the SiIvaGunner list they came from, not the main Albums.
-  if (a.view === 'album' && a.rip) return b.view === 'rips' && (b.tab ?? 'seasons') === a.rip
-  if (a.view === 'rips' && b.view === 'rips') return (a.tab ?? 'seasons') === (b.tab ?? 'seasons')
-  if (a.view !== b.view) {
-    // Album/artist/genre detail pages highlight their parent section.
-    const parent: Partial<Record<Route['view'], Route['view']>> = { album: 'albums', artist: 'artists', genre: 'genres' }
-    return parent[a.view] === b.view
+/** Which sidebar item a route belongs to (detail pages light up their tab). */
+function sectionOf(r: Route): string {
+  switch (r.view) {
+    case 'album':
+      return r.rip ? 'rips' : 'albums'
+    case 'artist':
+      return 'artists'
+    case 'genre':
+      return 'genres'
+    case 'rips':
+    case 'game':
+      return 'rips'
+    case 'songs':
+    case 'recent':
+    case 'auto':
+    case 'smart':
+    case 'playlists':
+      return 'playlists'
+    case 'liked':
+      return 'liked'
+    case 'playlist':
+      return `playlist:${r.id}`
+    default:
+      return r.view
   }
-  if (a.view === 'playlist' && b.view === 'playlist') return a.id === b.id
-  if (a.view === 'smart' && b.view === 'smart') return a.id === b.id
-  return true
 }
 
 function useDropTracks(onDrop?: (ids: number[]) => void) {
@@ -56,19 +68,50 @@ function useDropTracks(onDrop?: (ids: number[]) => void) {
   }
 }
 
-function Item({ icon, label, to, extra, rail }: { icon: IconName; label: string; to: Route; extra?: ReactNode; rail: boolean }) {
-  const route = useUi((s) => s.route)
-  const on = same(route, to)
+function Item({
+  icon,
+  label,
+  to,
+  section,
+  extra,
+  rail,
+  filled,
+  playing,
+  onContextMenu,
+  onDropTracks,
+}: {
+  icon: IconName
+  label: string
+  to: Route
+  /** Defaults to the section of `to`. */
+  section?: string
+  extra?: ReactNode
+  rail: boolean
+  filled?: boolean
+  /** It's the source of what's playing (a playlist): shows the playing icon. */
+  playing?: boolean
+  onContextMenu?: (e: React.MouseEvent) => void
+  onDropTracks?: (ids: number[]) => void
+}) {
+  const current = useUi((s) => sectionOf(s.route))
+  const drop = useDropTracks(onDropTracks)
+  const on = current === (section ?? sectionOf(to))
   return (
-    <button className={cx('sb-item', on && 'on')} onClick={() => navigate(to)} title={rail ? label : undefined}>
-      <Icon name={icon} size={rail ? 24 : 22} />
+    <button
+      className={cx('sb-item', on && 'on', drop.over && 'drop', playing && 'playing')}
+      onClick={() => navigate(to)}
+      onContextMenu={onContextMenu}
+      title={rail ? label : undefined}
+      {...drop.props}
+    >
+      <Icon name={icon} size={rail ? 26 : 24} filled={filled} />
       <span className="sb-label">{label}</span>
-      {extra}
+      {playing && !rail ? <Icon name="volume" size={16} className="sb-playing" /> : extra}
     </button>
   )
 }
 
-function Group({ id, title, children, rail }: { id: string; title: string; children: ReactNode; rail: boolean }) {
+function Group({ id, title, children, rail, action }: { id: string; title: string; children: ReactNode; rail: boolean; action?: ReactNode }) {
   const [closed, setClosed] = useState(() => {
     try {
       return (JSON.parse(localStorage.getItem('valence.ui.sbClosed') ?? '[]') as string[]).includes(id)
@@ -90,63 +133,19 @@ function Group({ id, title, children, rail }: { id: string; title: string; child
   }
   return (
     <div className="sb-group">
-      <button className={cx('sb-group-head', closed && 'closed')} onClick={toggle}>
-        <Icon name="chevronDown" size={12} />
-        {title}
-      </button>
+      {!rail && (
+        <div className="sb-group-row">
+          <button className={cx('sb-group-head', closed && 'closed')} onClick={toggle}>
+            {title}
+            <Icon name="chevronDown" size={16} />
+          </button>
+          {action}
+        </div>
+      )}
       {(!closed || rail) && children}
     </div>
   )
 }
-
-/** A collection entry with art (Liked Songs, a playlist, an album, an artist). */
-function Entry({
-  art,
-  title,
-  sub,
-  to,
-  playing,
-  onContextMenu,
-  onDropTracks,
-  rail,
-}: {
-  art: ReactNode
-  title: string
-  sub: ReactNode
-  to: Route
-  playing?: boolean
-  onContextMenu?: (e: React.MouseEvent) => void
-  onDropTracks?: (ids: number[]) => void
-  rail: boolean
-}) {
-  const route = useUi((s) => s.route)
-  const drop = useDropTracks(onDropTracks)
-  const isPlaying = usePlayer((s) => !!s.state?.playing)
-  return (
-    <button
-      className={cx('sb-entry', same(route, to) && JSON.stringify(route) === JSON.stringify(to) && 'on', drop.over && 'drop', playing && 'playing')}
-      onClick={() => navigate(to)}
-      onContextMenu={onContextMenu}
-      title={rail ? title : undefined}
-      {...drop.props}
-    >
-      {art}
-      <span className="sb-entry-text">
-        <span className="sb-entry-title">{title}</span>
-        <span className="sb-entry-sub">{sub}</span>
-      </span>
-      {playing && !rail && (
-        <span className={cx('now-bars', isPlaying && 'on')}>
-          <i />
-          <i />
-          <i />
-        </span>
-      )}
-    </button>
-  )
-}
-
-type Filter = 'playlists' | 'albums' | 'artists' | null
 
 export function Sidebar() {
   const playlists = useLib((s) => s.playlists)
@@ -155,12 +154,8 @@ export function Sidebar() {
   const stats = useLib((s) => s.stats)
   const scan = useLib((s) => s.scan)
   const counts = useFavorites((s) => s.counts)
-  const favAlbums = useFavorites((s) => s.albums)
-  const favArtists = useFavorites((s) => s.artists)
   const rail = useUi((s) => s.sidebarCollapsed)
   const source = usePlayer((s) => s.state?.queue.context.source)
-  const albumKey = usePlayer((s) => s.state?.current?.albumKey)
-  const [filter, setFilter] = useState<Filter>(null)
   const [promptNode, prompt] = usePrompt()
   const [shadow, setShadow] = useState(false)
 
@@ -204,132 +199,72 @@ export function Sidebar() {
           void invoke(LIB.deletePlaylist, p.id).then(() => {
             toast(`Deleted “${p.name}”`)
             const r = useUi.getState().route
-            if ((r.view === 'playlist' || r.view === 'smart') && r.id === p.id) navigate({ view: 'albums' })
+            if ((r.view === 'playlist' || r.view === 'smart') && r.id === p.id) navigate({ view: 'playlists' })
           })
         },
       },
     ])
 
-  const favAlbumMenu = (e: React.MouseEvent, a: AlbumRow) => albumMenu(e, a)
-  const favArtistMenu = (e: React.MouseEvent, a: ArtistRow) =>
-    showMenu(e, [
-      { label: 'Play', icon: 'play', onClick: () => void playQuery({ albumArtist: a.name }, undefined, { kind: 'artist', id: a.name, title: a.name }) },
-      { label: 'Shuffle', icon: 'shuffle', onClick: () => void playQuery({ albumArtist: a.name }, undefined, { kind: 'artist', id: a.name, title: a.name }, true) },
-      { separator: true },
-      { label: 'Remove from your library', icon: 'heart', onClick: () => void setLiked({ kind: 'artist', names: [a.name] }, false) },
-    ])
-
   const create = (e: React.MouseEvent) => {
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
     showMenu({ clientX: r.left, clientY: r.bottom + 6 }, [
-      { label: 'Playlist', icon: 'playlist', onClick: () => void newPlaylist() },
+      { label: 'Playlist', icon: 'playlistAdd', onClick: () => void newPlaylist() },
       { label: 'Smart Playlist', icon: 'smart', onClick: () => navigate({ view: 'smart' }) },
-      { separator: true },
-      { label: 'Import Music…', icon: 'inbox', onClick: () => navigate({ view: 'import' }) },
     ])
   }
 
   useWindowEvent('valence:new-playlist', (e) => void newPlaylist((e as CustomEvent<number[]>).detail ?? []))
 
-  const show = (f: Exclude<Filter, null>) => filter === null || filter === f
-  const playingPlaylist = (id: string) => source?.kind === 'playlist' && source.id === id
+  const pill = (text: ReactNode, warn = false) => <span className={cx('sb-pill', warn && 'warn')}>{text}</span>
 
   return (
-    <nav className={cx('sidebar', rail && 'rail')} aria-label="Your Library">
-      <div className="sb-head">
-        <button className="sb-head-title" onClick={() => useUi.getState().setSidebar({ collapsed: !rail })} title={rail ? 'Expand Your Library' : 'Collapse Your Library'}>
-          <Icon name="library" size={24} />
-          {!rail && <span>Your Library</span>}
-        </button>
-        {!rail && <IconButton icon="plus" size={18} title="Create playlist or import" onClick={create} />}
-      </div>
+    <nav className={cx('sidebar', rail && 'rail')} aria-label="Navigation">
       <div className={cx('sb-scroll', shadow && 'shadowed')} onScroll={(e) => setShadow((e.target as HTMLElement).scrollTop > 2)}>
-        <Group id="browse" title="Browse" rail={rail}>
-          <Item rail={rail} icon="heart" label="Liked Songs" to={{ view: 'liked' }} extra={counts.tracks ? <span className="sb-count">{counts.tracks.toLocaleString()}</span> : undefined} />
+        <div className="sb-group sb-tabs">
+          <Item rail={rail} icon="queue" label="Queue" to={{ view: 'queue' }} />
+          <Item rail={rail} icon="playCircle" label="Now playing" to={{ view: 'nowplaying' }} />
           <Item rail={rail} icon="albums" label="Albums" to={{ view: 'albums' }} />
-          <Item rail={rail} icon="songs" label="Songs" to={{ view: 'songs' }} />
           <Item rail={rail} icon="artists" label="Artists" to={{ view: 'artists' }} />
           <Item rail={rail} icon="genres" label="Genres" to={{ view: 'genres' }} />
-          <Item rail={rail} icon="clock" label="Recently Added" to={{ view: 'recent' }} />
-          <Item rail={rail} icon="chart" label="Listening Stats" to={{ view: 'stats' }} />
-        </Group>
-        {!rail && (
-          <>
-            <Group id="rips" title="SiIvaGunner" rail={rail}>
-              <Item rail={rail} icon="star" label="Seasons" to={{ view: 'rips', tab: 'seasons' }} />
-              <Item rail={rail} icon="albums" label="Rip Albums" to={{ view: 'rips', tab: 'albums' }} />
-              <Item rail={rail} icon="songs" label="Rip Songs" to={{ view: 'rips', tab: 'songs' }} extra={stats?.ripTracks ? <span className="sb-count">{stats.ripTracks.toLocaleString()}</span> : undefined} />
-              <Item rail={rail} icon="download" label="Get Rips" to={{ view: 'hqrip' }} extra={paused.hqrip || paused.youtube ? <span className="sb-pill warn">Paused</span> : undefined} />
-            </Group>
-            <Group id="sources" title="Sources" rail={rail}>
-              <Item rail={rail} icon="wave" label="TIDAL" to={{ view: 'tidal' }} extra={paused.tidal ? <span className="sb-pill warn">Paused</span> : undefined} />
-              <Item rail={rail} icon="disc" label="Bandcamp" to={{ view: 'bandcamp' }} extra={paused.bandcamp ? <span className="sb-pill warn">Paused</span> : undefined} />
-              <Item
-                rail={rail}
-                icon="inbox"
-                label="Import"
-                to={{ view: 'import' }}
-                extra={
-                  review ? (
-                    <span className="sb-pill warn" title="Needs review">
-                      {review}
-                    </span>
-                  ) : active ? (
-                    <span className="sb-pill">{active}</span>
-                  ) : failed ? (
-                    <span className="sb-count" style={{ color: 'var(--danger)' }}>
-                      {failed} failed
-                    </span>
-                  ) : undefined
-                }
-              />
-            </Group>
-          </>
-        )}
-        <div className="sb-divider" />
-        <div className="sb-lib-head">
-          {(['playlists', 'albums', 'artists'] as const).map((f) => (
-            <button key={f} className={cx('pill sm', filter === f && 'on')} onClick={() => setFilter(filter === f ? null : f)}>
-              {f === 'playlists' ? 'Playlists' : f === 'albums' ? 'Albums' : 'Artists'}
-            </button>
-          ))}
+          <Item rail={rail} icon="rips" label="SiivaGunner" to={{ view: 'rips' }} />
+          <Item rail={rail} icon="library" label="Playlists" to={{ view: 'playlists' }} />
+          <Item rail={rail} icon="chart" label="Listening stats" to={{ view: 'stats' }} />
         </div>
-        {show('playlists') && (
-          <Entry
+        <Group id="sources" title="Get music" rail={rail}>
+          <Item rail={rail} icon="download" label="Get Rips" to={{ view: 'hqrip' }} extra={paused.hqrip || paused.youtube ? pill('Paused', true) : undefined} />
+          <Item rail={rail} icon="wave" label="TIDAL" to={{ view: 'tidal' }} extra={paused.tidal ? pill('Paused', true) : undefined} />
+          <Item rail={rail} icon="store" label="Bandcamp" to={{ view: 'bandcamp' }} extra={paused.bandcamp ? pill('Paused', true) : undefined} />
+          <Item
             rail={rail}
-            art={
-              <span className="sb-tile liked">
-                <Icon name="heart" size={20} filled />
-              </span>
-            }
-            title="Liked Songs"
-            sub={
-              <>
-                <Icon name="pin" size={12} /> Playlist · {plural(counts.tracks, 'song')}
-              </>
-            }
+            icon="inbox"
+            label="Import"
+            to={{ view: 'import' }}
+            extra={review ? pill(review, true) : active ? pill(active) : failed ? <span className="sb-count danger">{failed} failed</span> : undefined}
+          />
+        </Group>
+        <Group id="playlists" title="Your playlists" rail={rail} action={<IconButton icon="plus" size={20} title="New playlist" onClick={create} />}>
+          <Item
+            rail={rail}
+            icon="heart"
+            filled
+            label="Favorites"
             to={{ view: 'liked' }}
             playing={source?.kind === 'playlist' && source.id === 'liked'}
+            extra={counts.tracks ? <span className="sb-count">{counts.tracks.toLocaleString()}</span> : undefined}
             onDropTracks={(ids) => void setLiked({ kind: 'track', ids }, true)}
           />
-        )}
-        {show('playlists') &&
-          playlists.map((p) => (
-            <Entry
+          {playlists.map((p) => (
+            <Item
               key={p.id}
               rail={rail}
-              art={
-                <span className="sb-tile">
-                  <Icon name={p.kind === 'smart' ? 'smart' : p.kind === 'mirror' ? 'link' : 'playlist'} size={22} />
-                </span>
-              }
-              title={p.name}
-              sub={p.kind === 'smart' ? 'Smart playlist' : p.kind === 'mirror' ? 'Mirrored playlist' : 'Playlist'}
+              icon={p.kind === 'smart' ? 'smart' : 'playlist'}
+              label={p.name}
               to={{ view: 'playlist', id: p.id }}
-              playing={playingPlaylist(p.id)}
+              playing={source?.kind === 'playlist' && source.id === p.id}
+              extra={<span className="sb-count">{p.count.toLocaleString()}</span>}
               onContextMenu={(e) => playlistMenu(e, p)}
               onDropTracks={
-                p.kind === 'static'
+                p.kind !== 'smart'
                   ? (ids) =>
                       void invoke(LIB.addToPlaylist, p.id, ids).then(
                         () => toast(`Added ${plural(ids.length, 'song')} to “${p.name}”`, 'ok'),
@@ -339,57 +274,35 @@ export function Sidebar() {
               }
             />
           ))}
-        {show('albums') &&
-          favAlbums.map((a) => (
-            <Entry
-              key={`a${a.id}`}
-              rail={rail}
-              art={<Artwork hash={a.artHash} px={96} title={a.title} />}
-              title={a.title}
-              sub={`Album · ${a.albumArtist}`}
-              to={albumRoute(a.id, a.hqRip)}
-              playing={albumKey === `a${a.id}`}
-              onContextMenu={(e) => favAlbumMenu(e, a)}
-            />
-          ))}
-        {show('artists') &&
-          favArtists.map((a) => (
-            <Entry
-              key={`r${a.name}`}
-              rail={rail}
-              art={<Artwork hash={a.artHash} px={96} title={a.name} className="round" />}
-              title={a.name}
-              sub="Artist"
-              to={{ view: 'artist', artist: a.name }}
-              playing={source?.kind === 'artist' && source.id === a.name}
-              onContextMenu={(e) => favArtistMenu(e, a)}
-            />
-          ))}
-        {!rail && filter === 'albums' && !favAlbums.length && <div className="sb-foot">Albums you like show up here. Click the heart on any album.</div>}
-        {!rail && filter === 'artists' && !favArtists.length && <div className="sb-foot">Artists you like show up here. Click the heart on an artist page.</div>}
-        {!rail && filter !== 'albums' && filter !== 'artists' && !playlists.length && (
-          <button className="sb-item faint" onClick={() => void newPlaylist()}>
-            <Icon name="plus" size={20} />
-            <span className="sb-label">New Playlist</span>
-          </button>
-        )}
+          {!rail && (
+            <button className="sb-item faint" onClick={() => void newPlaylist()}>
+              <Icon name="plus" size={24} />
+              <span className="sb-label">New Playlist</span>
+            </button>
+          )}
+        </Group>
       </div>
-      {!rail && (
-        <div className="sb-foot">
-          {scan && scan.total > 0 ? (
-            <>
-              <span>
-                Scanning {scan.done.toLocaleString()} / {scan.total.toLocaleString()}
-              </span>
+      <div className="sb-foot">
+        {!rail &&
+          (scan && scan.total > 0 ? (
+            <span className="grow">
+              Scanning {scan.done.toLocaleString()} / {scan.total.toLocaleString()}
               <ProgressBar value={scan.done / scan.total} />
-            </>
+            </span>
           ) : stats ? (
-            <span>
+            <span className="grow">
               {plural(stats.tracks, 'song')} · {plural(stats.albums, 'album')}
             </span>
-          ) : null}
-        </div>
-      )}
+          ) : (
+            <span className="grow" />
+          ))}
+        <IconButton
+          icon={rail ? 'chevronRight' : 'collapse'}
+          size={20}
+          title={rail ? 'Expand the sidebar' : 'Collapse the sidebar'}
+          onClick={() => useUi.getState().setSidebar({ collapsed: !rail })}
+        />
+      </div>
       <ResizeHandle />
       {promptNode}
     </nav>

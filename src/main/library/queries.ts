@@ -1,6 +1,6 @@
 // Read-side queries backing the library views.
 
-import type { AlbumRow, ArtistRow, FavoriteCounts, GenreRow, LibraryCollection, LibraryStats, TrackQuery, TrackRow } from '@shared/types'
+import type { AlbumRow, ArtistRow, FavoriteCounts, GenreRow, HistoryEntry, RipGameRow, LibraryCollection, LibraryStats, TrackQuery, TrackRow } from '@shared/types'
 import type { AlbumQuery, AlbumsPage } from '@shared/ipc/library'
 import type { DB } from '@main/db/db'
 import { artistFavoriteKey, trackKeySql } from '@main/sync/favorites'
@@ -113,7 +113,7 @@ export function ftsQuery(text: string): string | null {
 export function queryTracks(db: DB, q: TrackQuery = {}): { rows: TrackRow[]; total: number } {
   const where: string[] = []
   const params: unknown[] = []
-  const coll = collectionWhere('t', q.collection ?? (q.albumId !== undefined || q.playlistId || q.liked ? 'all' : 'main'), q.ripKinds, params)
+  const coll = collectionWhere('t', q.collection ?? (q.albumId !== undefined || q.playlistId || q.liked || q.ripGame ? 'all' : 'main'), q.ripKinds, params)
   if (coll) where.push(coll)
   if (q.search) {
     const fts = ftsQuery(q.search)
@@ -138,6 +138,10 @@ export function queryTracks(db: DB, q: TrackQuery = {}): { rows: TrackRow[]; tot
     where.push('t.genre = ? COLLATE NOCASE')
     params.push(q.genre)
   }
+  if (q.ripGame) {
+    where.push(`t.hq_rip <> '' AND t.rip_game = ? COLLATE NOCASE`)
+    params.push(q.ripGame)
+  }
   if (q.playlistId) {
     where.push('t.rel_path IN (SELECT rel_path FROM playlist_items WHERE playlist_id = ?)')
     params.push(q.playlistId)
@@ -147,16 +151,72 @@ export function queryTracks(db: DB, q: TrackQuery = {}): { rows: TrackRow[]; tot
     params.push(Date.now() - 30 * 24 * 3600 * 1000)
   }
   if (q.liked) where.push(TRACK_LIKED_SQL)
+  if (q.played === 'most') where.push('coalesce(ps.play_count, 0) > 0')
+  if (q.played === 'recent') where.push('ps.last_played IS NOT NULL')
+  if (q.played === 'never') where.push('coalesce(ps.play_count, 0) = 0')
   const w = where.length ? `WHERE ${where.join(' AND ')}` : ''
   let order = ALBUM_ORDER
   if (q.playlistId) order = `(SELECT min(pos) FROM playlist_items pi WHERE pi.playlist_id = '${q.playlistId.replace(/'/g, "''")}' AND pi.rel_path = t.rel_path)`
   if (q.recentlyAdded) order = 't.added_at DESC, ' + ALBUM_ORDER
   if (q.liked) order = 'liked_at DESC, ' + ALBUM_ORDER
+  if (q.ripGame) order = 't.youtube_uploaded IS NULL, t.youtube_uploaded, coalesce(t.title_sort, t.title) COLLATE NOCASE'
+  if (q.played === 'most') order = 'play_count DESC, last_played DESC'
+  if (q.played === 'recent') order = 'last_played DESC'
+  if (q.played === 'never') order = SORT_COLUMNS.title!
   if (q.sort && SORT_COLUMNS[q.sort.key]) order = `${SORT_COLUMNS[q.sort.key]} ${q.sort.dir === 'desc' ? 'DESC' : 'ASC'}, ${ALBUM_ORDER}`
-  const total = (db.prepare(`SELECT count(*) n FROM tracks t ${w}`).get(...params) as { n: number }).n
-  const limit = q.limit ?? 100000
-  const rows = db.prepare(`${TRACK_SELECT} ${w} ORDER BY ${order} LIMIT ? OFFSET ?`).all(...params, limit, q.offset ?? 0)
+  // The played filters read play_stats, so the count needs the same join.
+  const from = q.played ? `tracks t LEFT JOIN play_stats ps ON ps.track_key = ${trackKeySql('t')}` : 'tracks t'
+  let total = (db.prepare(`SELECT count(*) n FROM ${from} ${w}`).get(...params) as { n: number }).n
+  let limit = q.limit ?? 100000
+  const offset = q.offset ?? 0
+  // Recently and most played are top-100 lists (the phone's too).
+  if (q.played === 'most' || q.played === 'recent') {
+    total = Math.min(total, PLAYED_TOP)
+    limit = Math.max(0, Math.min(limit, total - offset))
+  }
+  const rows = db.prepare(`${TRACK_SELECT} ${w} ORDER BY ${order} LIMIT ? OFFSET ?`).all(...params, limit, offset)
   return { rows: (rows as Record<string, any>[]).map(toTrackRow), total }
+}
+
+/** Recently and most played list the top 100 songs, as on the phone. */
+const PLAYED_TOP = 100
+
+/**
+ * The listening history: every play from every device (skips left out), newest first, with the
+ * song it was. Plays of songs no longer in the library are dropped.
+ */
+export function listeningHistory(db: DB, limit = 300): HistoryEntry[] {
+  const rows = db
+    .prepare(
+      `SELECT p.track_key, p.played_at, p.device_id FROM plays p
+       WHERE p.skipped = 0 AND p.track_key IN (SELECT ${trackKeySql('t')} FROM tracks t)
+       ORDER BY p.played_at DESC LIMIT ?`,
+    )
+    .all(limit) as Array<{ track_key: string; played_at: number; device_id: string }>
+  if (!rows.length) return []
+  const keys = [...new Set(rows.map((r) => r.track_key))]
+  const tracks = db
+    .prepare(`${TRACK_SELECT} WHERE ${trackKeySql('t')} IN (SELECT value FROM json_each(?))`)
+    .all(JSON.stringify(keys)) as Record<string, any>[]
+  const byKey = new Map(tracks.map((r) => [(r.valence_id as string | null) ?? `path:${r.rel_path as string}`, toTrackRow(r)]))
+  const out: HistoryEntry[] = []
+  for (const r of rows) {
+    const track = byKey.get(r.track_key)
+    if (track) out.push({ track, playedAt: r.played_at, deviceId: r.device_id })
+  }
+  return out
+}
+
+/** Games that have rips, with how many and a cover (SiivaGunner → Games, as on the phone). */
+export function ripGames(db: DB): RipGameRow[] {
+  const rows = db
+    .prepare(
+      `SELECT t.rip_game AS name, count(*) AS n, max(t.art_hash) AS art
+       FROM tracks t WHERE t.hq_rip <> '' AND t.rip_game IS NOT NULL AND t.rip_game <> ''
+       GROUP BY t.rip_game COLLATE NOCASE ORDER BY t.rip_game COLLATE NOCASE`,
+    )
+    .all() as Array<{ name: string; n: number; art: string | null }>
+  return rows.map((r) => ({ name: r.name, trackCount: r.n, artHash: r.art }))
 }
 
 export function trackById(db: DB, id: number): TrackRow | null {

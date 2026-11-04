@@ -81,7 +81,7 @@ export function PlaylistView({ id }: { id: string }) {
     showMenu(e, [
       { label: 'Play next', icon: 'queue', disabled: !ids.length, onClick: () => void playNext(ids) },
       { label: 'Add to queue', disabled: !ids.length, onClick: () => void addToQueue(ids) },
-      { label: 'Add all to Liked Songs', icon: 'heart', disabled: !ids.length, onClick: () => void setLiked({ kind: 'track', ids }, true) },
+      { label: 'Add all to Favorites', icon: 'heart', disabled: !ids.length, onClick: () => void setLiked({ kind: 'track', ids }, true) },
       { label: 'Get Info', icon: 'info', disabled: !ids.length, onClick: () => useUi.getState().openGetInfo(ids) },
       { separator: true },
       ...(info.kind === 'smart' ? [{ label: 'Edit rules', icon: 'smart' as const, onClick: () => navigate({ view: 'smart', id }) }] : []),
@@ -158,7 +158,7 @@ const FIELDS: Array<{ field: SmartField; label: string; type: FieldType }> = [
   { field: 'compilation', label: 'Compilation', type: 'bool' },
   // SiIvaGunner, SGFR or YouTube; any rule on it brings rips into the playlist ("is not" empty = every rip).
   { field: 'hqRip', label: 'High Quality Rip collection', type: 'text' },
-  { field: 'liked', label: 'Liked', type: 'bool' },
+  { field: 'liked', label: 'In Favorites', type: 'bool' },
 ]
 const OPS: Record<FieldType, Array<{ op: SmartOp; label: string }>> = {
   text: [

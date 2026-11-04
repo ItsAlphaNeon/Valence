@@ -17,7 +17,7 @@ import { Icon } from './Icon'
 import { HeartButton } from './Heart'
 import { ScrollParent } from './TrackTable'
 
-const GAP = 24
+const GAP = 16
 const PAGE = 120
 /** Tile size presets (Settings → Appearance → Album art size). */
 const TILE_MIN: Record<string, number> = { small: 140, medium: 176, large: 220 }
@@ -33,8 +33,8 @@ export function albumMenu(e: React.MouseEvent, a: AlbumRow): void {
     { label: 'Add to queue', onClick: () => void ids().then(addToQueue) },
     { separator: true },
     a.liked
-      ? { label: 'Remove from your library', icon: 'heart', onClick: () => void setLiked({ kind: 'album', ids: [a.id] }, false) }
-      : { label: 'Save to your library', icon: 'heart', onClick: () => void setLiked({ kind: 'album', ids: [a.id] }, true) },
+      ? { label: 'Remove from Favorites', icon: 'heart', onClick: () => void setLiked({ kind: 'album', ids: [a.id] }, false) }
+      : { label: 'Add to Favorites', icon: 'heart', onClick: () => void setLiked({ kind: 'album', ids: [a.id] }, true) },
     {
       label: 'Add to playlist',
       icon: 'playlist',
@@ -176,7 +176,8 @@ export function AlbumGrid({ albums, query, header, subtitle, loading }: { albums
   const cols = Math.max(2, Math.floor((width + GAP) / (minTile + GAP)))
   const tile = (width - GAP * (cols - 1)) / cols
   // Art + title + two lines of subtitle + the row gap.
-  const rowH = Math.round(tile + 10 + 21 + 3 + 38 + GAP)
+  // Outlined card: art, then the title and one subtitle line inside the card.
+  const rowH = Math.round(tile + 64 + GAP)
   const rows = Math.ceil(count / cols)
   const v = useVirtualizer({
     count: rows,

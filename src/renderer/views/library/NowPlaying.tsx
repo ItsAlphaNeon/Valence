@@ -1,11 +1,11 @@
 import { LIB, type SearchResult } from '@shared/ipc/library'
 import type { AlbumRow, ArtistRow, TrackRow } from '@shared/types'
-import { invoke } from '../../lib/ipc'
+import { errorMessage, invoke, revealLabel } from '../../lib/ipc'
 import { cx, duration, quality } from '../../lib/format'
 import { cmd, playQuery, playTracks, usePlayer } from '../../state/player'
 import { useCurrentLyrics, useCurrentTrack } from '../../state/current'
-import { albumRoute, navigate, useUi } from '../../state/ui'
-import { useLibData, useSetting } from '../../state/library'
+import { albumRoute, navigate, toast, useUi } from '../../state/ui'
+import { useLib, useLibData, useSetting } from '../../state/library'
 import { useHeaderColor } from '../../theme/accent'
 import { useViewHeader } from '../../shell/header'
 import { LyricsView } from '../../shell/LyricsView'
@@ -13,86 +13,154 @@ import { AlbumTile, albumMenu } from '../../components/AlbumGrid'
 import { PlayButton, Shelf, useSourcePlaying } from '../../components/Hero'
 import { TrackTable } from '../../components/TrackTable'
 import { HeartButton } from '../../components/Heart'
-import { Artwork, Button, Empty, Spinner, Stars } from '../../components/ui'
+import { Artwork, Button, Empty, IconButton, Spinner, showMenu } from '../../components/ui'
+import { QueueList } from '../../components/QueueList'
+import { Seek, sleepMenuItems } from '../../shell/PlayerBar'
 import { Icon } from '../../components/Icon'
 import { ArtistTile, artistMenu } from './Artists'
 
+/**
+ * The phone's Now playing screen: big cover, the title with artist and album under it, heart / info
+ * / add to playlist / options and repeat / shuffle, the seek row and the controls. Lyrics (or what's
+ * up next) sit beside it on wide windows. The blurred cover behind it comes from the shell
+ * (NowPlayingBackdrop), so it reaches under the player bar too.
+ */
 export function NowPlayingView() {
   const cur = usePlayer((s) => s.state?.current)
   const playing = usePlayer((s) => !!s.state?.playing)
+  const shuffle = usePlayer((s) => !!s.state?.shuffle)
+  const repeat = usePlayer((s) => s.state?.repeat ?? 'off')
   const hash = usePlayer((s) => s.currentArtHash)
-  const next = usePlayer((s) => s.state?.queue.upNext[0] ?? s.state?.queue.context.upcoming[0] ?? s.state?.queue.continuation?.upcoming[0] ?? null)
   const track = useCurrentTrack()
   const { lyrics } = useCurrentLyrics()
-  const color = useHeaderColor(hash)
-  const [spin] = useSetting<boolean>('ui.np.spin', false)
-  useViewHeader({ color, strong: true, title: cur?.title ?? 'Now playing' })
+  const playlists = useLib((s) => s.playlists)
+  const [side, setSide] = useSetting<'lyrics' | 'next'>('ui.np.side', 'lyrics')
+  useViewHeader({ color: null, title: cur?.title ?? 'Now playing' })
   if (!cur)
     return (
       <div className="view">
-        <Empty icon="songs" title="Nothing playing">
-          Pick an album or song to start listening.
+        <Empty icon="playCircle" title="Nothing playing">
+          Pick a song in Albums, Artists or Playlists.
         </Empty>
       </div>
     )
   const openArt = () => useUi.getState().openArt({ hash, url: hash ? undefined : cur.artUrl, albumId: track?.albumId, title: cur.album || cur.title, sub: cur.artist })
+  const rip = !!track?.hqRip
+  const line2 = rip && track?.ripGame ? track.ripGame : cur.artist
+  const goLine2 = () => (rip && track?.ripGame ? navigate({ view: 'game', game: track.ripGame }) : navigate({ view: 'artist', artist: track?.albumArtist || cur.artist }))
+  const goAlbum = () => track?.albumId != null && navigate(albumRoute(track.albumId, track.hqRip))
+  const addTo = (e: React.MouseEvent) => {
+    if (!track) return
+    showMenu(e, [
+      { label: 'New playlist…', icon: 'plus', onClick: () => window.dispatchEvent(new CustomEvent('valence:new-playlist', { detail: [track.id] })) },
+      ...(playlists.some((p) => p.kind !== 'smart') ? [{ separator: true } as const] : []),
+      ...playlists
+        .filter((p) => p.kind !== 'smart')
+        .map((p) => ({
+          label: p.name,
+          icon: 'playlist' as const,
+          onClick: () => void invoke(LIB.addToPlaylist, p.id, [track.id]).then(() => toast(`Added to “${p.name}”`, 'ok'), (err) => toast(errorMessage(err), 'error')),
+        })),
+    ])
+  }
+  const options = (e: React.MouseEvent) =>
+    showMenu(e, [
+      ...(track?.albumId != null ? [{ label: 'Go to album', icon: 'albums' as const, onClick: goAlbum }] : []),
+      { label: rip && track?.ripGame ? 'Go to game' : 'Go to artist', icon: rip ? ('rips' as const) : ('artists' as const), onClick: goLine2 },
+      { label: 'View artwork', icon: 'image', onClick: openArt },
+      ...(track ? [{ label: revealLabel, icon: 'folder' as const, onClick: () => void invoke(LIB.reveal, track.id) }] : []),
+      { separator: true },
+      ...sleepMenuItems(usePlayer.getState().state?.sleep ?? { mode: 'off' }, !!usePlayer.getState().state?.stopAfterCurrent),
+    ])
   return (
-    <div className="nowplaying">
-      <div className="np-left">
+    <div className={cx('nowplaying', side === 'next' && 'side-next')}>
+      <div className="np-player">
         <button className="np-art-btn" title="View artwork" onClick={openArt}>
-          <Artwork hash={hash} url={hash ? undefined : cur.artUrl} px={1000} className={cx('np-art', spin && 'spin', !playing && 'paused')} title={cur.album} />
-          <span className="np-art-zoom">
-            <Icon name="zoomIn" size={18} />
-          </span>
+          <Artwork hash={hash} url={hash ? undefined : cur.artUrl} px={1000} className={cx('np-art', !playing && 'paused')} title={cur.album} />
         </button>
-        <div className="np-meta">
-          <div className="np-title-row">
-            <div className="np-title" title={cur.title}>
-              {cur.title}
-            </div>
-            {track && <HeartButton target={{ kind: 'track', id: track.id }} liked={track.liked} size={26} />}
-          </div>
-          <div className="np-sub">
-            <a className="link-muted" onClick={() => navigate({ view: 'artist', artist: track?.albumArtist || cur.artist })}>
-              {cur.artist}
-            </a>
-            {cur.album && (
-              <>
-                <span className="dot-sep" />
-                <a className="link-muted" onClick={() => track?.albumId != null && navigate(albumRoute(track.albumId, track.hqRip))}>
-                  {cur.album}
-                </a>
-              </>
-            )}
-          </div>
-          {track && (
-            <div className="np-chips">
-              <Stars rating={track.rating} size={14} onRate={(s) => void invoke(LIB.setRating, [track.id], s)} />
-              <span className="q-badge">{quality(track)}</span>
-              {track.year && <span className="chip">{track.year}</span>}
-              {track.genre && <span className="chip">{track.genre}</span>}
-            </div>
-          )}
-          {next && (
-            <button className="np-next" onClick={() => cmd({ type: 'next' })} title="Skip to the next song">
-              <span className="np-next-label">Next</span>
-              <span className="ellipsis">
-                <b>{next.title}</b> · {next.artist}
-              </span>
-              <Icon name="next" size={14} />
-            </button>
+        <div className="np-title" title={cur.title}>
+          {cur.title}
+        </div>
+        <a className="np-line" onClick={goLine2}>
+          {line2}
+        </a>
+        {cur.album && (
+          <a className="np-line" onClick={goAlbum}>
+            {cur.album}
+          </a>
+        )}
+        <div className="np-quick">
+          {track && <HeartButton target={{ kind: 'track', id: track.id }} liked={track.liked} size={24} />}
+          <IconButton icon="info" size={24} title="Song info" disabled={!track} onClick={() => track && useUi.getState().openGetInfo([track.id])} />
+          <IconButton icon="playlistAdd" size={24} title="Add to playlists" disabled={!track} onClick={addTo} />
+          <IconButton icon="more" size={24} title="Options for this song" onClick={options} />
+          <span className="grow" />
+          <IconButton
+            icon={repeat === 'one' ? 'repeatOne' : 'repeat'}
+            size={24}
+            active={repeat !== 'off'}
+            title={repeat === 'off' ? 'Repeat: off' : repeat === 'all' ? 'Repeat: queue' : 'Repeat: this song'}
+            onClick={() => cmd({ type: 'cycleRepeat' })}
+          />
+          <IconButton icon="shuffle" size={24} active={shuffle} title={shuffle ? 'Shuffle: on' : 'Shuffle: off'} onClick={() => cmd({ type: 'setShuffle', shuffle: !shuffle })} />
+        </div>
+        <Seek />
+        <div className="np-controls">
+          <NpVolume />
+          <IconButton icon="prev" size={40} title="Previous" onClick={() => cmd({ type: 'prev' })} />
+          <IconButton className="np-play" icon={playing ? 'pause' : 'play'} size={64} title={playing ? 'Pause' : 'Play'} onClick={() => cmd({ type: 'toggle' })} />
+          <IconButton icon="next" size={40} title="Next" onClick={() => cmd({ type: 'next' })} />
+          <IconButton icon="eq" size={22} title="Equalizer" onClick={() => navigate({ view: 'settings', section: 'playback' })} />
+        </div>
+      </div>
+      <div className="np-side">
+        <div className="pill-row np-side-tabs">
+          <button className={cx('pill', side === 'lyrics' && 'on')} onClick={() => setSide('lyrics')}>
+            Lyrics
+          </button>
+          <button className={cx('pill', side === 'next' && 'on')} onClick={() => setSide('next')}>
+            Up next
+          </button>
+        </div>
+        <div className="np-side-body lyrics-scroll">
+          {side === 'next' ? (
+            <QueueList />
+          ) : lyrics ? (
+            <LyricsView big />
+          ) : (
+            <Empty icon="lyrics" title="No lyrics for this song">
+              Valence looks lyrics up on import. You can add them in Get Info.
+            </Empty>
           )}
         </div>
       </div>
-      <div className="np-right lyrics-scroll">
-        {lyrics ? (
-          <LyricsView big />
-        ) : (
-          <Empty icon="lyrics" title="No lyrics for this song">
-            Valence looks lyrics up on import. You can add them in Get Info.
-          </Empty>
-        )}
-      </div>
+    </div>
+  )
+}
+
+/** Volume on the player screen: the speaker mutes; scroll on it to change the volume. */
+function NpVolume() {
+  const volume = usePlayer((s) => s.state?.volume ?? 1)
+  const muted = usePlayer((s) => !!s.state?.muted)
+  return (
+    <span onWheel={(e) => cmd({ type: 'setVolume', volume: Math.min(1, Math.max(0, volume - Math.sign(e.deltaY) * 0.05)) })}>
+      <IconButton
+        icon={muted || volume === 0 ? 'mute' : volume < 0.5 ? 'volumeLow' : 'volume'}
+        size={22}
+        title={`${muted ? 'Unmute' : 'Mute'} · volume ${Math.round(volume * 100)}% (scroll to change)`}
+        onClick={() => cmd({ type: 'setMuted', muted: !muted })}
+      />
+    </span>
+  )
+}
+
+/** The blurred, darkened cover behind Now playing (main area and player bar), as on the phone. */
+export function NowPlayingBackdrop() {
+  const cur = usePlayer((s) => s.state?.current)
+  const hash = usePlayer((s) => s.currentArtHash)
+  return (
+    <div className="np-backdrop" aria-hidden>
+      {cur && <Artwork hash={hash} url={hash ? undefined : cur.artUrl} px={300} className="np-backdrop-art" title={cur.album} />}
     </div>
   )
 }

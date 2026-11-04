@@ -1,5 +1,6 @@
-// Player bar along the bottom: now playing (art, title, like) | transport + seek | sleep timer,
-// panels, mini player and volume.
+// Player bar along the bottom, in the phone's style: now playing (cover, title, heart) | shuffle,
+// previous, a plain play button, next, repeat and the seek line | sleep timer, panels, mini player,
+// volume. On the Now playing page it turns see-through over the blurred cover.
 
 import { useEffect, useState } from 'react'
 import { cx, duration } from '../lib/format'
@@ -12,7 +13,7 @@ import { HeartButton } from '../components/Heart'
 import { Icon } from '../components/Icon'
 import { MOD } from './TopBar'
 
-function Seek() {
+export function Seek() {
   const pos = usePlayer((s) => s.positionMs)
   const dur = usePlayer((s) => s.durationMs || s.state?.current?.durationMs || 0)
   const has = usePlayer((s) => !!s.state?.current)
@@ -45,7 +46,7 @@ function Volume() {
   const icon = muted || volume === 0 ? 'mute' : volume < 0.5 ? 'volumeLow' : 'volume'
   return (
     <>
-      <IconButton icon={icon} size={18} title={muted ? 'Unmute' : `Mute (${Math.round(volume * 100)}%)`} onClick={() => cmd({ type: 'setMuted', muted: !muted })} />
+      <IconButton icon={icon} size={22} title={muted ? 'Unmute' : `Mute (${Math.round(volume * 100)}%)`} onClick={() => cmd({ type: 'setMuted', muted: !muted })} />
       <div className="pb-volume" title={`Volume ${Math.round((muted ? 0 : volume) * 100)}%`} onWheel={(e) => cmd({ type: 'setVolume', volume: Math.min(1, Math.max(0, volume - Math.sign(e.deltaY) * 0.05)) })}>
         <Slider value={muted ? 0 : volume} max={1} label="Volume" onChange={(v) => cmd({ type: 'setVolume', volume: v })} onCommit={(v) => cmd({ type: 'setVolume', volume: v })} />
       </div>
@@ -111,7 +112,7 @@ function SleepButton() {
         showMenu({ clientX: r.left, clientY: r.top - 8 }, sleepMenuItems(sleep, stopAfter))
       }}
     >
-      <Icon name={stopAfter && !label ? 'stop' : 'moon'} size={16} filled={stopAfter && !label} />
+      <Icon name={stopAfter && !label ? 'stopCircle' : 'moon'} size={22} />
       {label && <span className="tnum">{label}</span>}
     </button>
   )
@@ -119,7 +120,7 @@ function SleepButton() {
 
 function PanelButton({ panel, icon, title }: { panel: Panel; icon: 'lyrics' | 'queue' | 'panel'; title: string }) {
   const drawer = useUi((s) => s.drawer)
-  return <IconButton icon={icon} size={18} title={title} active={drawer === panel} className="dot" onClick={() => useUi.getState().toggleDrawer(panel)} />
+  return <IconButton icon={icon} size={22} title={title} active={drawer === panel} onClick={() => useUi.getState().toggleDrawer(panel)} />
 }
 
 export function PlayerBar() {
@@ -140,7 +141,7 @@ export function PlayerBar() {
             <button className="pb-art" title={route.view === 'nowplaying' ? 'Close Now Playing' : 'Now Playing'} onClick={openNowPlaying}>
               <Artwork hash={artHash} url={artHash ? undefined : cur.artUrl} px={128} title={cur.album || cur.title} />
               <span className="pb-art-hover">
-                <Icon name={route.view === 'nowplaying' ? 'chevronDown' : 'expand'} size={16} />
+                <Icon name={route.view === 'nowplaying' ? 'chevronDown' : 'playCircle'} size={22} />
               </span>
             </button>
             <div className="pb-meta">
@@ -168,16 +169,15 @@ export function PlayerBar() {
       </div>
       <div className="pb-center">
         <div className="pb-transport">
-          <IconButton icon="shuffle" size={18} active={state?.shuffle} className="dot" title={state?.shuffle ? 'Disable shuffle' : 'Enable shuffle'} onClick={() => cmd({ type: 'setShuffle', shuffle: !state?.shuffle })} />
-          <IconButton icon="prev" size={18} filled title={`Previous (${MOD}+←)`} onClick={() => cmd({ type: 'prev' })} disabled={!cur} />
-          <IconButton className="pb-play" icon={playing ? 'pause' : 'play'} size={18} filled title={playing ? 'Pause (Space)' : 'Play (Space)'} onClick={() => cmd({ type: 'toggle' })} disabled={!cur} />
-          <IconButton icon="next" size={18} filled title={`Next (${MOD}+→)`} onClick={() => cmd({ type: 'next' })} disabled={!cur} />
+          <IconButton icon="shuffle" size={22} active={state?.shuffle} title={state?.shuffle ? 'Shuffle: on' : 'Shuffle: off'} onClick={() => cmd({ type: 'setShuffle', shuffle: !state?.shuffle })} />
+          <IconButton icon="prev" size={30} title={`Previous (${MOD}+←)`} onClick={() => cmd({ type: 'prev' })} disabled={!cur} />
+          <IconButton className="pb-play" icon={playing ? 'pause' : 'play'} size={40} title={playing ? 'Pause (Space)' : 'Play (Space)'} onClick={() => cmd({ type: 'toggle' })} disabled={!cur} />
+          <IconButton icon="next" size={30} title={`Next (${MOD}+→)`} onClick={() => cmd({ type: 'next' })} disabled={!cur} />
           <IconButton
-            icon="repeat"
-            size={18}
+            icon={repeat === 'one' ? 'repeatOne' : 'repeat'}
+            size={22}
             active={repeat !== 'off'}
-            className={cx('dot', repeat === 'one' && 'pb-repeat-one')}
-            title={repeat === 'off' ? 'Enable repeat' : repeat === 'all' ? 'Enable repeat one' : 'Disable repeat'}
+            title={repeat === 'off' ? 'Repeat: off' : repeat === 'all' ? 'Repeat: queue' : 'Repeat: this song'}
             onClick={() => cmd({ type: 'cycleRepeat' })}
           />
         </div>
@@ -187,13 +187,13 @@ export function PlayerBar() {
         {state?.buffering && <span className="spinner" style={{ width: 14, height: 14, marginRight: 4 }} />}
         <SleepButton />
         <span className="pb-hide-narrow">
-          <IconButton icon="expand" size={18} title="Now Playing view" active={route.view === 'nowplaying'} className="dot" onClick={openNowPlaying} />
+          <IconButton icon="playCircle" size={22} title="Now playing" active={route.view === 'nowplaying'} onClick={openNowPlaying} />
         </span>
         <PanelButton panel="lyrics" icon="lyrics" title={`Lyrics (${MOD}+L)`} />
         <PanelButton panel="queue" icon="queue" title={`Queue (${MOD}+U)`} />
         <PanelButton panel="info" icon="panel" title={`Now playing info (${MOD}+I)`} />
         <span className="pb-hide-narrow">
-          <IconButton icon="mini" size={18} title="Mini player" onClick={() => window.valence.send('mini:toggle')} />
+          <IconButton icon="mini" size={22} title="Mini player" onClick={() => window.valence.send('mini:toggle')} />
         </span>
         <Volume />
       </div>

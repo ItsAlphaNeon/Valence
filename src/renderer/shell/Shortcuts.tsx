@@ -40,7 +40,7 @@ export const SHORTCUTS: Array<[string, Array<[string, string[]]>]> = [
       ['Queue', [MOD, 'U']],
       ['Lyrics', [MOD, 'L']],
       ['Now playing info', [MOD, 'I']],
-      ['Collapse Your Library', ['Alt', 'Shift', 'L']],
+      ['Collapse the sidebar', ['Alt', 'Shift', 'L']],
       ['Toggle right panel', ['Alt', 'Shift', 'R']],
       ['Mini player', [MOD, 'Shift', 'M']],
       ['Zoom in / out', [MOD, '+ / −']],

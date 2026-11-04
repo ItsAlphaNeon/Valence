@@ -33,14 +33,16 @@ function baseCommands(): Cmd[] {
   const playing = !!st.state?.playing
   const ui = useUi.getState()
   const nav: Array<[string, IconName, Route, string?, string?]> = [
-    ['Liked Songs', 'heart', { view: 'liked' }, undefined, 'favorites favourites'],
+    ['Favorites', 'heart', { view: 'liked' }, undefined, 'liked songs favourites'],
+    ['Queue', 'queue', { view: 'queue' }, undefined, 'up next'],
+    ['Playlists', 'library', { view: 'playlists' }, undefined, 'recently played most played not played history'],
     ['Albums', 'albums', { view: 'albums' }],
     ['Songs', 'songs', { view: 'songs' }, undefined, 'tracks'],
     ['Artists', 'artists', { view: 'artists' }],
     ['Genres', 'genres', { view: 'genres' }],
-    ['Recently Added', 'clock', { view: 'recent' }, undefined, 'new'],
-    ['Listening Stats', 'chart', { view: 'stats' }, undefined, 'wrapped history top'],
-    ['Now Playing', 'expand', { view: 'nowplaying' }, undefined, 'fullscreen'],
+    ['Recently added', 'moreTime', { view: 'recent' }, undefined, 'new'],
+    ['Listening stats', 'chart', { view: 'stats' }, undefined, 'wrapped history top'],
+    ['Now playing', 'playCircle', { view: 'nowplaying' }, undefined, 'fullscreen lyrics'],
     ['Import', 'inbox', { view: 'import' }],
     ['TIDAL', 'wave', { view: 'tidal' }],
     ['Bandcamp', 'disc', { view: 'bandcamp' }],
@@ -77,7 +79,7 @@ function baseCommands(): Cmd[] {
     { id: 'p:queue', group: 'View', label: 'Show queue', icon: 'queue', hint: `${MOD}+U`, run: () => ui.setDrawer('queue') },
     { id: 'p:lyrics', group: 'View', label: 'Show lyrics', icon: 'lyrics', hint: `${MOD}+L`, run: () => ui.setDrawer('lyrics') },
     { id: 'p:info', group: 'View', label: 'Show now playing info', icon: 'panel', hint: `${MOD}+I`, run: () => ui.setDrawer('info') },
-    { id: 'p:sidebar', group: 'View', label: ui.sidebarCollapsed ? 'Expand Your Library' : 'Collapse Your Library', icon: 'library', hint: 'Alt+Shift+L', run: () => ui.setSidebar({ collapsed: !ui.sidebarCollapsed }) },
+    { id: 'p:sidebar', group: 'View', label: ui.sidebarCollapsed ? 'Expand the sidebar' : 'Collapse the sidebar', icon: 'collapse', hint: 'Alt+Shift+L', run: () => ui.setSidebar({ collapsed: !ui.sidebarCollapsed }) },
     { id: 'p:mini', group: 'View', label: 'Mini player', icon: 'mini', hint: `${MOD}+Shift+M`, run: () => window.valence.send('mini:toggle') },
     {
       id: 'p:art',

@@ -98,7 +98,7 @@ export function AppearanceSection() {
         </Row>
         <Row label="Album art colors" desc="Let the album that's playing color the app." top />
         <ArtThemePicker />
-        <ToggleRow k="ui.headerColors" fallback={true} label="Colorful page headers" desc="Album, artist and playlist pages fade in from their artwork's color." />
+        <ToggleRow k="ui.headerColors" fallback={false} label="Colorful page headers" desc="Album, artist and playlist pages fade in from their artwork's color." />
       </Card>
       <UserThemesCard />
       <Card title="Layout">
@@ -143,7 +143,9 @@ export function AppearanceSection() {
             { value: 'last', label: 'Where I left off' },
             { value: 'albums', label: 'Albums' },
             { value: 'songs', label: 'Songs' },
-            { value: 'liked', label: 'Liked Songs' },
+            { value: 'liked', label: 'Favorites' },
+            { value: 'playlists', label: 'Playlists' },
+            { value: 'nowplaying', label: 'Now playing' },
           ]}
         />
       </Card>
@@ -159,7 +161,6 @@ export function AppearanceSection() {
             { value: 'off', label: 'Reduced' },
           ]}
         />
-        <ToggleRow k="ui.np.spin" fallback={false} label="Spin the cover while playing" desc="A slow vinyl-style turn on the Now Playing page." />
       </Card>
       <Card title="Player">
         <ToggleRow k="ui.player.remaining" fallback={false} label="Show time remaining" desc="The player bar counts down instead of showing the song length. You can also click the time." />

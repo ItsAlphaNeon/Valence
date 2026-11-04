@@ -47,7 +47,11 @@ export function PalettePicker({ withUser = true }: { withUser?: boolean }) {
 }
 
 export function AccentPicker({ custom = true }: { custom?: boolean }) {
-  const [accent, setAccent] = useSetting<string>('ui.accent', ACCENTS[0].id)
+  // Until you pick one, the palette's own accent is in use (Musicolet's mint), so show that.
+  const [themeId] = useSetting<string>('ui.theme', 'dark')
+  const themeAccent = findTheme(themeId).accent?.toLowerCase()
+  const fallback = ACCENTS.find((a) => a.hex === themeAccent)?.id ?? themeAccent ?? ACCENTS[0].id
+  const [accent, setAccent] = useSetting<string>('ui.accent', fallback)
   const preset = ACCENTS.find((a) => a.id === accent || a.hex === String(accent).toLowerCase())
   const isCustom = !preset && HEX.test(String(accent))
   const [hex, setHex] = useState(() => accentHex(accent))
@@ -98,11 +102,14 @@ const ART_CHOICES: Array<[ArtTheme, string, string]> = [
 export function ArtThemePicker() {
   const all = useLib((s) => s.settings)
   const [, setArt] = useSetting<ArtTheme>('ui.artTheme', 'accent')
-  const art = artThemeSetting(all)
+  const theme = findTheme(all['ui.theme'])
+  // Palettes like Musicolet keep one accent color; album colors stay off while they're on.
+  const fixed = theme.artTint === false
+  const art = fixed ? 'off' : artThemeSetting(all)
   return (
-    <div className="choice-row" role="radiogroup" aria-label="Album art colors">
+    <div className="choice-row" role="radiogroup" aria-label="Album art colors" title={fixed ? `The ${theme.name} palette keeps one accent color` : undefined}>
       {ART_CHOICES.map(([v, label, sub]) => (
-        <button key={v} role="radio" aria-checked={art === v} className={cx('choice', art === v && 'on', `art-${v}`)} onClick={() => setArt(v)}>
+        <button key={v} role="radio" aria-checked={art === v} disabled={fixed && v !== 'off'} className={cx('choice', art === v && 'on', `art-${v}`)} onClick={() => setArt(v)}>
           <span className="choice-demo" aria-hidden>
             <i />
             <b />

@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
-import '@fontsource-variable/figtree'
+import '@fontsource-variable/roboto'
 import './theme/theme.css'
 import './app.css'
 import './features.css'

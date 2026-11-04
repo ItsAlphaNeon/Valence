@@ -278,7 +278,7 @@ function SourcesStep({ finish }: { finish: (then?: () => void) => void }) {
 function TipsStep() {
   const tips: Array<[IconName, ReactNode, string]> = [
     ['search', <><span className="kbd">{MOD}</span> <span className="kbd">K</span></>, 'Command palette: find any song or action from the keyboard.'],
-    ['heart', <Icon name="heart" size={16} filled />, 'Like songs, albums and artists. They gather in Your Library and sync to your other computers.'],
+    ['heart', <Icon name="heart" size={16} filled />, 'Heart songs, albums and artists. They gather in Favorites and sync to your phone and other computers.'],
     ['zoomIn', 'Click the art', 'Album covers open full size. Scroll to zoom in on the details.'],
     ['moon', 'Sleep timer', 'The moon in the player bar stops playback after a while or at the end of a song.'],
     ['keyboard', <span className="kbd">?</span>, 'Shows every keyboard shortcut.'],

@@ -28,17 +28,19 @@ export interface ThemeDef {
 }
 
 export const BUILTIN_THEMES: ThemeDef[] = [
-  { id: 'dark', name: 'Dark', scheme: 'dark', description: 'Deep black around soft charcoal panels.', preview: ['#000', '#121212', '#282828', '#fff'] },
-  { id: 'system', name: 'Match System', description: 'Dark or Light, following your system setting.', preview: ['#000', '#121212', '#f6f6f8', '#fff'] },
-  { id: 'midnight', name: 'Midnight', scheme: 'dark', description: 'Inky blue-black, cool and calm.', preview: ['#04060c', '#0d1120', '#1c2238', '#fff'] },
-  { id: 'ember', name: 'Ember', scheme: 'dark', description: 'Warm, low-light browns. Cozy for late nights.', preview: ['#0b0806', '#16110d', '#2b221b', '#fbf3ea'] },
-  { id: 'oled', name: 'OLED Black', scheme: 'dark', description: 'Pure black everywhere, outlined panels.', preview: ['#000', '#000', '#161616', '#fff'] },
-  { id: 'light', name: 'Light', scheme: 'light', description: 'Clean white panels on soft gray.', preview: ['#e6e6ea', '#fff', '#f0f0f3', '#121212'] },
-  { id: 'paper', name: 'Paper', scheme: 'light', description: 'Warm cream, like a liner note.', preview: ['#e9e2d6', '#fbf8f2', '#f1ebe1', '#2b241e'] },
+  { id: 'dark', name: 'Dark', scheme: 'dark', description: 'Musicolet’s dark grey, like the phone app.', preview: ['#212121', '#181818', '#323232', '#fff'] },
+  { id: 'black', name: 'Black (AMOLED)', scheme: 'dark', description: 'Pure black, easy on OLED screens.', preview: ['#0f0f0f', '#000', '#1e1e1e', '#fff'] },
+  { id: 'light', name: 'Light', scheme: 'light', description: 'Light grey bars around white.', preview: ['#eeeeee', '#fafafa', '#ffffff', '#1a1a1a'] },
+  { id: 'system', name: 'Follow system', description: 'Dark or Light, following your system setting.', preview: ['#212121', '#181818', '#fafafa', '#fff'] },
+  { id: 'midnight', name: 'Midnight', scheme: 'dark', description: 'Inky blue-black, cool and calm.', preview: ['#121729', '#0d1120', '#222a45', '#fff'] },
+  { id: 'ember', name: 'Ember', scheme: 'dark', description: 'Warm, low-light browns.', preview: ['#1c1611', '#16110d', '#30261e', '#fbf3ea'] },
+  { id: 'paper', name: 'Paper', scheme: 'light', description: 'Warm cream, like a liner note.', preview: ['#ece4d7', '#faf6ef', '#fffdf8', '#2b241e'] },
 ]
 
 /** Theme ids from earlier versions. */
 const LEGACY: Record<string, string> = {
+  oled: 'black',
+  musicolet: 'dark',
   'liquid-glass': 'dark',
   'liquid-glass-performance': 'dark',
   'solid-dark': 'dark',

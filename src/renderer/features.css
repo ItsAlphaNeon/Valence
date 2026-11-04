@@ -102,27 +102,8 @@
   background: var(--sep);
   margin: 0 4px;
 }
-.filter-input {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 36px;
-  padding: 0 12px;
-  border-radius: var(--r-pill);
-  background: var(--surface-2);
-  color: var(--fg-2);
-}
-.filter-input:focus-within {
-  box-shadow: inset 0 0 0 1px var(--fg-2);
-}
 .filter-input input {
-  border: 0;
-  background: none;
-  outline: none;
-  color: var(--fg);
   width: 180px;
-  font: inherit;
-  font-size: 13.5px;
 }
 .tile-size .segmented-opt {
   min-width: 34px;
@@ -159,21 +140,13 @@
   height: 100%;
   border-radius: 0;
 }
-.playlist-tile,
-.liked-tile {
+/* A page without artwork (a playlist with no covers): its icon on a plain square, like the phone's
+   playlist rows. */
+.playlist-tile {
   display: grid;
   place-items: center;
-  color: var(--fg-3);
-  background: var(--elev);
-}
-/* Liked Songs art follows the accent (and the album-art accent when that is on). */
-.liked-tile {
-  color: var(--accent);
-  background: radial-gradient(circle at 50% 46%, color-mix(in oklab, var(--accent) 34%, var(--elev)) 0, color-mix(in oklab, var(--accent) 8%, var(--elev)) 62%, var(--elev) 100%);
-  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--accent) 22%, transparent);
-}
-.hero-plain {
-  min-height: 220px;
+  color: var(--fg-2);
+  background: var(--surface-2);
 }
 .smart-editor {
   max-width: 900px;
@@ -190,6 +163,7 @@
   z-index: 2;
 }
 .artist-tile .tile-art {
+  margin: 0;
   box-shadow: none;
 }
 .artist-tile:hover .tile-play-wrap,
@@ -224,8 +198,7 @@
 }
 .stats-hero-figure b {
   font-size: 64px;
-  font-weight: 800;
-  letter-spacing: -0.04em;
+  font-weight: 700;
   line-height: 1;
 }
 .stats-hero-figure i {
@@ -258,7 +231,6 @@
 .stat-value {
   font-size: 26px;
   font-weight: 700;
-  letter-spacing: -0.02em;
   color: var(--fg);
   white-space: nowrap;
   overflow: hidden;
@@ -505,8 +477,7 @@
 }
 .top-title {
   font-size: 30px;
-  font-weight: 800;
-  letter-spacing: -0.03em;
+  font-weight: 700;
 }
 .top-sub {
   display: flex;
@@ -576,117 +547,6 @@
   }
 }
 
-/* ---- Now Playing ---- */
-.np-art-btn {
-  position: relative;
-}
-.np-art-zoom {
-  position: absolute;
-  right: 14px;
-  bottom: 14px;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  background: rgb(0 0 0 / 0.6);
-  color: #fff;
-  opacity: 0;
-  transition: opacity var(--dur) var(--ease);
-}
-.np-art-btn:hover .np-art-zoom,
-.np-art-btn:focus-visible .np-art-zoom {
-  opacity: 1;
-}
-.np-art.spin {
-  border-radius: 50%;
-  animation: np-spin 28s linear infinite;
-}
-.np-art.spin.paused {
-  animation-play-state: paused;
-}
-@keyframes np-spin {
-  to {
-    rotate: 360deg;
-  }
-}
-:root[data-motion='off'] .np-art.spin {
-  animation: none;
-}
-@media (prefers-reduced-motion: reduce) {
-  :root[data-motion='system'] .np-art.spin {
-    animation: none;
-  }
-}
-.np-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  max-width: 560px;
-}
-.np-title-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-}
-.np-title-row .np-title {
-  flex: 1;
-  min-width: 0;
-}
-.np-chips {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 6px;
-}
-.np-next {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 14px;
-  padding: 10px 14px;
-  border: 0;
-  border-radius: var(--r-md);
-  background: var(--surface-2);
-  color: var(--fg-2);
-  font-size: 13.5px;
-  text-align: left;
-  min-width: 0;
-}
-.np-next:hover {
-  background: var(--surface-hover);
-  color: var(--fg);
-}
-.np-next b {
-  color: var(--fg);
-  font-weight: 600;
-}
-.np-next .ellipsis {
-  flex: 1;
-}
-.np-next-label {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--fg-3);
-}
-@media (max-width: 980px) {
-  .nowplaying {
-    grid-template-columns: 1fr;
-    padding: calc(var(--sticky-top) + 8px) 24px 0;
-  }
-  .np-left {
-    position: static;
-  }
-  .np-right {
-    height: auto;
-    max-height: none;
-    mask-image: none;
-  }
-}
-
 /* ---- Right panel bits ---- */
 .rp-tabs {
   display: flex;
@@ -746,17 +606,13 @@
   width: 44px;
   height: 44px;
 }
-.q-art .art {
-  width: 44px;
-  height: 44px;
-}
 .q-play {
   position: absolute;
   inset: 0;
   display: grid;
   place-items: center;
   border: 0;
-  border-radius: var(--r-xs);
+  border-radius: 2px;
   background: rgb(0 0 0 / 0.55);
   color: #fff;
   opacity: 0;
@@ -767,7 +623,7 @@
   opacity: 1;
 }
 .q-dur {
-  font-size: 12.5px;
+  font-size: 13px;
   flex: none;
 }
 .q-item:hover .q-dur:has(+ .q-actions) {
@@ -796,8 +652,8 @@
   vertical-align: 1px;
 }
 .pb-chip.icon-only {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   padding: 0;
   justify-content: center;
   background: none;
@@ -946,6 +802,11 @@
 .choice.on {
   box-shadow: inset 0 0 0 2px var(--accent);
 }
+.choice:disabled {
+  opacity: 0.4;
+  cursor: default;
+  background: var(--surface-2);
+}
 .choice-demo {
   position: relative;
   height: 44px;
@@ -1029,8 +890,7 @@
 .onboard-body h1 {
   font-family: var(--font-display);
   font-size: 30px;
-  font-weight: 800;
-  letter-spacing: -0.03em;
+  font-weight: 700;
   margin: 4px 0 8px;
 }
 .onboard-body p {
@@ -1212,8 +1072,4 @@ label.onboard-card {
   margin-right: 8px;
   vertical-align: -1px;
 }
-.hero-art.liked-tile {
-  box-shadow:
-    var(--shadow-art),
-    inset 0 0 0 1px color-mix(in oklab, var(--accent) 22%, transparent);
-}
+

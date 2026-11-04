@@ -36,11 +36,11 @@ describe('window chrome helpers', () => {
     expect(clampZoom('3')).toBe(1.6)
     expect(clampZoom('x')).toBeNull()
     expect(clampZoom(0)).toBeNull()
-    expect(TOPBAR_HEIGHT).toBe(64)
-    expect(overlayHeight()).toBe(64)
-    expect(overlayHeight(1.5)).toBe(96)
-    // Traffic lights (16 px) centred in the 64 px bar.
-    expect(trafficLightPosition()).toEqual({ x: 18, y: 24 })
+    expect(TOPBAR_HEIGHT).toBe(56)
+    expect(overlayHeight()).toBe(56)
+    expect(overlayHeight(1.5)).toBe(84)
+    // Traffic lights (16 px) centred in the 56 px bar.
+    expect(trafficLightPosition()).toEqual({ x: 18, y: 20 })
   })
 
   it('titles the window after the playing track', () => {

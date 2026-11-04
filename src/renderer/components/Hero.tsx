@@ -1,5 +1,5 @@
-// Page building blocks shared by album, artist, playlist and home views: the colored hero header
-// (art opens the zoomable viewer), the action bar with the big play button, and shelves.
+// Page building blocks shared by album, artist and playlist pages: the page header with its cover
+// (opens the zoomable viewer), the action row with the play button, and shelves.
 
 import type { ReactNode } from 'react'
 import { cx } from '../lib/format'
@@ -18,10 +18,11 @@ export function useSourcePlaying(match: (s: QueueSource | null | undefined) => b
   return { current, playing }
 }
 
+/** The accent play button: a labelled one in page action rows (Musicolet's "Play"), a small badge on tiles. */
 export function PlayButton({ onPlay, current, playing, size, title }: { onPlay: () => void; current?: boolean; playing?: boolean; size?: 'sm' | 'xs'; title?: string }) {
   return (
     <button
-      className={cx('play-btn', size)}
+      className={cx('play-btn', size ?? 'label')}
       title={playing ? 'Pause' : (title ?? 'Play')}
       onClick={(e) => {
         e.stopPropagation()
@@ -29,7 +30,8 @@ export function PlayButton({ onPlay, current, playing, size, title }: { onPlay: 
         else onPlay()
       }}
     >
-      <Icon name={playing ? 'pause' : 'play'} size={size === 'xs' ? 14 : size === 'sm' ? 20 : 24} />
+      <Icon name={playing ? 'pause' : 'play'} size={size === 'xs' ? 14 : size === 'sm' ? 20 : 22} />
+      {!size && (playing ? 'Pause' : current ? 'Resume' : 'Play')}
     </button>
   )
 }
@@ -52,7 +54,7 @@ export function Hero({
   info?: ReactNode
   play?: () => void
   round?: boolean
-  /** Shown in place of artwork (Liked Songs, playlists without art). */
+  /** Shown in place of artwork (playlists without art). */
   tile?: ReactNode
 }) {
   const color = useHeaderColor(art?.hash)

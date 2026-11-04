@@ -1,4 +1,4 @@
-// App shell: top bar | Your Library | main panel (the route) | right panel | player bar.
+// App shell: top bar | sidebar (the phone's tabs) | main panel (the route) | right panel | player bar.
 // Routes render into one scroll container that virtualized lists use as their scroll parent.
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
@@ -10,6 +10,7 @@ import { navigate, toast, useUi, type Route } from '../state/ui'
 import { cmd, usePlayer } from '../state/player'
 import { setting, useLib } from '../state/library'
 import { setLiked } from '../state/favorites'
+import { Icon } from '../components/Icon'
 import { ScrollParent } from '../components/TrackTable'
 import { MenuHost } from '../components/ui'
 import { TopBar } from './TopBar'
@@ -29,14 +30,16 @@ import { AlbumsView, RecentView } from '../views/library/Albums'
 import { AlbumDetailView } from '../views/library/AlbumDetail'
 import { ArtistDetailView, ArtistsView, GenreDetailView, GenresView } from '../views/library/Artists'
 import { PlaylistView, SmartEditorView } from '../views/library/Playlist'
-import { NowPlayingView, SearchView } from '../views/library/NowPlaying'
+import { NowPlayingBackdrop, NowPlayingView, SearchView } from '../views/library/NowPlaying'
 import { GetInfo } from '../views/library/GetInfo'
 import { SettingsView } from '../views/settings/SettingsView'
 import { ImportView } from '../views/import/ImportView'
 import { TidalView } from '../views/tidal/TidalView'
 import { BandcampView } from '../views/bandcamp/BandcampView'
-import { RipsView } from '../views/rips/RipsView'
+import { GameView, RipsView } from '../views/rips/RipsView'
 import { GetRipsView } from '../views/rips/GetRipsView'
+import { QueueView } from '../views/library/QueueView'
+import { AutoListView, PlaylistsView } from '../views/library/PlaylistsView'
 
 /** Title for the sticky header on views that don't set their own. */
 function titleOf(r: Route): string | undefined {
@@ -54,11 +57,17 @@ function titleOf(r: Route): string | undefined {
     case 'artist':
       return r.artist
     case 'recent':
-      return 'Recently Added'
+      return 'Recently added'
     case 'liked':
-      return 'Liked'
+      return 'Favorites'
     case 'stats':
-      return 'Listening Stats'
+      return 'Listening stats'
+    case 'queue':
+      return 'Queue'
+    case 'playlists':
+      return 'Playlists'
+    case 'game':
+      return r.game
     case 'search':
       return `Results for “${r.q}”`
     case 'settings':
@@ -70,7 +79,7 @@ function titleOf(r: Route): string | undefined {
     case 'bandcamp':
       return 'Bandcamp'
     case 'rips':
-      return r.tab === 'songs' ? 'Rip Songs' : r.tab === 'albums' ? 'Rip Albums' : 'Seasons'
+      return 'SiivaGunner'
     case 'hqrip':
       return 'Get Rips'
     default:
@@ -118,6 +127,14 @@ function renderRoute(r: Route): ReactNode {
       return <BandcampView id={r.id} />
     case 'rips':
       return <RipsView tab={r.tab} />
+    case 'game':
+      return <GameView game={r.game} />
+    case 'queue':
+      return <QueueView />
+    case 'playlists':
+      return <PlaylistsView />
+    case 'auto':
+      return <AutoListView list={r.list} />
     case 'hqrip':
       return <GetRipsView tab={r.tab} />
   }
@@ -310,7 +327,7 @@ function useOnboarding(): void {
     const start = setting<string>('ui.startPage', 'last')
     // 'home' is from before the Home page was removed; it opens Albums now.
     if (start === 'home' || start === 'albums') useUi.getState().navigate({ view: 'albums' }, { replace: true })
-    else if (start === 'songs' || start === 'liked') useUi.getState().navigate({ view: start }, { replace: true })
+    else if (start === 'songs' || start === 'liked' || start === 'playlists' || start === 'nowplaying' || start === 'queue') useUi.getState().navigate({ view: start }, { replace: true })
   }, [loaded])
 }
 
@@ -364,14 +381,15 @@ export function App() {
 
   return (
     <ScrollParent.Provider value={scrollRef}>
-      <div className={cx('app', `platform-${platform}`)} style={style}>
+      <div className={cx('app', `platform-${platform}`, route.view === 'nowplaying' && 'np')} style={style}>
+        {route.view === 'nowplaying' && <NowPlayingBackdrop />}
         <TopBar />
         <Sidebar />
         <main className={cx('main', level > 0 && 'scrolled', h.strong && 'hdr-strong')} style={mainStyle}>
           <div className={cx('main-head', past && 'scrolled')}>
             {h.play && (
               <button className="play-btn xs" title="Play" onClick={h.play}>
-                <PlayGlyph />
+                <Icon name="play" size={16} />
               </button>
             )}
             {title && <span className="main-head-title">{title}</span>}
@@ -393,13 +411,5 @@ export function App() {
       <MenuHost />
       {dropping && <div className="dropzone">Drop to import into your library</div>}
     </ScrollParent.Provider>
-  )
-}
-
-function PlayGlyph() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden>
-      <path d="M7 4.8v14.4a1 1 0 0 0 1.5.86l11.6-7.2a1 1 0 0 0 0-1.72L8.5 3.94A1 1 0 0 0 7 4.8z" fill="currentColor" />
-    </svg>
   )
 }

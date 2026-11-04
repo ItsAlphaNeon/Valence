@@ -63,7 +63,7 @@ export function AlbumsView() {
             </div>
             <div className="filter-bar">
               <button className={cx('pill', liked && 'on')} onClick={() => setLiked(!liked)}>
-                <Icon name="heart" size={13} filled={liked} /> Saved
+                <Icon name="heart" size={13} filled={liked} /> Favorites
               </button>
               <span className="filter-sep" />
               {SORTS.map((s) => (

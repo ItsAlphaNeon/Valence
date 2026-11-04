@@ -1,27 +1,60 @@
-// SiIvaGunner section of the library: season albums (YouTube rips), rip albums (highquality.rip and
-// SGFR) and every rip as one song list. Rips never appear in the main library views.
+// The SiivaGunner tab, as on the phone: Seasons / Albums / Games / Songs chips over season albums
+// (YouTube rips), rip albums (highquality.rip and SGFR), the games that have rips, and every rip as
+// one song list. Rips never appear in the main library views.
 
 import { useMemo, useState } from 'react'
-import type { AlbumRow, TrackQuery } from '@shared/types'
+import type { AlbumRow, RipGameRow, TrackQuery } from '@shared/types'
 import { LIB } from '@shared/ipc/library'
 import { HQRIP_IPC, type SeasonInfo } from '@shared/ipc/hqrip'
 import { invoke } from '../../lib/ipc'
-import { plural } from '../../lib/format'
+import { cx, plural } from '../../lib/format'
 import { useLib, useLibData } from '../../state/library'
 import { playQuery } from '../../state/player'
-import { navigate, type RipTab } from '../../state/ui'
+import { navigate, useUi, type RipTab } from '../../state/ui'
+import { useViewHeader } from '../../shell/header'
 import { AlbumGrid } from '../../components/AlbumGrid'
 import { TrackTable } from '../../components/TrackTable'
-import { Button, Empty, Segmented, Spinner } from '../../components/ui'
+import { Artwork, Button, Empty, Segmented, Spinner } from '../../components/ui'
 
 const ALBUM_KINDS = ['SiIvaGunner', 'SGFR']
 const SEASON_KINDS = ['YouTube']
 
+const TABS: Array<{ value: RipTab; label: string }> = [
+  { value: 'seasons', label: 'Seasons' },
+  { value: 'albums', label: 'Albums' },
+  { value: 'games', label: 'Games' },
+  { value: 'songs', label: 'Songs' },
+]
+
 export function RipsView({ tab = 'seasons' }: { tab?: RipTab }) {
   const stats = useLib((s) => s.stats)
+  useViewHeader({ color: null, title: 'SiivaGunner' })
   if (stats && stats.ripTracks === 0) return <RipsEmpty />
   if (tab === 'songs') return <RipSongs />
+  if (tab === 'games') return <RipGames />
   return <RipAlbums seasons={tab === 'seasons'} />
+}
+
+/** The page title, its count line, actions, and the phone's chips. */
+function RipsHead({ tab, sub, actions }: { tab: RipTab; sub: string; actions?: React.ReactNode }) {
+  return (
+    <>
+      <div className="view-head">
+        <div>
+          <h1 className="view-title">SiivaGunner</h1>
+          <div className="view-sub">{sub}</div>
+        </div>
+        {actions && <div className="view-actions">{actions}</div>}
+      </div>
+      <div className="pill-row">
+        {TABS.map((t) => (
+          <button key={t.value} className={cx('pill', tab === t.value && 'on')} onClick={() => useUi.getState().navigate({ view: 'rips', tab: t.value }, { replace: true })}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+    </>
+  )
 }
 
 function RipsEmpty() {
@@ -80,34 +113,28 @@ function RipAlbums({ seasons }: { seasons: boolean }) {
         albums={albums ?? []}
         subtitle={(a) => (seasons ? plural(a.trackCount, 'rip') : [a.albumArtist, a.year].filter(Boolean).join(' · '))}
         header={
-          <div className="view-head">
-            <div>
-              <h1 className="view-title">{seasons ? 'Seasons' : 'Rip Albums'}</h1>
-              <div className="view-sub">
-                {albums
-                  ? seasons
-                    ? `${plural(albums.length, 'season')} from your YouTube playlist`
-                    : `${plural(albums.length, 'album')} from highquality.rip and SGFR`
-                  : ' '}
-              </div>
-            </div>
-            <div className="view-actions">
-              {!seasons && (
-                <Segmented
-                  value={sort}
-                  onChange={setSort}
-                  options={[
-                    { value: 'title', label: 'Title' },
-                    { value: 'year', label: 'Year' },
-                    { value: 'added', label: 'Recent' },
-                  ]}
-                />
-              )}
-              <Button icon="shuffle" onClick={() => void playQuery(query, undefined, src, true)}>
-                Shuffle All
-              </Button>
-            </div>
-          </div>
+          <RipsHead
+            tab={seasons ? 'seasons' : 'albums'}
+            sub={albums ? (seasons ? `${plural(albums.length, 'season')} from your YouTube playlist` : `${plural(albums.length, 'album')} from highquality.rip and SGFR`) : ' '}
+            actions={
+              <>
+                {!seasons && (
+                  <Segmented
+                    value={sort}
+                    onChange={setSort}
+                    options={[
+                      { value: 'title', label: 'Title' },
+                      { value: 'year', label: 'Year' },
+                      { value: 'added', label: 'Recent' },
+                    ]}
+                  />
+                )}
+                <Button icon="shuffle" onClick={() => void playQuery(query, undefined, src, true)}>
+                  Shuffle all
+                </Button>
+              </>
+            }
+          />
         }
       />
       {!albums && (
@@ -141,10 +168,75 @@ function RipSongs() {
   const src = { kind: 'library' as const, title: 'Rip Songs' }
   return (
     <div className="view">
+      <RipsHead
+        tab="songs"
+        sub={stats ? plural(stats.ripTracks, 'rip') : ' '}
+        actions={
+          <>
+            <Button kind="primary" icon="play" onClick={() => void playQuery(query, undefined, src)}>
+              Play
+            </Button>
+            <Button icon="shuffle" onClick={() => void playQuery(query, undefined, src, true)}>
+              Shuffle
+            </Button>
+          </>
+        }
+      />
+      <TrackTable
+        query={query}
+        source={src}
+        sort={sort}
+        onSort={(s) => {
+          setSort(s)
+          localStorage.setItem(SONG_SORT_KEY, JSON.stringify(s ?? null))
+        }}
+        showArt
+        columns={['title', 'game', 'album', 'composer', 'heart', 'time', 'plays', 'added']}
+      />
+    </div>
+  )
+}
+
+/** Games that have rips, with how many (the phone's Games chip). */
+function RipGames() {
+  const games = useLibData(() => invoke<RipGameRow[]>(LIB.ripGames), []).data
+  return (
+    <div className="view">
+      <RipsHead tab="games" sub={games ? plural(games.length, 'game') : ' '} />
+      {!games ? (
+        <div className="center-spin">
+          <Spinner />
+        </div>
+      ) : !games.length ? (
+        <div className="empty">Rips with a game in their tags are grouped here.</div>
+      ) : (
+        <div className="pl-list">
+          {games.map((g) => (
+            <button key={g.name} className="pl-row art" onClick={() => navigate({ view: 'game', game: g.name })}>
+              <Artwork hash={g.artHash} px={96} title={g.name} />
+              <span className="grow ellipsis">{g.name}</span>
+              <span className="faint tnum">{plural(g.trackCount, 'rip')}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** A game's rips, oldest upload first. */
+export function GameView({ game }: { game: string }) {
+  const query: TrackQuery = { ripGame: game }
+  const src = { kind: 'other' as const, id: `game:${game}`, title: game }
+  const count = useLibData(() => invoke<{ total: number }>(LIB.tracks, { ...query, limit: 0 }), [game]).data
+  useViewHeader({ color: null, title: game })
+  return (
+    <div className="view">
       <div className="view-head">
         <div>
-          <h1 className="view-title">Rip Songs</h1>
-          {stats && <div className="view-sub">{plural(stats.ripTracks, 'rip')}</div>}
+          <div className="hero-kicker">Game</div>
+          <h1 className="view-title">{game}</h1>
+          {count && <div className="view-sub">{plural(count.total, 'rip')}</div>}
         </div>
         <div className="view-actions">
           <Button kind="primary" icon="play" onClick={() => void playQuery(query, undefined, src)}>
@@ -155,16 +247,7 @@ function RipSongs() {
           </Button>
         </div>
       </div>
-      <TrackTable
-        query={query}
-        source={src}
-        sort={sort}
-        onSort={(s) => {
-          setSort(s)
-          localStorage.setItem(SONG_SORT_KEY, JSON.stringify(s ?? null))
-        }}
-        columns={['title', 'game', 'album', 'composer', 'time', 'rating', 'plays', 'added']}
-      />
+      <TrackTable query={query} source={src} showArt columns={['index', 'title', 'album', 'composer', 'heart', 'time', 'plays']} />
     </div>
   )
 }
