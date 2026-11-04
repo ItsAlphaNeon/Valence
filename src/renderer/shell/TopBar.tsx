@@ -88,8 +88,7 @@ export function TopBar() {
   return (
     <header className="topbar drag">
       <button className="tb-brand" onClick={() => navigate({ view: 'albums' })} title="Albums" style={{ border: 0, background: 'none' }}>
-        <span className="brand-mark" />
-        <span>Valence</span>
+        Valence
       </button>
       <div className="tb-nav">
         <IconButton icon="chevronLeft" size={18} title="Back (Alt+←)" disabled={!back} onClick={() => useUi.getState().goBack()} />

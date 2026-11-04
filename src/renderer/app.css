@@ -97,7 +97,6 @@
 .tb-brand {
   display: flex;
   align-items: center;
-  gap: 10px;
   padding: 0 8px 0 6px;
   font-weight: 700;
   font-size: 16px;
