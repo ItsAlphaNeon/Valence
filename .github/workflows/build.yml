@@ -32,53 +32,43 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  plan:
+    name: Pick platforms
+    runs-on: ubuntu-latest
+    outputs:
+      desktop: ${{ steps.pick.outputs.desktop }}
+      android: ${{ steps.pick.outputs.android }}
+    steps:
+      - id: pick
+        env:
+          ONLY: ${{ inputs.only || 'all' }} # a tag push has no input: build everything
+        run: |
+          # One entry per desktop build. electron-builder rebuilds the native modules (better-sqlite3,
+          # sharp, ffmpeg-static) for the machine it runs on, so every platform and Mac architecture
+          # builds on its own runner.
+          desktop='[
+            {"platform": "windows", "name": "Windows (EXE, MSI)", "os": "windows-latest", "artifact": "valence-windows",
+             "targets": "--win nsis msi --x64", "files": "release/*-Setup-*.exe\nrelease/*.msi"},
+            {"platform": "macos", "name": "macOS Apple Silicon (.app)", "os": "macos-latest", "artifact": "valence-macos-arm64",
+             "targets": "--mac zip --arm64", "files": "release/*.zip"},
+            {"platform": "macos", "name": "macOS Intel (.app)", "os": "macos-15-intel", "artifact": "valence-macos-x64",
+             "targets": "--mac zip --x64", "files": "release/*.zip"},
+            {"platform": "linux", "name": "Linux (AppImage)", "os": "ubuntu-latest", "artifact": "valence-linux",
+             "targets": "--linux AppImage --x64", "files": "release/*.AppImage"}
+          ]'
+          echo "desktop=$(jq -c --arg only "$ONLY" '[.[] | select($only == "all" or .platform == $only)]' <<< "$desktop")" >> "$GITHUB_OUTPUT"
+          if [ "$ONLY" = all ] || [ "$ONLY" = android ]; then echo "android=true" >> "$GITHUB_OUTPUT"; else echo "android=false" >> "$GITHUB_OUTPUT"; fi
+
   desktop:
     name: ${{ matrix.name }}
-    if: inputs.only != 'android'
+    needs: plan
+    if: needs.plan.outputs.desktop != '[]'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
-        platform: [windows, macos-arm64, macos-x64, linux]
-        # "Only" drops the other platforms (a tag push has no input and builds them all).
-        exclude: >-
-          ${{ fromJSON(
-            inputs.only == 'windows' && '[{"platform":"macos-arm64"},{"platform":"macos-x64"},{"platform":"linux"}]' ||
-            inputs.only == 'macos' && '[{"platform":"windows"},{"platform":"linux"}]' ||
-            inputs.only == 'linux' && '[{"platform":"windows"},{"platform":"macos-arm64"},{"platform":"macos-x64"}]' ||
-            '[]') }}
-        include:
-          - platform: windows
-            name: Windows (EXE, MSI)
-            os: windows-latest
-            artifact: valence-windows
-            # electron-builder rebuilds the native modules (better-sqlite3, sharp, ffmpeg-static) for
-            # the machine it runs on, so every platform and Mac architecture builds on its own runner.
-            targets: --win nsis msi --x64
-            files: |
-              release/*-Setup-*.exe
-              release/*.msi
-          - platform: macos-arm64
-            name: macOS Apple Silicon (.app)
-            # macos-15 rather than macos-latest (macOS 26), whose Apple Silicon queue left jobs
-            # waiting for a runner for over 15 minutes.
-            os: macos-15
-            artifact: valence-macos-arm64
-            targets: --mac zip --arm64
-            files: release/*.zip
-          - platform: macos-x64
-            name: macOS Intel (.app)
-            os: macos-15-intel
-            artifact: valence-macos-x64
-            targets: --mac zip --x64
-            files: release/*.zip
-          - platform: linux
-            name: Linux (AppImage)
-            os: ubuntu-latest
-            artifact: valence-linux
-            targets: --linux AppImage --x64
-            files: release/*.AppImage
+        include: ${{ fromJSON(needs.plan.outputs.desktop) }}
     steps:
       - uses: actions/checkout@v7
 
@@ -115,7 +105,8 @@ jobs:
 
   android:
     name: Android (ARM, x86)
-    if: inputs.only == '' || inputs.only == 'all' || inputs.only == 'android'
+    needs: plan
+    if: needs.plan.outputs.android == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     defaults:
