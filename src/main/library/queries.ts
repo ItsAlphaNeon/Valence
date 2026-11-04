@@ -1,7 +1,9 @@
 // Read-side queries backing the library views.
 
-import type { AlbumRow, ArtistRow, GenreRow, LibraryCollection, LibraryStats, TrackQuery, TrackRow } from '@shared/types'
+import type { AlbumRow, ArtistRow, FavoriteCounts, GenreRow, LibraryCollection, LibraryStats, TrackQuery, TrackRow } from '@shared/types'
+import type { AlbumQuery, AlbumsPage } from '@shared/ipc/library'
 import type { DB } from '@main/db/db'
+import { artistFavoriteKey, trackKeySql } from '@main/sync/favorites'
 
 /**
  * SQL condition for one half of the library on a table alias with an hq_rip column (tracks or
@@ -18,9 +20,16 @@ export function collectionWhere(alias: string, c: LibraryCollection, kinds?: rea
 }
 
 const TRACK_SELECT = `
-  SELECT t.*, coalesce(ps.play_count, 0) AS play_count, ps.last_played AS last_played
+  SELECT t.*, coalesce(ps.play_count, 0) AS play_count, ps.last_played AS last_played,
+    coalesce(fv.liked, 0) AS liked, CASE WHEN fv.liked = 1 THEN fv.at END AS liked_at
   FROM tracks t
-  LEFT JOIN play_stats ps ON ps.track_key = coalesce(t.valence_id, 'path:' || t.rel_path)`
+  LEFT JOIN play_stats ps ON ps.track_key = coalesce(t.valence_id, 'path:' || t.rel_path)
+  LEFT JOIN favorites fv ON fv.kind = 't' AND fv.item_key = coalesce(t.valence_id, 'path:' || t.rel_path)`
+
+/** Condition: the track on alias `t` is liked (`+item_key` has no affinity, so the tracks_item_key index applies). */
+export const TRACK_LIKED_SQL = `${trackKeySql('t')} IN (SELECT +item_key FROM favorites WHERE kind = 't' AND liked = 1)`
+/** Condition: the album on alias `a` is liked. */
+export const ALBUM_LIKED_SQL = `a.album_key IN (SELECT item_key FROM favorites WHERE kind = 'a' AND liked = 1)`
 
 export function toTrackRow(r: Record<string, any>): TrackRow {
   return {
@@ -63,6 +72,8 @@ export function toTrackRow(r: Record<string, any>): TrackRow {
     composer: r.composer ?? null,
     ripGame: r.rip_game ?? null,
     youtubeVideoId: r.youtube_video_id ?? null,
+    liked: !!r.liked,
+    likedAt: r.liked_at ?? null,
   }
 }
 
@@ -83,6 +94,7 @@ const SORT_COLUMNS: Partial<Record<keyof TrackRow, string>> = {
   codec: 't.codec',
   ripGame: 't.rip_game COLLATE NOCASE',
   composer: 't.composer COLLATE NOCASE',
+  likedAt: 'liked_at',
 }
 
 const ALBUM_ORDER = 'coalesce(t.album_artist_sort, t.album_artist) COLLATE NOCASE, t.year, t.album COLLATE NOCASE, coalesce(t.disc_no, 1), coalesce(t.track_no, 9999), t.title COLLATE NOCASE'
@@ -101,7 +113,7 @@ export function ftsQuery(text: string): string | null {
 export function queryTracks(db: DB, q: TrackQuery = {}): { rows: TrackRow[]; total: number } {
   const where: string[] = []
   const params: unknown[] = []
-  const coll = collectionWhere('t', q.collection ?? (q.albumId !== undefined || q.playlistId ? 'all' : 'main'), q.ripKinds, params)
+  const coll = collectionWhere('t', q.collection ?? (q.albumId !== undefined || q.playlistId || q.liked ? 'all' : 'main'), q.ripKinds, params)
   if (coll) where.push(coll)
   if (q.search) {
     const fts = ftsQuery(q.search)
@@ -134,10 +146,12 @@ export function queryTracks(db: DB, q: TrackQuery = {}): { rows: TrackRow[]; tot
     where.push('t.added_at > ?')
     params.push(Date.now() - 30 * 24 * 3600 * 1000)
   }
+  if (q.liked) where.push(TRACK_LIKED_SQL)
   const w = where.length ? `WHERE ${where.join(' AND ')}` : ''
   let order = ALBUM_ORDER
   if (q.playlistId) order = `(SELECT min(pos) FROM playlist_items pi WHERE pi.playlist_id = '${q.playlistId.replace(/'/g, "''")}' AND pi.rel_path = t.rel_path)`
   if (q.recentlyAdded) order = 't.added_at DESC, ' + ALBUM_ORDER
+  if (q.liked) order = 'liked_at DESC, ' + ALBUM_ORDER
   if (q.sort && SORT_COLUMNS[q.sort.key]) order = `${SORT_COLUMNS[q.sort.key]} ${q.sort.dir === 'desc' ? 'DESC' : 'ASC'}, ${ALBUM_ORDER}`
   const total = (db.prepare(`SELECT count(*) n FROM tracks t ${w}`).get(...params) as { n: number }).n
   const limit = q.limit ?? 100000
@@ -172,28 +186,20 @@ function toAlbumRow(r: Record<string, any>): AlbumRow {
     addedAt: r.added_at,
     compilation: !!r.compilation,
     hqRip: r.hq_rip ?? '',
+    liked: !!r.liked,
   }
 }
 
 const ALBUM_SELECT = `
-  SELECT a.*, count(t.id) AS track_count, sum(t.duration_ms) AS duration_ms
+  SELECT a.*, count(t.id) AS track_count, sum(t.duration_ms) AS duration_ms,
+    (SELECT f.liked FROM favorites f WHERE f.kind = 'a' AND f.item_key = a.album_key) AS liked,
+    (SELECT f.at FROM favorites f WHERE f.kind = 'a' AND f.item_key = a.album_key AND f.liked = 1) AS liked_at
   FROM albums a JOIN tracks t ON t.album_id = a.id`
 
-export function queryAlbums(
-  db: DB,
-  q: {
-    albumArtist?: string
-    genre?: string
-    search?: string
-    sort?: 'artist' | 'title' | 'year' | 'added'
-    limit?: number
-    collection?: LibraryCollection
-    ripKinds?: string[]
-  } = {},
-): AlbumRow[] {
+function albumWhere(q: AlbumQuery): { w: string; params: unknown[]; order: string } {
   const where: string[] = []
   const params: unknown[] = []
-  const coll = collectionWhere('a', q.collection ?? 'main', q.ripKinds, params)
+  const coll = collectionWhere('a', q.collection ?? (q.liked ? 'all' : 'main'), q.ripKinds, params)
   if (coll) where.push(coll)
   if (q.albumArtist) {
     where.push('a.album_artist = ? COLLATE NOCASE')
@@ -210,17 +216,37 @@ export function queryAlbums(
       params.push(fts)
     }
   }
+  if (q.liked) where.push(ALBUM_LIKED_SQL)
+  const sort = q.sort ?? (q.liked ? 'likedAt' : 'artist')
   const order =
-    q.sort === 'title'
+    sort === 'title'
       ? 'a.title COLLATE NOCASE'
-      : q.sort === 'year'
+      : sort === 'year'
         ? 'a.year DESC, a.album_artist COLLATE NOCASE'
-        : q.sort === 'added'
+        : sort === 'added'
           ? 'a.added_at DESC'
-          : 'a.album_artist COLLATE NOCASE, a.year, a.title COLLATE NOCASE'
-  const w = where.length ? `WHERE ${where.join(' AND ')}` : ''
-  const rows = db.prepare(`${ALBUM_SELECT} ${w} GROUP BY a.id ORDER BY ${order} LIMIT ?`).all(...params, q.limit ?? 100000)
+          : sort === 'likedAt'
+            ? 'liked_at DESC, a.album_artist COLLATE NOCASE, a.year, a.title COLLATE NOCASE'
+            : 'a.album_artist COLLATE NOCASE, a.year, a.title COLLATE NOCASE'
+  // The id tiebreak keeps pages stable.
+  return { w: where.length ? `WHERE ${where.join(' AND ')}` : '', params, order: `${order}, a.id` }
+}
+
+export function queryAlbums(db: DB, q: AlbumQuery = {}): AlbumRow[] {
+  const { w, params, order } = albumWhere(q)
+  const rows = db
+    .prepare(`${ALBUM_SELECT} ${w} GROUP BY a.id ORDER BY ${order} LIMIT ? OFFSET ?`)
+    .all(...params, q.limit ?? 100000, Math.max(0, q.offset ?? 0))
   return (rows as Record<string, any>[]).map(toAlbumRow)
+}
+
+/** One page of albums plus the total matching the query (for chunked loading; default limit 200). */
+export function queryAlbumsPage(db: DB, q: AlbumQuery = {}): AlbumsPage {
+  const { w, params } = albumWhere(q)
+  const total = (
+    db.prepare(`SELECT count(*) AS n FROM albums a ${w ? `${w} AND` : 'WHERE'} EXISTS (SELECT 1 FROM tracks t WHERE t.album_id = a.id)`).get(...params) as { n: number }
+  ).n
+  return { rows: queryAlbums(db, { ...q, limit: q.limit ?? 200 }), total }
 }
 
 export function albumById(db: DB, id: number): AlbumRow | null {
@@ -228,15 +254,37 @@ export function albumById(db: DB, id: number): AlbumRow | null {
   return r ? toAlbumRow(r) : null
 }
 
-export function queryArtists(db: DB, q: { search?: string; collection?: LibraryCollection } = {}): ArtistRow[] {
+/** Albums in the order given (unknown ids are skipped). */
+export function albumsByIds(db: DB, ids: number[]): AlbumRow[] {
+  if (!ids.length) return []
+  const rows = db.prepare(`${ALBUM_SELECT} WHERE a.id IN (SELECT value FROM json_each(?)) GROUP BY a.id`).all(JSON.stringify(ids)) as Record<string, any>[]
+  const byId = new Map(rows.map((r) => [r.id as number, toAlbumRow(r)]))
+  return ids.map((id) => byId.get(id)).filter((r): r is AlbumRow => !!r)
+}
+
+export function likedArtistKeys(db: DB): Set<string> {
+  const rows = db.prepare("SELECT item_key FROM favorites WHERE kind = 'r' AND liked = 1").all() as Array<{ item_key: string }>
+  return new Set(rows.map((r) => r.item_key))
+}
+
+export function queryArtists(
+  db: DB,
+  q: { search?: string; collection?: LibraryCollection; liked?: boolean; names?: string[] } = {},
+): ArtistRow[] {
   const params: unknown[] = []
   const where: string[] = []
-  const coll = collectionWhere('t', q.collection ?? 'main')
-  const artColl = collectionWhere('a', q.collection ?? 'main')
+  // Liked artists default to every collection (like liked tracks and albums).
+  const collection = q.collection ?? (q.liked ? 'all' : 'main')
+  const coll = collectionWhere('t', collection)
+  const artColl = collectionWhere('a', collection)
   if (coll) where.push(coll)
   if (q.search) {
     where.push('album_artist LIKE ?')
     params.push(`%${q.search}%`)
+  }
+  if (q.names) {
+    where.push('t.album_artist COLLATE NOCASE IN (SELECT value FROM json_each(?))')
+    params.push(JSON.stringify(q.names))
   }
   const w = where.length ? `WHERE ${where.join(' AND ')}` : ''
   const rows = db
@@ -246,7 +294,32 @@ export function queryArtists(db: DB, q: { search?: string; collection?: LibraryC
        FROM tracks t ${w} GROUP BY album_artist COLLATE NOCASE ORDER BY coalesce(max(album_artist_sort), album_artist) COLLATE NOCASE`,
     )
     .all(...params) as Array<{ name: string; album_count: number; track_count: number; art_hash: string | null }>
-  return rows.map((r) => ({ name: r.name, albumCount: r.album_count, trackCount: r.track_count, artHash: r.art_hash }))
+  const liked = likedArtistKeys(db)
+  const out = rows.map((r) => ({
+    name: r.name,
+    albumCount: r.album_count,
+    trackCount: r.track_count,
+    artHash: r.art_hash,
+    liked: liked.size > 0 && liked.has(artistFavoriteKey(r.name)),
+  }))
+  return q.liked ? out.filter((a) => a.liked) : out
+}
+
+/** Liked items that exist in the library (any collection). */
+export function favoriteCounts(db: DB): FavoriteCounts {
+  const tracks = (db.prepare(`SELECT count(*) AS n FROM tracks t WHERE ${TRACK_LIKED_SQL}`).get() as { n: number }).n
+  const albums = (
+    db.prepare(`SELECT count(*) AS n FROM albums a WHERE ${ALBUM_LIKED_SQL} AND EXISTS (SELECT 1 FROM tracks t WHERE t.album_id = a.id)`).get() as { n: number }
+  ).n
+  const liked = likedArtistKeys(db)
+  const seen = new Set<string>()
+  if (liked.size) {
+    for (const { name } of db.prepare('SELECT DISTINCT album_artist AS name FROM tracks').all() as Array<{ name: string }>) {
+      const k = artistFavoriteKey(name)
+      if (liked.has(k)) seen.add(k)
+    }
+  }
+  return { tracks, albums, artists: seen.size }
 }
 
 export function queryGenres(db: DB, q: { collection?: LibraryCollection } = {}): GenreRow[] {

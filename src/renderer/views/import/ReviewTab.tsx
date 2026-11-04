@@ -105,7 +105,7 @@ function ReviewDetail({ job, review }: { job: JobInfo; review: JobReview }) {
         </div>
       </div>
 
-      <section className="card glass imp-panel">
+      <section className="card imp-panel">
         <h3>Files</h3>
         <div className="imp-files" role="table">
           {files.map((t) => (
@@ -127,7 +127,7 @@ function ReviewDetail({ job, review }: { job: JobInfo; review: JobReview }) {
         </div>
       </section>
 
-      <section className="card glass imp-panel">
+      <section className="card imp-panel">
         <h3>{review.candidates.length ? 'Possible releases' : 'No candidates found'}</h3>
         {review.candidates.length ? (
           <div className="imp-cands" role="radiogroup" aria-label="Candidate releases">
@@ -182,7 +182,7 @@ function ReviewDetail({ job, review }: { job: JobInfo; review: JobReview }) {
         )}
       </section>
 
-      <div className="imp-review-bar glass glass-strong">
+      <div className="imp-review-bar pop">
         <Button kind="ghost" className="btn-danger" onClick={() => void skip()} disabled={!!busy} title="Cancel this import; the files stay where they are">
           Don’t Import
         </Button>

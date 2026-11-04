@@ -7,6 +7,8 @@ const P: Record<string, string> = {
   pause: 'M7 4h3.2v16H7zM13.8 4H17v16h-3.2z',
   next: 'M4 5.2v13.6a.8.8 0 0 0 1.2.7l9.6-6.8a.8.8 0 0 0 0-1.4L5.2 4.5A.8.8 0 0 0 4 5.2zM17 4.5h3v15h-3z',
   prev: 'M20 5.2v13.6a.8.8 0 0 1-1.2.7l-9.6-6.8a.8.8 0 0 1 0-1.4l9.6-6.8a.8.8 0 0 1 1.2.7zM4 4.5h3v15H4z',
+  stop: 'M6.5 5h11A1.5 1.5 0 0 1 19 6.5v11a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 17.5v-11A1.5 1.5 0 0 1 6.5 5z',
+  homeFilled: 'M12 3.2 3.5 10v10.3h6v-6.5h5v6.5h6V10L12 3.2z',
 }
 
 const S: Record<string, string> = {
@@ -55,6 +57,21 @@ const S: Record<string, string> = {
   heart: 'M12 20s-7.5-4.4-7.5-10A4.5 4.5 0 0 1 12 7a4.5 4.5 0 0 1 7.5 3c0 5.6-7.5 10-7.5 10z',
   sliders: 'M4 7h10M18 7h2M4 17h4M12 17h8M16 4v6M10 14v6',
   eq: 'M6 20v-6M6 10V4M12 20v-9M12 7V4M18 20v-3M18 13V4M4 14h4M10 7h4M16 13h4',
+  home: 'M4 10.2 12 3.8l8 6.4V20h-5.5v-6.2h-5V20H4v-9.8z',
+  library: 'M5 4v16M10 4v16M14.5 4.8l4.8 14.9',
+  zoomIn: 'M10.5 17a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13zM15.3 15.3 20 20M10.5 8v5M8 10.5h5',
+  zoomOut: 'M10.5 17a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13zM15.3 15.3 20 20M8 10.5h5',
+  fit: 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5',
+  moon: 'M19.5 14.5A7.5 7.5 0 1 1 9.5 4.5a6 6 0 0 0 10 10z',
+  chart: 'M5 20v-8M11 20V5M17 20v-5M3 20h18',
+  keyboard: 'M3 7h18v10H3zM7 10.5h.01M10.5 10.5h.01M14 10.5h.01M17.5 10.5h.01M7.5 14h9',
+  panel: 'M4 5h16v14H4zM14.5 5v14',
+  image: 'M4 5h16v14H4zM4 16l5-5 4 4 2.5-2.5L20 17M15.5 9h.01',
+  grid: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
+  list: 'M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01',
+  collapse: 'M11 17l-5-5 5-5M18 17l-5-5 5-5',
+  sparkle: 'M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.4L12 3z',
+  device: 'M5 4h14v12H5zM9 20h6M12 16v4',
 }
 
 export type IconName = keyof typeof P | keyof typeof S

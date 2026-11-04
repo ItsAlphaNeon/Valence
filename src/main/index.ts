@@ -1,4 +1,4 @@
-import { app, BrowserWindow, globalShortcut, nativeTheme, protocol } from 'electron'
+import { app, BrowserWindow, globalShortcut, protocol } from 'electron'
 import { join } from 'node:path'
 import { configureDataDir, defaultInboxDir, defaultMusicDir } from './platform/paths'
 import { loadDeviceId } from './platform/device'
@@ -17,6 +17,7 @@ import { registerHqrip } from './sources/hqrip'
 import { registerYoutube } from './sources/youtube'
 import { onMessage } from './ipc'
 import { closeMini, isMiniOpen, setMiniOnTop, toggleMini } from './windows/mini'
+import { attachMainWindow, mainWindowChromeOptions, registerWindowChrome, startTaskbarProgress } from './windows/chrome'
 import { createTray, destroyTray, refreshTray } from './integrations/tray'
 import { startDiscord } from './integrations/discord'
 import { startMediaKeys } from './integrations/media-keys'
@@ -52,8 +53,6 @@ function rendererUrl(page: 'index' | 'mini'): { url?: string; file?: string; has
   return { file: join(import.meta.dirname, '../renderer', `${page}.html`), hash }
 }
 
-const overlay = () => ({ color: '#00000000', symbolColor: nativeTheme.shouldUseDarkColors ? '#f2f2f7' : '#1c1c1e', height: 52 })
-
 function loadPage(win: BrowserWindow, page: 'index' | 'mini'): void {
   const r = rendererUrl(page)
   if (r.url) void win.loadURL(r.url)
@@ -64,7 +63,6 @@ let mainWin: BrowserWindow | null = null
 let quitting = false
 
 function createMainWindow(settings: SettingsStore): BrowserWindow {
-  const glass = process.platform === 'win32' && !process.env.VALENCE_NO_MICA
   const win = new BrowserWindow({
     width: 1360,
     height: 860,
@@ -73,11 +71,9 @@ function createMainWindow(settings: SettingsStore): BrowserWindow {
     title: 'Valence',
     show: false,
     ...(process.platform !== 'darwin' ? { icon: appIcon } : {}),
-    titleBarStyle: 'hidden',
-    ...(process.platform === 'darwin'
-      ? { trafficLightPosition: { x: 18, y: 18 }, vibrancy: 'under-window' as const, visualEffectState: 'followWindow' as const, backgroundColor: '#00000000' }
-      : { titleBarOverlay: overlay() }),
-    ...(glass ? { backgroundMaterial: 'mica' as const, backgroundColor: '#00000000' } : { backgroundColor: nativeTheme.shouldUseDarkColors ? '#1c1c1e' : '#f2f2f7' }),
+    // Opaque background, hidden title bar: native caption buttons (Windows/Linux) or traffic lights
+    // (macOS) sit in the renderer's TOPBAR_HEIGHT top bar; the renderer recolours them ('window:chrome').
+    ...mainWindowChromeOptions(settings),
     webPreferences: {
       preload: join(import.meta.dirname, '../preload/index.cjs'),
       sandbox: false,
@@ -86,11 +82,7 @@ function createMainWindow(settings: SettingsStore): BrowserWindow {
     },
   })
   win.once('ready-to-show', () => win.show())
-  const onTheme = () => {
-    if (process.platform !== 'darwin' && !win.isDestroyed()) win.setTitleBarOverlay(overlay())
-  }
-  nativeTheme.on('updated', onTheme)
-  win.on('closed', () => nativeTheme.off('updated', onTheme))
+  attachMainWindow(win)
   // The audio engine lives in this window, so "closing" it to the tray (or, on macOS, the dock)
   // keeps the music going. Otherwise closing it quits, mini player included.
   win.on('close', (e) => {
@@ -119,7 +111,13 @@ function showMain(settings: SettingsStore): void {
   win.focus()
 }
 
-function registerWindowIpc(settings: SettingsStore): void {
+function registerWindowIpc(settings: SettingsStore, lib: LibraryService): void {
+  registerWindowChrome({
+    settings,
+    mainWindow: () => (mainWin && !mainWin.isDestroyed() ? mainWin : null),
+    showMain: () => showMain(settings),
+    art: (hash, size) => lib.art.get(hash, size),
+  })
   const toggle = () => {
     toggleMini(settings, (w) => loadPage(w, 'mini'))
     refreshTray()
@@ -185,7 +183,8 @@ if (SMOKE) {
     const youtube = registerYoutube(ctx, library)
     stopIntegrations.push(() => hqrip.stop(), () => youtube.stop())
     createMainWindow(settings)
-    registerWindowIpc(settings)
+    registerWindowIpc(settings, lib)
+    stopIntegrations.push(startTaskbarProgress(() => (mainWin && !mainWin.isDestroyed() ? mainWin : null), imports.queue))
     const coverQuery = lib.db.prepare('SELECT mb_release_id FROM tracks WHERE id = ?')
     stopIntegrations.push(
       startMediaKeys(settings),

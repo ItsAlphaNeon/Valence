@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { cmd, getPlayer, usePlayer } from '../../../state/player'
+import { PLAYBACK_SETTINGS as PS, cmd, getPlayer, usePlayer } from '../../../state/player'
 import type { EngineKind, OutputDevice, RgMode } from '../../../audio'
 import { Segmented, Slider, Spinner } from '../../../components/ui'
-import { Card, Row, SectionHead, Select, ToggleRow } from '../controls'
+import { Card, Row, SectionHead, Select, ToggleRow, useSettingValue } from '../controls'
 import { Equalizer } from './Equalizer'
 
 const ENGINE_DESC: Record<EngineKind, string> = {
@@ -43,6 +43,78 @@ function useOutputDevices(ready: boolean): OutputDevice[] | null {
 function fmtDb(db: number): string {
   const r = Math.round(db * 2) / 2
   return `${r > 0 ? '+' : r < 0 ? '−' : ''}${Math.abs(r).toFixed(1)} dB`
+}
+
+/** Settings values arrive untyped; numbers may be stored as strings. */
+function num(v: unknown, d: number): number {
+  const n = typeof v === 'number' ? v : typeof v === 'string' && v.trim() !== '' ? Number(v) : NaN
+  return Number.isFinite(n) ? n : d
+}
+
+/** Balance snaps to center within this distance (keyboard steps are 0.04, so they still leave it). */
+const BALANCE_DETENT = 0.035
+
+function fmtBalance(b: number): string {
+  const pct = Math.round(Math.abs(b) * 100)
+  return pct === 0 ? 'Centered' : `${b < 0 ? 'Left' : 'Right'} ${pct}%`
+}
+
+function BalanceRow() {
+  const [stored, setStored] = useSettingValue<unknown>(PS.balance.key, PS.balance.fallback)
+  const [drag, setDrag] = useState<number | null>(null)
+  const snap = (v: number) => {
+    const b = Math.max(-1, Math.min(1, v - 1))
+    return Math.abs(b) < BALANCE_DETENT ? 0 : Math.round(b * 100) / 100
+  }
+  const b = drag ?? Math.max(-1, Math.min(1, num(stored, 0)))
+  return (
+    <Row label="Balance" desc="Shift the sound toward the left or right speaker. Double-click to center.">
+      <div className="set-slider" onDoubleClick={() => setStored(0)}>
+        <Slider value={b + 1} max={2} label="Balance" onChange={(v) => setDrag(snap(v))} onCommit={(v) => {
+          setDrag(null)
+          setStored(snap(v))
+        }} />
+        <span className="set-slider-value tnum">{fmtBalance(b)}</span>
+      </div>
+    </Row>
+  )
+}
+
+const FADE_MAX = 500
+
+function PauseFadeRow() {
+  const [stored, setStored] = useSettingValue<unknown>(PS.fadePauseMs.key, PS.fadePauseMs.fallback)
+  const [drag, setDrag] = useState<number | null>(null)
+  const round = (v: number) => Math.round(Math.max(0, Math.min(FADE_MAX, v)) / 10) * 10
+  const ms = drag ?? Math.max(0, Math.min(FADE_MAX, num(stored, PS.fadePauseMs.fallback)))
+  return (
+    <Row label="Pause fade" desc="Fade briefly on play, pause, stop and skip instead of cutting off.">
+      <div className="set-slider">
+        <Slider value={ms} max={FADE_MAX} label="Pause fade milliseconds" onChange={(v) => setDrag(round(v))} onCommit={(v) => {
+          setDrag(null)
+          setStored(round(v))
+        }} />
+        <span className="set-slider-value tnum">{Math.round(ms) === 0 ? 'Off' : `${Math.round(ms)} ms`}</span>
+      </div>
+    </Row>
+  )
+}
+
+const PREV_CHOICES = [0, 2, 3, 5, 10]
+
+function PrevRestartRow() {
+  const [stored, setStored] = useSettingValue<unknown>(PS.prevRestartSec.key, PS.prevRestartSec.fallback)
+  const sec = Math.max(0, num(stored, PS.prevRestartSec.fallback))
+  const choices = PREV_CHOICES.includes(sec) ? PREV_CHOICES : [...PREV_CHOICES, sec].sort((a, b) => a - b)
+  return (
+    <Row label="Previous restarts the song" desc={sec === 0 ? 'Previous always goes to the song before.' : `After ${sec} seconds, Previous starts the song over instead of going back.`}>
+      <Segmented<string>
+        value={String(sec)}
+        options={choices.map((c) => ({ value: String(c), label: c === 0 ? 'Off' : `${c} s` }))}
+        onChange={(v) => setStored(Number(v))}
+      />
+    </Row>
+  )
 }
 
 export function PlaybackSection() {
@@ -95,6 +167,11 @@ export function PlaybackSection() {
         {state.error && <p className="set-callout warn">{state.error}</p>}
       </Card>
 
+      <Card title="Channels">
+        <ToggleRow k={PS.mono.key} fallback={PS.mono.fallback} label="Mono" desc="Mix both channels into one, so nothing is missed with a single earbud or speaker." />
+        <BalanceRow />
+      </Card>
+
       <Card title="Transitions">
         <Row
           label="Crossfade"
@@ -108,6 +185,16 @@ export function PlaybackSection() {
             <span className="set-slider-value tnum">{Math.round(crossfade) === 0 ? 'Off' : `${Math.round(crossfade)} s`}</span>
           </div>
         </Row>
+        <PauseFadeRow />
+      </Card>
+
+      <Card title="Queue">
+        <ToggleRow k={PS.autoplay.key} fallback={PS.autoplay.fallback} label="Autoplay" desc="When the queue runs out, keep playing similar songs from your library." />
+        <PrevRestartRow />
+      </Card>
+
+      <Card title="Sleep timer">
+        <ToggleRow k={PS.sleepFade.key} fallback={PS.sleepFade.fallback} label="Fade out" desc="Lower the volume over the last 20 seconds before a timed sleep timer pauses." />
       </Card>
 
       <Card title="Volume leveling">

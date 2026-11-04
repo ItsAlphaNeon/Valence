@@ -49,6 +49,8 @@ export interface LoadOptions {
   autoplay?: boolean
   /** Linear ReplayGain factor. */
   gain?: number
+  /** Ramp whatever is playing out over this long first (manual track changes); 0 = ~10 ms anti-click ramp. */
+  fadeOutMs?: number
 }
 
 export interface NextOptions {
@@ -64,8 +66,11 @@ export interface AudioEngine {
   setNext(item: PlayItem | null, opts?: NextOptions): void
   play(): void
   pause(): void
-  stop(): void
+  /** `fadeOutMs` ramps the output out first; 0 = ~10 ms anti-click ramp. */
+  stop(fadeOutMs?: number): void
   seek(ms: number): void
+  /** Length of the pause/resume gain ramp. */
+  setPauseRamp(ms: number): void
   setGain(itemId: string, gain: number): void
   readonly loaded: boolean
   positionMs(): number

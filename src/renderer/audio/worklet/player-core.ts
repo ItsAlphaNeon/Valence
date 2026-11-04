@@ -2,20 +2,23 @@
 // Voices: `cur` (playing), `nxt` (prefetched), `out` (fading out during a crossfade). Each voice
 // is a ~4 s stereo ring plus a pending chunk queue fed by the decode host. Gapless joins are
 // sample-accurate: when `cur` drains mid-quantum the rest of the quantum comes from `nxt`.
-// A single output envelope implements the seek/load (10 ms) and pause/resume (30 ms) ramps.
+// A single output envelope implements the seek/load (10 ms) and pause/resume (30 ms by default,
+// see 'ramps') ramps; load and stop can ask for a longer fade-out first (manual track changes).
 
 import type { PcmEvent, PcmRequest } from '@main/audio/pcm-protocol'
 
 export type CoreCommand =
-  | { type: 'load'; streamId: number; path: string; startFrame: number; gain: number; durationFrames: number | null; play: boolean }
+  | { type: 'load'; streamId: number; path: string; startFrame: number; gain: number; durationFrames: number | null; play: boolean; fadeOutFrames?: number }
   | { type: 'next'; streamId: number; path: string; gain: number; durationFrames: number | null; crossfadeFrames: number }
   | { type: 'clearNext' }
   | { type: 'crossfade'; streamId: number; frames: number }
   | { type: 'seek'; frame: number }
   | { type: 'play' }
   | { type: 'pause' }
-  | { type: 'stop' }
+  | { type: 'stop'; fadeOutFrames?: number }
   | { type: 'gain'; streamId: number; gain: number }
+  /** Pause/resume ramp length. */
+  | { type: 'ramps'; pauseFrames: number }
 
 export type CoreEvent =
   | { type: 'pos'; streamId: number | null; frame: number; playing: boolean; buffering: boolean; outFrames: number; playedFrames: number }
@@ -177,7 +180,7 @@ export class PlayerCore {
   private readonly reportFrames: number
   private readonly ackFrames: number
   private readonly seekStep: number
-  private readonly pauseStep: number
+  private pauseStep: number
   private readonly gk: number
   private pool: Float32Array[] = []
   private aL = new Float32Array(128)
@@ -217,7 +220,7 @@ export class PlayerCore {
           this.pausedSent = this.paused
           if (c.play) this.sinks.host({ type: 'playing' })
           this.sinks.host({ type: 'buffering', streamId: c.streamId, buffering: true })
-        })
+        }, this.fadeStep(c.fadeOutFrames))
       case 'next': {
         if (this.nxt) this.close(this.nxt)
         const v = (this.nxt = this.voice(c.streamId, c.path, 0, c.gain, c.durationFrames))
@@ -264,11 +267,20 @@ export class PlayerCore {
           this.paused = true
           this.notifyPaused()
           this.report()
-        })
+        }, this.fadeStep(c.fadeOutFrames))
       case 'gain':
         for (const v of [this.cur, this.nxt, this.out]) if (v?.id === c.streamId) v.gain = c.gain
         return
+      case 'ramps':
+        // applies from the next pause/play; a ramp in progress finishes at its own rate
+        this.pauseStep = 1 / Math.max(1, Math.round(c.pauseFrames) || 1)
+        return
     }
+  }
+
+  /** Envelope step for a fade-out of `frames` (at least the 10 ms seek ramp). */
+  private fadeStep(frames: number | undefined): number {
+    return frames && frames > 0 ? Math.min(this.seekStep, 1 / frames) : this.seekStep
   }
 
   onDecoder(ev: PcmEvent): void {
@@ -416,8 +428,8 @@ export class PlayerCore {
     this.envStep = step
   }
 
-  /** Runs `act` once the output is silent (10 ms ramp first when audible). */
-  private silenced(act: () => void): void {
+  /** Runs `act` once the output is silent (a ramp first when audible: 10 ms, or `step` per frame). */
+  private silenced(act: () => void, step = this.seekStep): void {
     if (this.env <= 0 || !this.cur || this.cur.waiting) {
       this.env = 0
       act()
@@ -425,7 +437,8 @@ export class PlayerCore {
       return
     }
     this.pendingAction = act
-    this.target(0, this.seekStep)
+    // never slower than a fade already in progress (e.g. a pause ramp)
+    this.target(0, this.envTarget === 0 ? Math.max(step, this.envStep) : step)
   }
 
   private runPending(): void {

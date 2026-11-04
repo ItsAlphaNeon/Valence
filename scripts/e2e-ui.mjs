@@ -1,6 +1,6 @@
 // UI e2e: builds, generates a small sandbox library (tagged MP3s with art and synced lyrics),
 // launches Valence against it (VALENCE_MUTE=1) and checks:
-//   - every view renders with zero console errors, screenshots in light + dark and per tier
+//   - every view renders with zero console errors, screenshots in light + dark and per palette
 //   - playback starts from the UI and the position advances
 //   - lyrics highlight follows the position
 //   - the mini player mirrors the main player and controls it
@@ -128,6 +128,7 @@ try {
   const multi = albumList.find((a) => a.title === 'Night Signals')
 
   const ROUTES = [
+    ['home', { view: 'home' }],
     ['albums', { view: 'albums' }],
     ['songs', { view: 'songs' }],
     ['artists', { view: 'artists' }],
@@ -135,11 +136,16 @@ try {
     ['genres', { view: 'genres' }],
     ['genre', { view: 'genre', genre: 'Rock' }],
     ['recent', { view: 'recent' }],
+    ['liked', { view: 'liked' }],
+    ['liked-albums', { view: 'liked', tab: 'albums' }],
+    ['stats', { view: 'stats' }],
     ['album-multidisc', multi ? { view: 'album', id: multi.id } : { view: 'albums' }],
     ['search', { view: 'search', q: 'light' }],
     ['smart-editor', { view: 'smart' }],
     ['nowplaying-empty', { view: 'nowplaying' }],
     ['settings', { view: 'settings' }],
+    ['settings-appearance', { view: 'settings', section: 'appearance' }],
+    ['settings-playback', { view: 'settings', section: 'playback' }],
     ['import', { view: 'import' }],
     ['tidal', { view: 'tidal' }],
     ['bandcamp', { view: 'bandcamp' }],
@@ -152,27 +158,46 @@ try {
   }
   for (const s of ['light', 'dark']) {
     await scheme(s)
+    // The default palette is Dark regardless of the OS, so pick the matching palette as well.
+    await win.evaluate((s) => window.valence.invoke('settings:set', 'ui.theme', s), s)
+    await sleep(300)
+    const got = await win.evaluate(() => document.documentElement.dataset.scheme)
+    check(`${s}: palette applied`, got === s, `html[data-scheme]=${got}`)
     for (const [name, route] of ROUTES) {
       const before = errors.length
       await go(route)
-      await sleep(name === 'settings' || name === 'tidal' || name === 'bandcamp' ? 900 : 500)
+      await sleep(name.startsWith('settings') || name === 'tidal' || name === 'bandcamp' || name === 'stats' ? 900 : 500)
       const empty = await win.evaluate(() => !document.querySelector('.content')?.children.length)
       await win.screenshot({ path: join(shots, `${s}-${name}.png`) })
       check(`${s}: ${name}`, errors.length === before && !empty, errors.slice(before).join(' | ').slice(0, 300))
     }
   }
 
-  // Tiers (dark, albums view).
-  for (const tier of ['full', 'glass', 'flat', 'minimal']) {
-    await win.evaluate((t) => window.valence.invoke('settings:set', 'ui.tier', t), tier)
-    await go({ view: 'albums' })
-    await sleep(500)
-    const applied = await win.evaluate(() => document.documentElement.dataset.tier)
-    await win.screenshot({ path: join(shots, `tier-${tier}.png`) })
-    check(`tier ${tier}`, applied === tier, `html[data-tier]=${applied}`)
-  }
-  await win.evaluate(() => window.valence.invoke('settings:set', 'ui.tier', 'auto'))
+  // Palettes (home view), then the density and album-art color options.
+  const setting = (k, v) => win.evaluate(([k, v]) => window.valence.invoke('settings:set', k, v), [k, v])
+  const dataset = () => win.evaluate(() => ({ ...document.documentElement.dataset }))
   await scheme('system')
+  for (const id of ['midnight', 'ember', 'oled', 'paper']) {
+    await setting('ui.theme', id)
+    await go({ view: 'home' })
+    await sleep(500)
+    const d = await dataset()
+    await win.screenshot({ path: join(shots, `palette-${id}.png`) })
+    check(`palette ${id}`, d.theme === id, `html[data-theme]=${d.theme}`)
+  }
+  await setting('ui.theme', 'dark')
+  await setting('ui.density', 'compact')
+  await go({ view: 'songs' })
+  await sleep(500)
+  check('density compact', (await dataset()).density === 'compact')
+  await win.screenshot({ path: join(shots, 'songs-compact.png') })
+  await setting('ui.density', 'comfortable')
+  for (const mode of ['off', 'full']) {
+    await setting('ui.artTheme', mode)
+    await sleep(300)
+    check(`album art colors ${mode}`, (await dataset()).art === mode, `html[data-art]=${(await dataset()).art}`)
+  }
+  await setting('ui.artTheme', 'accent')
 
   // User themes: the example file loads, applies its tokens, and edits hot-reload through the watcher.
   {
@@ -189,7 +214,7 @@ try {
     const listed = await until(async () => (await win.evaluate(() => window.valence.invoke('settings:themes'))).themes.some((t) => t.id === 'user:example'))
     check('user theme: example file listed', listed, file)
     await win.evaluate(() => window.valence.invoke('settings:set', 'ui.theme', 'user:example'))
-    const applied = await until(async () => (await cssVar('--r-lg')) === '16px')
+    const applied = await until(async () => (await cssVar('--r-lg')) === '14px')
     check('user theme: tokens applied', applied, `--r-lg=${await cssVar('--r-lg')}`)
     await go({ view: 'settings', section: 'appearance' })
     await sleep(700)
@@ -198,7 +223,7 @@ try {
     writeFileSync(file, JSON.stringify({ ...json, tokens: { ...json.tokens, 'r-lg': '7px' } }, null, 2))
     const reloaded = await until(async () => (await cssVar('--r-lg')) === '7px', 12000)
     check('user theme: edit hot-reloads', reloaded, `--r-lg=${await cssVar('--r-lg')}`)
-    await win.evaluate(() => window.valence.invoke('settings:set', 'ui.theme', 'liquid-glass'))
+    await win.evaluate(() => window.valence.invoke('settings:set', 'ui.theme', 'dark'))
     await sleep(300)
   }
 
@@ -241,12 +266,26 @@ try {
 
     // Lyrics: drawer + now playing view should highlight the line for the current position.
     await win.keyboard.press('Control+L')
-    await win.waitForSelector('.drawer .lyric-line', { timeout: 5000 })
-    const line1 = await win.locator('.drawer .lyric-line.on').textContent().catch(() => null)
+    await win.waitForSelector('.rightpanel.open .lyric-line', { timeout: 5000 })
+    const line1 = await win.locator('.rightpanel .lyric-line.on').textContent().catch(() => null)
     await sleep(2300)
-    const line2 = await win.locator('.drawer .lyric-line.on').textContent().catch(() => null)
+    const line2 = await win.locator('.rightpanel .lyric-line.on').textContent().catch(() => null)
     check('lyrics highlight follows position', !!line1 && !!line2 && line1 !== line2, `${line1} → ${line2}`)
     await win.screenshot({ path: join(shots, 'lyrics-drawer.png') })
+    // Favorites: Alt+Shift+B likes the playing song; it shows up in Liked Songs.
+    const playingId = (await win.evaluate((id) => window.valence.invoke('library:album', id), aurora.id)).tracks.find((t) => t.title === 'Opening')?.id
+    await win.keyboard.press('Alt+Shift+B')
+    let liked = null
+    for (let i = 0; i < 12 && !liked?.liked; i++) {
+      await sleep(250)
+      liked = await win.evaluate((id) => window.valence.invoke('library:track', id), playingId)
+    }
+    check('like current song (Alt+Shift+B)', liked?.liked === true, `liked=${liked?.liked}`)
+    await go({ view: 'liked' })
+    await sleep(700)
+    const likedRows = await win.locator('.tt-row:not(.placeholder)').count()
+    check('liked songs lists it', likedRows === 1, `${likedRows} rows`)
+    await win.screenshot({ path: join(shots, 'liked-one.png') })
     await go({ view: 'nowplaying' })
     await sleep(700)
     await win.screenshot({ path: join(shots, 'nowplaying.png') })

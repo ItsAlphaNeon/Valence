@@ -1,7 +1,9 @@
 import { lazy, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
+import '@fontsource-variable/figtree'
 import './theme/theme.css'
 import './app.css'
+import './features.css'
 
 const root = createRoot(document.getElementById('root')!)
 
@@ -16,13 +18,14 @@ async function boot(): Promise<void> {
     )
     return
   }
-  const [{ App }, { initLibraryState }, { initAppearance, startTierWatch }, { initPlayer }] = await Promise.all([
+  const [{ App }, { initLibraryState }, { initAppearance }, { initPlayer }] = await Promise.all([
     import('./shell/App'),
     import('./state/library'),
     import('./theme/boot'),
     import('./state/player'),
   ])
   initLibraryState()
+  void import('./state/favorites').then((m) => m.initFavorites())
   // scripts/e2e-ui.mjs launches with #e2e and drives routes directly.
   if (location.hash === '#e2e') {
     const ui = await import('./state/ui')
@@ -31,7 +34,6 @@ async function boot(): Promise<void> {
   await initAppearance()
   root.render(<App />)
   void initPlayer()
-  startTierWatch()
 }
 
 void boot()

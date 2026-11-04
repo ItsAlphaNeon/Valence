@@ -448,7 +448,7 @@
   color: var(--fg-2);
 }
 .imp-review-bar,
-.imp-review-bar.glass {
+.imp-review-bar.pop {
   position: sticky;
   bottom: calc(var(--playerbar-h) + 28px);
   z-index: 4;

@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import type { TrackQuery } from '@shared/types'
 import { longDuration, plural } from '../../lib/format'
-import { useLib } from '../../state/library'
+import { useLib, useSetting } from '../../state/library'
+import { useViewHeader } from '../../shell/header'
 import { playQuery } from '../../state/player'
 import { TrackTable } from '../../components/TrackTable'
 import { Button, Empty } from '../../components/ui'
@@ -22,6 +23,8 @@ export function SongsView() {
   const [sort, setSort] = useState<TrackQuery['sort']>(loadSort)
   const query: TrackQuery = { sort }
   const src = { kind: 'library' as const, title: 'Songs' }
+  const [art] = useSetting<boolean>('ui.songs.art', true)
+  useViewHeader({ color: null })
   if (stats && stats.tracks === 0) return <LibraryEmpty />
   return (
     <div className="view">
@@ -51,7 +54,8 @@ export function SongsView() {
           setSort(s)
           localStorage.setItem(SORT_KEY, JSON.stringify(s ?? null))
         }}
-        columns={['title', 'artist', 'album', 'time', 'genre', 'year', 'rating', 'plays', 'added']}
+        showArt={art}
+        columns={['index', 'title', 'artist', 'album', 'heart', 'time', 'genre', 'year', 'rating', 'plays', 'added']}
       />
     </div>
   )

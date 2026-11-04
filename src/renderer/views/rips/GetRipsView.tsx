@@ -98,7 +98,7 @@ function CatalogGrid({ collection, releases, fetchedAt, error, loading, onRefres
   return (
     <>
       <div className="bc-toolbar">
-        <label className="search-box glass bc-filter">
+        <label className="search-box bc-filter">
           <Icon name="search" size={15} />
           <input type="search" value={text} placeholder="Filter albums" aria-label="Filter rip albums" onChange={(e) => setText(e.target.value)} />
         </label>

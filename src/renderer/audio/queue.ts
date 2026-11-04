@@ -1,6 +1,8 @@
 // Play queue: a context (album/playlist/search...) in play order, a user Up Next list that always
-// wins, and a history stack. Pure; the Player drives it.
+// wins, an optional continuation (autoplay picks) that becomes the context when the context runs
+// out, and a history stack. Pure; the Player drives it.
 
+import type { NextFrom } from './policy'
 import type { PlayItem, QueueSnapshot, QueueSource, RepeatMode } from './types'
 
 export type Rng = () => number
@@ -9,6 +11,13 @@ interface Entry {
   item: PlayItem
   /** Index into the context items, or null for Up Next items. */
   idx: number | null
+}
+
+interface Peek {
+  e: Entry
+  from: NextFrom
+  /** Taken from the continuation (adopted as the new context on advance). */
+  cont?: boolean
 }
 
 export const PREV_RESTART_MS = 3000
@@ -93,6 +102,7 @@ export class PlayQueue {
   private cur: Entry | null = null
   private up: PlayItem[] = []
   private hist: Entry[] = []
+  private cont: { items: PlayItem[]; source: QueueSource | null } | null = null
   private _shuffle = false
   private _repeat: RepeatMode = 'off'
   source: QueueSource | null = null
@@ -129,6 +139,13 @@ export class PlayQueue {
   get repeat(): RepeatMode {
     return this._repeat
   }
+  get continuation(): { readonly items: readonly PlayItem[]; readonly source: QueueSource | null } | null {
+    return this.cont
+  }
+  /** Items still to play before the queue runs out (Up Next, rest of the context, continuation), ignoring repeat. */
+  get remaining(): number {
+    return this.up.length + Math.max(0, this.order.length - this.ptr - 1) + (this.cont?.items.length ?? 0)
+  }
 
   private bump(): void {
     this.version++
@@ -138,6 +155,7 @@ export class PlayQueue {
     this.items = [...items]
     this.source = source
     this.hist = []
+    this.cont = null
     const start = items.length ? Math.min(Math.max(0, Math.floor(startIndex)), items.length - 1) : -1
     if (this._shuffle) {
       this.order = shuffleOrder(this.items, start >= 0 ? start : null, this.rng)
@@ -158,22 +176,59 @@ export class PlayQueue {
     this.cur = null
     this.up = []
     this.hist = []
+    this.cont = null
     this.source = null
     this.bump()
   }
 
-  private peekEntry(auto: boolean): Entry | null {
-    if (auto && this._repeat === 'one' && this.cur) return this.cur
-    if (this.up.length) return { item: this.up[0], idx: null }
+  private peekEntry(auto: boolean): Peek | null {
+    if (auto && this._repeat === 'one' && this.cur) return { e: this.cur, from: 'repeat' }
+    if (this.up.length) return { e: { item: this.up[0], idx: null }, from: 'upNext' }
     const p = this.ptr + 1
-    if (p < this.order.length) return { item: this.items[this.order[p]], idx: this.order[p] }
-    if (this._repeat === 'all' && this.order.length) return { item: this.items[this.order[0]], idx: this.order[0] }
+    if (p < this.order.length) return { e: { item: this.items[this.order[p]], idx: this.order[p] }, from: 'context' }
+    if (this._repeat === 'all' && this.order.length) return { e: { item: this.items[this.order[0]], idx: this.order[0] }, from: 'wrap' }
+    if (this.cont) return { e: { item: this.cont.items[0], idx: null }, from: 'continuation', cont: true }
     return null
   }
 
   /** What `next(true)` would return (for prefetch / gapless). */
   peekNext(): PlayItem | null {
-    return this.peekEntry(true)?.item ?? null
+    return this.peekEntry(true)?.e.item ?? null
+  }
+
+  /** Where `next(true)` would take the next item from; null at the end of the queue. */
+  peekFrom(): NextFrom | null {
+    return this.peekEntry(true)?.from ?? null
+  }
+
+  /** Items to continue with once the context runs out (replaces any earlier continuation; null clears). */
+  setContinuation(items: readonly PlayItem[] | null, source: QueueSource | null = null): void {
+    if (!items?.length && !this.cont) return
+    this.cont = items?.length ? { items: [...items], source } : null
+    this.bump()
+  }
+
+  /** Appends to the end of the context (shuffled among themselves when shuffle is on). */
+  appendContext(items: readonly PlayItem[]): void {
+    if (!items.length) return
+    const base = this.items.length
+    this.items = [...this.items, ...items]
+    const idx = items.map((_, i) => base + i)
+    const key = (i: number) => artistKey(this.items[i])
+    this.order = [...this.order, ...(this._shuffle ? repairAdjacent(spreadByArtist(idx, key, this.rng), key) : idx)]
+    this.bump()
+  }
+
+  /** The continuation becomes the context; history is kept (as standalone items, since it indexed the old context). */
+  private adoptContinuation(): void {
+    const c = this.cont!
+    this.cont = null
+    this.hist = this.hist.map((e) => ({ item: e.item, idx: null }))
+    this.items = c.items
+    this.source = c.source
+    this.order = this._shuffle ? shuffleOrder(this.items, 0, this.rng) : this.items.map((_, i) => i)
+    this.ptr = 0
+    this.cur = { item: this.items[0], idx: 0 }
   }
 
   private pushHistory(): void {
@@ -184,22 +239,26 @@ export class PlayQueue {
 
   /** Advances. `auto` = the track ended by itself (repeat-one replays). Null at the end of the queue. */
   next(auto = false): PlayItem | null {
-    const n = this.peekEntry(auto)
-    if (!n) return null
+    const p = this.peekEntry(auto)
+    if (!p) return null
+    const n = p.e
     if (n === this.cur) return n.item
     this.pushHistory()
-    if (n.idx === null) this.up.shift()
-    else this.ptr = this.order.indexOf(n.idx)
-    this.cur = n
+    if (p.cont) this.adoptContinuation()
+    else {
+      if (n.idx === null) this.up.shift()
+      else this.ptr = this.order.indexOf(n.idx)
+      this.cur = n
+    }
     this.bump()
-    return n.item
+    return this.current
   }
 
-  /** Prev rule: restart when more than 3 s in (or nothing earlier), else go back. */
-  prev(positionMs: number): { item: PlayItem | null; restart: boolean } {
+  /** Prev rule: restart when more than `restartMs` in (or nothing earlier), else go back. restartMs 0 = always go back. */
+  prev(positionMs: number, restartMs = PREV_RESTART_MS): { item: PlayItem | null; restart: boolean } {
     const left = this.cur
     if (!left) return { item: null, restart: false }
-    if (positionMs > PREV_RESTART_MS) return { item: left.item, restart: true }
+    if (restartMs > 0 && positionMs > restartMs) return { item: left.item, restart: true }
     let target: Entry | null = this.hist.pop() ?? null
     if (!target) {
       if (left.idx !== null) {
@@ -314,6 +373,7 @@ export class PlayQueue {
     return {
       upNext: this.up.slice(0, limit),
       context: { source: this.source, upcoming: this.upcoming(limit), position: this.ptr, length: this.order.length },
+      continuation: this.cont ? { source: this.cont.source, upcoming: this.cont.items.slice(0, limit) } : null,
       history: this.hist.slice(-50).map((e) => e.item),
     }
   }

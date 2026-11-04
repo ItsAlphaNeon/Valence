@@ -85,7 +85,7 @@ function Group({ title, count, aside, children }: { title: string; count: number
         <span className="faint tnum">{count}</span>
         {aside && <span className="imp-group-aside">{aside}</span>}
       </div>
-      <div className="card glass imp-group-card">
+      <div className="card imp-group-card">
         <div className="list">{children}</div>
       </div>
     </section>
@@ -99,7 +99,7 @@ function PausedBanner() {
   return (
     <>
       {entries.map(([source, reason]) => (
-        <div key={source} className="imp-banner card glass">
+        <div key={source} className="imp-banner card">
           <div className="imp-banner-icon">
             <Icon name="warning" size={18} />
           </div>
@@ -160,7 +160,7 @@ export function QueueTab() {
     <div className="imp-queue">
       <PausedBanner />
       {review.length > 0 && (
-        <button className="imp-review-callout card glass" onClick={() => goTab('review')}>
+        <button className="imp-review-callout card" onClick={() => goTab('review')}>
           <Icon name="info" size={18} />
           <span className="grow">
             <b>{plural(review.length, 'import')} need{review.length === 1 ? 's' : ''} your review</b>

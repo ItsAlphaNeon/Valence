@@ -343,3 +343,71 @@ describe('PlayerCore credit accounting', () => {
     expect(out.L[8000]).toBeCloseTo(0.4, 6)
   })
 })
+
+describe('PlayerCore configurable fades', () => {
+  const playing = () => {
+    const env = setup()
+    load(env.core, 1)
+    env.core.onDecoder({ type: 'pcm', streamId: 1, gen: 0, data: stereo(SR * 2, () => 1) })
+    render(env.core, SR / 10)
+    return env
+  }
+  const opens = (dec: PcmRequest[], id: number) => dec.filter((m) => m.type === 'open' && (m as { streamId: number }).streamId === id).length
+
+  it("'ramps' sets the pause/resume ramp length", () => {
+    const { core, host } = playing()
+    const frames = Math.round(SR * 0.12)
+    core.command({ type: 'ramps', pauseFrames: frames })
+    core.command({ type: 'pause' })
+    const p = render(core, 8192)
+    expect(p.L[frames / 2]).toBeCloseTo(0.5, 2)
+    expect(p.L[Math.round(SR * 0.03)]).toBeGreaterThan(0.7)
+    for (let i = frames; i < 8192; i++) expect(p.L[i]).toBe(0)
+    expect(host.filter((e) => e.type === 'paused')).toHaveLength(1)
+    core.command({ type: 'play' })
+    const r = render(core, 8192)
+    expect(r.L[frames / 2]).toBeCloseTo(0.5, 2)
+    expect(r.L[frames + 10]).toBe(1)
+  })
+
+  it('load with fadeOutFrames fades the old track over that long before switching', () => {
+    const frames = Math.round(SR * 0.1)
+    const { core, dec } = playing()
+    core.command({ type: 'load', streamId: 2, path: '/x/2.flac', startFrame: 0, gain: 1, durationFrames: null, play: true, fadeOutFrames: frames })
+    const out = render(core, 2048)
+    expect(out.L[1024]).toBeCloseTo(1 - 1024 / frames, 2)
+    expect(opens(dec, 2)).toBe(0)
+    const rest = render(core, frames)
+    expect(opens(dec, 2)).toBe(1)
+    expect(rest.L[frames - 2048 - 1]).toBe(0)
+    core.onDecoder({ type: 'pcm', streamId: 2, gen: 0, data: stereo(SR, () => 0.5) })
+    const after = render(core, 4096)
+    expect(after.L[4000]).toBeCloseTo(0.5, 6)
+    expect(core.cur?.id).toBe(2)
+  })
+
+  it('a plain load still switches after the 10 ms ramp', () => {
+    const { core, dec } = playing()
+    load(core, 2)
+    render(core, 256)
+    expect(opens(dec, 2)).toBe(0)
+    render(core, SR * 0.01)
+    expect(opens(dec, 2)).toBe(1)
+  })
+
+  it('stop with fadeOutFrames ramps down, then reports paused; short values keep the 10 ms ramp', () => {
+    const { core, host } = playing()
+    const frames = Math.round(SR * 0.2)
+    core.command({ type: 'stop', fadeOutFrames: frames })
+    const out = render(core, frames + 1024)
+    expect(out.L[frames / 2]).toBeCloseTo(0.5, 2)
+    expect(out.L[frames + 512]).toBe(0)
+    expect(host.filter((e) => e.type === 'paused')).toHaveLength(1)
+
+    const s = playing()
+    s.core.command({ type: 'stop', fadeOutFrames: 10 })
+    const o = render(s.core, 1024)
+    expect(o.L[Math.round(SR * 0.005)]).toBeCloseTo(0.5, 2)
+    expect(o.L[Math.round(SR * 0.01) + 1]).toBe(0)
+  })
+})

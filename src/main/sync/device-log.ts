@@ -47,6 +47,16 @@ export class DeviceLog {
     appendFileSync(join(dir, file), JSON.stringify(ev) + '\n')
     return ev
   }
+
+  /** Appends several events to `<name>.jsonl` in one write (each gets its own, increasing HLC). */
+  appendMany(name: string, events: Array<Record<string, unknown>>): LogEvent[] {
+    if (!events.length) return []
+    const dir = deviceDir(this.libraryRoot, this.deviceId)
+    mkdirSync(dir, { recursive: true })
+    const out = events.map((e) => ({ hlc: this.clock.tick(), ...e }))
+    appendFileSync(join(dir, `${name}.jsonl`), out.map((e) => JSON.stringify(e) + '\n').join(''))
+    return out
+  }
 }
 
 export interface ReadEvent extends LogEvent {

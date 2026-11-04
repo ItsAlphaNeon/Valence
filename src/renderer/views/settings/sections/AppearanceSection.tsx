@@ -1,151 +1,50 @@
-import { useEffect, useRef, useState } from 'react'
-import { cx } from '../../../lib/format'
+import { useState } from 'react'
 import { SETTINGS } from '@shared/ipc/settings'
 import { errorMessage, invoke } from '../../../lib/ipc'
-import { toast } from '../../../state/ui'
-import { findTheme, useThemes, type ThemeDef } from '../../../theme/themes'
-import { TIERS, type Tier } from '../../../theme/tiers'
+import { toast, useUi } from '../../../state/ui'
+import { useThemes } from '../../../theme/themes'
 import { Button, Segmented } from '../../../components/ui'
 import { Icon } from '../../../components/Icon'
-import { Card, openPath, PathLine, Row, SectionHead, ToggleRow, useHtmlAttr, useSettingValue } from '../controls'
+import { Card, openPath, PathLine, Row, SectionHead, Select, ToggleRow, useSettingValue } from '../controls'
+import { AccentPicker, ArtThemePicker, PalettePicker } from '../AppearancePickers'
 
-const THEME_DESC: Record<string, string> = {
-  'liquid-glass': 'Layered glass that takes on the colors of the album playing.',
-  'liquid-glass-performance': 'The same look with lighter effects — no refraction or backdrop motion.',
-  'solid-dark': 'Opaque dark surfaces. Easy on battery and older graphics.',
-  'solid-light': 'Opaque light surfaces. Easy on battery and older graphics.',
-}
+const ZOOMS = [0.75, 0.8, 0.9, 1, 1.1, 1.2, 1.3, 1.4, 1.5]
 
-const TIER_INFO: Record<Tier | 'auto', { label: string; desc: string }> = {
-  auto: { label: 'Automatic', desc: 'Picks a level from your graphics hardware and accessibility settings, and steps down if animation stutters.' },
-  full: { label: 'Full', desc: 'Liquid Glass refraction, blur and the slowly drifting album-art backdrop. Best with a dedicated GPU.' },
-  glass: { label: 'Glass', desc: 'Frosted blur without refraction or backdrop motion.' },
-  flat: { label: 'Flat', desc: 'Translucent solid surfaces, no blur. Light work for integrated graphics.' },
-  minimal: { label: 'Minimal', desc: 'Solid surfaces and no animation. Lowest power use.' },
-}
-
-const SWATCHES = ['#5e5ce6', '#0a84ff', '#40c8e0', '#30d158', '#ffd60a', '#ff9f0a', '#ff453a', '#ff375f', '#bf5af2', '#a2845e']
-const DEFAULT_ACCENT = SWATCHES[0]
-const HEX = /^#[0-9a-f]{6}$/i
-
-function schemeLabel(t: ThemeDef): string {
-  return t.scheme === 'dark' ? 'Dark' : t.scheme === 'light' ? 'Light' : 'Auto'
-}
-
-function ThemePicker() {
-  const [themeId, setTheme] = useSettingValue<string>('ui.theme', 'liquid-glass')
-  const { themes } = useThemes()
-  const active = findTheme(themeId).id
+function SegSetting<T extends string>({ k, fallback, label, desc, options }: { k: string; fallback: T; label: string; desc?: string; options: Array<{ value: T; label: string }> }) {
+  const [v, set] = useSettingValue<T>(k, fallback)
   return (
-    <div className="set-tiles" role="radiogroup" aria-label="Theme">
-      {themes.map((t) => {
-        const on = t.id === active
-        return (
-          <button key={t.id} role="radio" aria-checked={on} className={cx('set-tile', on && 'on')} onClick={() => setTheme(t.id)}>
-            <div className="set-tile-top">
-              <span className="set-tile-name">{t.name}</span>
-              {on && <Icon name="check" size={14} className="set-tile-check" />}
-            </div>
-            <div className="set-tile-desc">{THEME_DESC[t.id] ?? t.description ?? (t.artTint === false ? 'Fixed accent color.' : 'Tinted by album art.')}</div>
-            <div className="set-tile-tags">
-              {t.file && <span className="chip">Custom</span>}
-              <span className="chip">{schemeLabel(t)}</span>
-              {t.maxTier && <span className="chip">Up to {TIER_INFO[t.maxTier].label}</span>}
-            </div>
-          </button>
-        )
-      })}
-    </div>
+    <Row label={label} desc={desc}>
+      <Segmented value={v} onChange={set} options={options} />
+    </Row>
   )
 }
 
-function TierPicker() {
-  const [tier, setTier] = useSettingValue<Tier | 'auto'>('ui.tier', 'auto')
-  const [themeId] = useSettingValue<string>('ui.theme', 'liquid-glass')
-  const resolved = useHtmlAttr('data-tier') as Tier | null
-  useThemes()
-  const theme = findTheme(themeId)
-  const options: Array<Tier | 'auto'> = ['auto', ...TIERS]
+function SelectSetting<T extends string>({ k, fallback, label, desc, options }: { k: string; fallback: T; label: string; desc?: string; options: Array<{ value: T; label: string }> }) {
+  const [v, set] = useSettingValue<T>(k, fallback)
   return (
-    <>
-      <div className="set-radios" role="radiogroup" aria-label="Visual effects">
-        {options.map((o) => (
-          <label key={o} className={cx('set-radio', tier === o && 'on')}>
-            <input type="radio" name="ui-tier" checked={tier === o} onChange={() => setTier(o)} />
-            <span className="set-radio-dot" aria-hidden />
-            <span className="grow">
-              <span className="set-radio-label">
-                {TIER_INFO[o].label}
-                {o === 'auto' && tier === 'auto' && resolved && TIER_INFO[resolved] && <span className="faint"> — using {TIER_INFO[resolved].label}</span>}
-              </span>
-              <span className="set-radio-desc">{TIER_INFO[o].desc}</span>
-            </span>
-          </label>
-        ))}
+    <Row label={label} desc={desc}>
+      <Select value={v} onChange={set} options={options} ariaLabel={label} />
+    </Row>
+  )
+}
+
+function ZoomRow() {
+  const [zoom, setZoom] = useSettingValue<number>('ui.zoom', 1)
+  const z = Number(zoom) || 1
+  const i = ZOOMS.reduce((best, v, k) => (Math.abs(v - z) < Math.abs(ZOOMS[best] - z) ? k : best), 0)
+  return (
+    <Row label="Zoom" desc="Scales the whole window. Ctrl + and Ctrl − work anywhere; Ctrl 0 resets.">
+      <div className="row">
+        <Button small kind="ghost" icon="zoomOut" disabled={i === 0} onClick={() => setZoom(ZOOMS[i - 1])} aria-label="Zoom out" />
+        <span className="tnum zoom-val">{Math.round(z * 100)}%</span>
+        <Button small kind="ghost" icon="zoomIn" disabled={i === ZOOMS.length - 1} onClick={() => setZoom(ZOOMS[i + 1])} aria-label="Zoom in" />
+        {z !== 1 && (
+          <Button small kind="ghost" onClick={() => setZoom(1)}>
+            Reset
+          </Button>
+        )}
       </div>
-      {theme?.maxTier && (
-        <p className="set-callout">
-          <Icon name="info" size={13} /> {theme.name} limits effects to {TIER_INFO[theme.maxTier].label}.
-        </p>
-      )}
-    </>
-  )
-}
-
-function AccentPicker() {
-  const [accent, setAccent] = useSettingValue<string>('ui.accent', 'art')
-  const fixed = accent !== 'art' && HEX.test(accent)
-  const [hex, setHex] = useState(fixed ? accent : DEFAULT_ACCENT)
-  const commitTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  useEffect(() => {
-    if (fixed) setHex(accent)
-  }, [accent, fixed])
-  useEffect(() => () => void (commitTimer.current && clearTimeout(commitTimer.current)), [])
-  return (
-    <>
-      <Row label="Accent color" desc={fixed ? 'Buttons, selections and highlights use this color.' : 'Buttons and highlights pick up the dominant color of the current album’s artwork.'}>
-        <Segmented<'art' | 'fixed'>
-          value={fixed ? 'fixed' : 'art'}
-          options={[
-            { value: 'art', label: 'From Artwork' },
-            { value: 'fixed', label: 'Fixed' },
-          ]}
-          onChange={(v) => setAccent(v === 'art' ? 'art' : hex)}
-        />
-      </Row>
-      {fixed && (
-        <div className="set-accent">
-          <div className="set-swatches" role="radiogroup" aria-label="Accent presets">
-            {SWATCHES.map((c) => (
-              <button
-                key={c}
-                role="radio"
-                aria-checked={accent.toLowerCase() === c}
-                aria-label={c}
-                className={cx('set-swatch', accent.toLowerCase() === c && 'on')}
-                style={{ background: c }}
-                onClick={() => setAccent(c)}
-              />
-            ))}
-          </div>
-          <label className="set-color" title="Custom color">
-            <input
-              type="color"
-              value={hex}
-              aria-label="Custom accent color"
-              onChange={(e) => {
-                const v = e.target.value
-                setHex(v)
-                // The picker streams values while dragging; persist once it settles.
-                if (commitTimer.current) clearTimeout(commitTimer.current)
-                commitTimer.current = setTimeout(() => HEX.test(v) && setAccent(v.toLowerCase()), 350)
-              }}
-            />
-            <span className="mono">{hex.toUpperCase()}</span>
-          </label>
-        </div>
-      )}
-    </>
+    </Row>
   )
 }
 
@@ -156,7 +55,7 @@ function UserThemesCard() {
     setBusy(true)
     try {
       await invoke<string>(SETTINGS.themeExample)
-      toast('Example theme added — edit it and changes apply right away')
+      toast('Example theme added. Edit it and the changes apply right away')
       void openPath(user.dir)
     } catch (e) {
       toast(errorMessage(e), 'error')
@@ -173,9 +72,7 @@ function UserThemesCard() {
         </Button>
       }
     >
-      <p className="set-card-note">
-        Put theme files (.json) in the themes folder inside your library. They sync to every device, and edits apply live. Start from the example to see every option.
-      </p>
+      <p className="set-card-note">Theme files (.json) in the themes folder inside your library show up as palettes above. They sync to your other computers, and edits apply live.</p>
       <PathLine path={user.dir || null} empty="—" onOpen={() => void openPath(user.dir)} />
       {user.errors.map((e) => (
         <p key={e.file} className="set-callout warn">
@@ -189,24 +86,109 @@ function UserThemesCard() {
 export function AppearanceSection() {
   return (
     <>
-      <SectionHead icon="smart" title="Appearance">
-        Pick a look, then trade effects for battery or speed. Changes apply immediately.
+      <SectionHead icon="sparkle" title="Appearance">
+        Make Valence feel like yours. Everything applies right away.
       </SectionHead>
-      <Card title="Theme">
-        <ThemePicker />
+      <Card title="Palette">
+        <PalettePicker />
+      </Card>
+      <Card title="Color">
+        <Row label="Accent" desc="Play buttons, sliders, selections and highlights." top>
+          <AccentPicker />
+        </Row>
+        <Row label="Album art colors" desc="Let the album that's playing color the app." top />
+        <ArtThemePicker />
+        <ToggleRow k="ui.headerColors" fallback={true} label="Colorful page headers" desc="Album, artist and playlist pages fade in from their artwork's color." />
       </Card>
       <UserThemesCard />
-      <Card title="Visual effects">
-        <TierPicker />
+      <Card title="Layout">
+        <SegSetting
+          k="ui.density"
+          fallback="comfortable"
+          label="Density"
+          desc="Compact fits more songs on screen."
+          options={[
+            { value: 'comfortable', label: 'Comfortable' },
+            { value: 'compact', label: 'Compact' },
+          ]}
+        />
+        <SegSetting
+          k="ui.textSize"
+          fallback="default"
+          label="Text size"
+          options={[
+            { value: 'small', label: 'Small' },
+            { value: 'default', label: 'Default' },
+            { value: 'large', label: 'Large' },
+            { value: 'larger', label: 'Larger' },
+          ]}
+        />
+        <ZoomRow />
+        <SegSetting
+          k="ui.tileSize"
+          fallback="medium"
+          label="Album art size in grids"
+          options={[
+            { value: 'small', label: 'Small' },
+            { value: 'medium', label: 'Medium' },
+            { value: 'large', label: 'Large' },
+          ]}
+        />
+        <ToggleRow k="ui.songs.art" fallback={true} label="Artwork in song lists" desc="Shows a small cover next to each song in Songs." />
+        <SelectSetting
+          k="ui.startPage"
+          fallback="last"
+          label="Open Valence to"
+          options={[
+            { value: 'last', label: 'Where I left off' },
+            { value: 'home', label: 'Home' },
+            { value: 'albums', label: 'Albums' },
+            { value: 'songs', label: 'Songs' },
+            { value: 'liked', label: 'Liked Songs' },
+          ]}
+        />
       </Card>
-      <Card>
-        <AccentPicker />
+      <Card title="Motion">
+        <SegSetting
+          k="ui.motion"
+          fallback="system"
+          label="Animations"
+          desc="Follow system respects your operating system's reduce-motion setting."
+          options={[
+            { value: 'system', label: 'Follow system' },
+            { value: 'on', label: 'On' },
+            { value: 'off', label: 'Reduced' },
+          ]}
+        />
+        <ToggleRow k="ui.np.spin" fallback={false} label="Spin the cover while playing" desc="A slow vinyl-style turn on the Now Playing page." />
+      </Card>
+      <Card title="Player">
+        <ToggleRow k="ui.player.remaining" fallback={false} label="Show time remaining" desc="The player bar counts down instead of showing the song length. You can also click the time." />
+        <ToggleRow k="ui.panel.facts" fallback={true} label="Song details in the side panel" desc="Album, format, plays, loudness and more under the cover art." />
+        <SegSetting
+          k="ui.lyrics.size"
+          fallback="default"
+          label="Lyrics text"
+          options={[
+            { value: 'small', label: 'Small' },
+            { value: 'default', label: 'Default' },
+            { value: 'large', label: 'Large' },
+          ]}
+        />
+        <ToggleRow k="ui.notifications.trackChange" fallback={false} label="Notify when the song changes" desc="A quiet desktop notification, only while Valence isn't the active window." />
       </Card>
       <Card title="Windows">
         {window.valence.platform !== 'darwin' && (
           <ToggleRow k="ui.closeToTray" fallback={false} label="Keep playing when the window is closed" desc="Closing the window hides Valence in the tray instead of quitting. Quit from the tray menu." />
         )}
-        <ToggleRow k="ui.mini.onTop" fallback={true} label="Mini player stays on top" desc="Open it from the player bar, the tray, or Ctrl+Alt+M (⌘⌥M on a Mac)." />
+        <ToggleRow k="ui.mini.onTop" fallback={true} label="Mini player stays on top" desc="Open it from the player bar, the tray, Ctrl+Shift+M inside Valence, or Ctrl+Alt+M from anywhere (⌘⌥M on a Mac)." />
+      </Card>
+      <Card title="Welcome tour">
+        <Row label="Run setup again" desc="Walks through your library folders, look, playback and sources, with tips at the end.">
+          <Button icon="sparkle" onClick={() => useUi.getState().setOnboarding(true)}>
+            Start tour
+          </Button>
+        </Row>
       </Card>
     </>
   )

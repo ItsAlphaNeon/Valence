@@ -100,7 +100,7 @@ export function SectionHead({ icon, title, children }: { icon: IconName; title: 
 
 export function Card({ title, aside, children, className }: { title?: ReactNode; aside?: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <section className={cx('card glass set-card', className)}>
+    <section className={cx('card set-card', className)}>
       {(title || aside) && (
         <div className="set-card-head">
           {title && <h3>{title}</h3>}

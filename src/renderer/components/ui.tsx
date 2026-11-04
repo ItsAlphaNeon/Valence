@@ -166,7 +166,7 @@ export function Slider({
 export function Segmented<T extends string>({ value, options, onChange, className }: { value: T; options: Array<{ value: T; label: ReactNode }>; onChange: (v: T) => void; className?: string }) {
   const idx = Math.max(0, options.findIndex((o) => o.value === value))
   return (
-    <div className={cx('segmented glass liquid', className)} style={{ ['--n' as string]: options.length, ['--i' as string]: idx }}>
+    <div className={cx('segmented', className)} style={{ ['--n' as string]: options.length, ['--i' as string]: idx }}>
       <div className="segmented-thumb" />
       {options.map((o) => (
         <button key={o.value} className={cx('segmented-opt', o.value === value && 'on')} onClick={() => onChange(o.value)}>
@@ -297,7 +297,7 @@ function MenuList({ x, y, items, close }: { x: number; y: number; items: MenuIte
     setPos({ x: Math.min(x, innerWidth - r.width - 8), y: Math.min(y, innerHeight - r.height - 8) })
   }, [x, y])
   return (
-    <div ref={ref} className="menu glass glass-strong" style={{ left: pos.x, top: pos.y }} onPointerDown={(e) => e.stopPropagation()} onContextMenu={(e) => e.preventDefault()}>
+    <div ref={ref} className="menu pop" style={{ left: pos.x, top: pos.y }} onPointerDown={(e) => e.stopPropagation()} onContextMenu={(e) => e.preventDefault()}>
       {items.map((it, i) =>
         it.separator ? (
           <div key={i} className="menu-sep" />
@@ -339,7 +339,7 @@ export function Modal({ title, onClose, children, footer, width = 560, className
   }, [onClose])
   return createPortal(
     <div className="modal-scrim" onPointerDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className={cx('modal glass glass-strong', className)} style={{ width }} role="dialog" aria-modal>
+      <div className={cx('modal pop', className)} style={{ width }} role="dialog" aria-modal>
         <header className="modal-head">
           <h2>{title}</h2>
           <IconButton icon="close" onClick={onClose} title="Close" />

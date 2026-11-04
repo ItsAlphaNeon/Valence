@@ -80,7 +80,7 @@ function ReportsList() {
   return (
     <div className="imp-reports">
       {withErrors > 0 && (
-        <div className="imp-reports-bar card glass">
+        <div className="imp-reports-bar card">
           <Icon name="warning" size={16} className="imp-err-text" />
           <span className="grow">
             <b>{plural(withErrors, 'import')}</b> finished with errors
@@ -96,7 +96,7 @@ function ReportsList() {
             <span>{g.label}</span>
             <span className="faint tnum">{g.items.length}</span>
           </div>
-          <div className="card glass imp-group-card">
+          <div className="card imp-group-card">
             <div className="list">
               {g.items.map((r) => (
                 <button key={r.id} className={cx('list-row imp-report-row', !!r.undoneAt && 'undone')} onClick={() => openReport(r.id)}>

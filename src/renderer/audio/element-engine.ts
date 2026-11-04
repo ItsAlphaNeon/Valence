@@ -38,6 +38,7 @@ export class ElementEngine extends Emitter<EngineEvents> implements AudioEngine 
   private wantPlay = false
   private handoff = false
   private lastPosEmit = 0
+  private pauseRamp = PAUSE_RAMP
   private disposers: (() => void)[] = []
 
   constructor(
@@ -123,10 +124,11 @@ export class ElementEngine extends Emitter<EngineEvents> implements AudioEngine 
 
   load(item: PlayItem, o: LoadOptions = {}): void {
     const old = this.cur
-    const s = this.other(old)
+    const s = old ? this.other(old) : (this.slots.find((x) => !x.fading) ?? this.slots[0])
     if (old) {
-      this.ramp(old, 0, SEEK_RAMP)
-      this.releaseLater(old, SEEK_RAMP * 1000 + 20)
+      const out = Math.max(SEEK_RAMP, (o.fadeOutMs ?? 0) / 1000)
+      this.ramp(old, 0, out)
+      this.releaseLater(old, out * 1000 + 20)
     }
     if (this.nxt?.slot && this.nxt.slot !== s) this.release(this.nxt.slot)
     this.nxt = null
@@ -242,23 +244,34 @@ export class ElementEngine extends Emitter<EngineEvents> implements AudioEngine 
     const c = this.cur
     if (!c) return
     this.wantPlay = true
-    this.startSlot(c, PAUSE_RAMP)
+    this.startSlot(c, this.pauseRamp)
   }
 
   pause(): void {
     const c = this.cur
     this.wantPlay = false
     if (!c) return
-    this.ramp(c, 0, PAUSE_RAMP)
-    setTimeout(() => !this.wantPlay && c.el.pause(), PAUSE_RAMP * 1000 + 15)
+    const sec = this.pauseRamp
+    this.ramp(c, 0, sec)
+    setTimeout(() => !this.wantPlay && c.el.pause(), sec * 1000 + 15)
     if (this.nxt?.slot && this.nxt.slot !== c) this.nxt.slot.el.pause()
   }
 
-  stop(): void {
+  stop(fadeOutMs = 0): void {
     this.wantPlay = false
-    for (const s of this.slots) this.release(s)
+    const sec = fadeOutMs / 1000
+    for (const s of this.slots) {
+      if (sec > SEEK_RAMP && s.item && !s.el.paused) {
+        this.ramp(s, 0, sec)
+        this.releaseLater(s, sec * 1000 + 20)
+      } else this.release(s)
+    }
     this.cur = null
     this.nxt = null
+  }
+
+  setPauseRamp(ms: number): void {
+    this.pauseRamp = Math.max(0.005, ms / 1000)
   }
 
   seek(ms: number): void {

@@ -1,17 +1,20 @@
-// UI-agnostic Player: owns the queue, engine, Web Audio graph, output stage and media session.
-//   const player = await Player.create({ onPlayLogged, onSkip })
+// UI-agnostic Player: owns the queue, engine, Web Audio graph, output stage and media session, plus
+// the sleep timer, stop-after-current and autoplay (the host supplies similar tracks).
+//   const player = await Player.create({ onPlayLogged, onSkip, autoplay })
 //   player.on('state', render); player.command({ type: 'setQueue', items, startIndex: 3 })
+//   player.setPrefs({ mono: true, fadeMs: 120 })
 
 import { ElementEngine } from './element-engine'
 import { Emitter, type AudioEngine } from './engine'
 import { AudioGraph, defaultEq, EQ_PRESETS, normalizeEq } from './graph'
 import { DEFAULT_OUTPUT_STRATEGY, MediaSessionBridge, OutputStage, type OutputStrategy } from './media-session'
-import { clamp, crossfadeSecFor, rgGain } from './policy'
+import { albumEndsBetween, clamp, crossfadeSecFor, DEFAULT_PREFS, normalizePrefs, normalizeSleep, rgGain, SLEEP_OFF, sleepFadePlan } from './policy'
 import { PlayQueue } from './queue'
 import type {
   EngineKind,
   EqState,
   OutputDevice,
+  PlaybackPrefs,
   PlayerCommand,
   PlayerState,
   PlayItem,
@@ -21,6 +24,7 @@ import type {
   RepeatMode,
   RgMode,
   SkipEvent,
+  SleepTimer,
 } from './types'
 import { WorkletEngine } from './worklet-engine'
 
@@ -36,6 +40,20 @@ export interface PlayerEvents extends Record<string, unknown> {
   error: { item: PlayItem | null; message: string }
 }
 
+export const AUTOPLAY_SOURCE: QueueSource = Object.freeze({ kind: 'autoplay', title: 'Autoplay' }) as QueueSource
+
+export interface AutoplayRequest {
+  /** Recently played, most recent (the current item) last. */
+  seed: PlayItem[]
+  /** Played or already queued; not to be suggested again. */
+  exclude: PlayItem[]
+}
+
+/** Retry delay after autoplay found nothing or failed. */
+const AUTOPLAY_RETRY_MS = 30_000
+/** After the queue ran out, autoplay results arriving within this long still start playback. */
+const AUTOPLAY_LATE_MS = 15_000
+
 export interface PlayerOptions {
   /** Force master gain 0 (VALENCE_MUTE). Default: hash `?mute=1` or invoke('audio:env'). */
   mute?: boolean
@@ -48,6 +66,8 @@ export interface PlayerOptions {
   onSkip?(e: SkipEvent): void
   rng?: () => number
   latencyHint?: AudioContextLatencyCategory | number
+  /** Similar tracks to continue with once ≤ 1 item remains (prefs.autoplay, repeat off). May reject. */
+  autoplay?(req: AutoplayRequest): Promise<PlayItem[]>
 }
 
 interface Settings {
@@ -103,6 +123,20 @@ function defaultStorage(): Storage | null {
   }
 }
 
+/** Freezes an AudioParam at its current value so new ramps start from there. */
+function holdParam(p: AudioParam, t: number, v: number): void {
+  if (typeof p.cancelAndHoldAtTime === 'function') {
+    try {
+      p.cancelAndHoldAtTime(t)
+      return
+    } catch {
+      /* fall back below */
+    }
+  }
+  p.cancelScheduledValues(0)
+  p.setValueAtTime(v, t)
+}
+
 export class Player extends Emitter<PlayerEvents> {
   static async create(opts: PlayerOptions = {}): Promise<Player> {
     const mute = opts.mute ?? (await detectMute())
@@ -132,7 +166,18 @@ export class Player extends Emitter<PlayerEvents> {
   private stateTimer: ReturnType<typeof setTimeout> | null = null
   private lastStateAt = 0
   private switching = false
+  private prefs: PlaybackPrefs = { ...DEFAULT_PREFS }
+  private sleep: SleepTimer = SLEEP_OFF
+  private sleepTimer: ReturnType<typeof setTimeout> | null = null
+  private stopAfter = false
+  private activeTimer: ReturnType<typeof setTimeout> | null = null
+  /** performance.now() when the queue ran out (late autoplay results may still start), 0 otherwise. */
+  private endedAt = 0
+  private ap = { busy: false, token: 0, retryAt: 0, checked: -1 }
   private onPageHide = () => this.endListen('stopped')
+  private onCtxState = () => {
+    if (this.ctx.state === 'running') this.syncFader()
+  }
 
   private constructor(private opts: PlayerOptions) {
     super()
@@ -168,6 +213,7 @@ export class Player extends Emitter<PlayerEvents> {
       })
     }
     addEventListener('pagehide', this.onPageHide)
+    this.ctx.addEventListener('statechange', this.onCtxState)
     this.scheduleState()
   }
 
@@ -210,6 +256,34 @@ export class Player extends Emitter<PlayerEvents> {
     }
   }
 
+  /** Host-app preferences (Settings mirror); applied live. */
+  setPrefs(p: Partial<PlaybackPrefs>): void {
+    const prev = this.prefs
+    const next = normalizePrefs({ ...prev, ...p }, prev)
+    this.prefs = next
+    this.graph.setMono(next.mono)
+    this.graph.setBalance(next.balance)
+    if (next.fadeMs !== prev.fadeMs) this.engine?.setPauseRamp(this.pauseRampMs)
+    if (next.sleepFade !== prev.sleepFade) this.syncFader()
+    if (next.autoplay !== prev.autoplay) {
+      if (!next.autoplay && this.queue.continuation) {
+        this.queue.setContinuation(null)
+        if (this.queue.current) this.updateNext()
+      }
+      this.ap.checked = -1
+      this.scheduleState()
+    }
+  }
+
+  getPrefs(): PlaybackPrefs {
+    return { ...this.prefs }
+  }
+
+  /** Pause/resume ramp: prefs.fadeMs, never below the 30 ms anti-click ramp. */
+  private get pauseRampMs(): number {
+    return Math.max(30, this.prefs.fadeMs)
+  }
+
   // ---- engine -----------------------------------------------------------------------------
 
   private async makeEngine(kind: EngineKind): Promise<AudioEngine> {
@@ -217,6 +291,7 @@ export class Player extends Emitter<PlayerEvents> {
       const w = new WorkletEngine(this.ctx, this.graph.input)
       try {
         await w.init()
+        w.setPauseRamp(this.pauseRampMs)
         return this.bind(w)
       } catch (e) {
         console.warn('[valence] worklet engine unavailable, using <audio> fallback', e)
@@ -225,6 +300,7 @@ export class Player extends Emitter<PlayerEvents> {
     }
     const el = new ElementEngine(this.ctx, this.graph.input)
     await el.init()
+    el.setPauseRamp(this.pauseRampMs)
     return this.bind(el)
   }
 
@@ -268,28 +344,32 @@ export class Player extends Emitter<PlayerEvents> {
 
   private updateNext(): void {
     const cur = this.queue.current
-    const n = cur ? this.queue.peekNext() : null
+    // a pending stop (sleep timer, stop after current) lets the track end instead of joining the next
+    const n = cur && !this.boundaryStop() ? this.queue.peekNext() : null
     this.engine.setNext(n, { gain: this.rg(n), crossfadeSec: crossfadeSecFor(cur, n, this.st.crossfadeSec) })
   }
 
-  private startCurrent(startMs: number, autoplay: boolean): void {
+  /** `fadeOut`: a manual track change; whatever plays fades out first (prefs.fadeMs). */
+  private startCurrent(startMs: number, autoplay: boolean, fadeOut = false): void {
     const item = this.queue.current
+    this.endedAt = 0
     if (!item) {
-      this.engine.stop()
+      this.engine.stop(fadeOut ? this.prefs.fadeMs : 0)
       this.playing = false
       this.pos = this.dur = 0
-      this.output.setActive(false)
+      this.setActive(false)
       this.emit('track', null)
       this.scheduleState()
       return
     }
     this.error = null
-    this.engine.load(item, { startMs, autoplay, gain: this.rg(item) })
+    if (autoplay && !this.playing) this.syncFader()
+    this.engine.load(item, { startMs, autoplay, gain: this.rg(item), fadeOutMs: fadeOut ? this.prefs.fadeMs : 0 })
     this.playing = autoplay
     this.pos = startMs
     this.dur = item.durationMs
     this.buffering = true
-    this.output.setActive(autoplay)
+    this.setActive(autoplay)
     this.beginListen(item, startMs)
     this.updateNext()
     this.emit('track', item)
@@ -298,10 +378,12 @@ export class Player extends Emitter<PlayerEvents> {
 
   private onTransition(item: PlayItem | null): void {
     this.endListen('completed')
+    const stop = this.boundaryStop()
     const n = this.queue.next(true)
+    if (stop) this.boundaryFired(stop)
     if (!n || !item || n.id !== item.id) {
-      if (n) this.startCurrent(0, this.playing)
-      else this.stopAtEnd()
+      if (n) this.startCurrent(0, !stop && this.playing)
+      else this.stopAtEnd(!stop)
       return
     }
     this.pos = 0
@@ -311,23 +393,174 @@ export class Player extends Emitter<PlayerEvents> {
     this.updateNext()
     this.emit('track', item)
     this.scheduleState()
+    if (stop) {
+      // the engine joined the next item before it heard about the stop: pause at its start
+      this.pause()
+      this.seek(0)
+    }
   }
 
   private onEnded(): void {
     this.endListen('completed')
-    if (this.errors > Math.min(5, Math.max(1, this.queue.contextItems.length + this.queue.upNext.length))) return this.stopAtEnd()
+    if (this.errors > Math.min(5, Math.max(1, this.queue.contextItems.length + this.queue.upNext.length))) return this.stopAtEnd(false)
+    const stop = this.boundaryStop()
     const n = this.queue.next(true)
-    if (n) this.startCurrent(0, true)
-    else this.stopAtEnd()
+    if (stop) this.boundaryFired(stop)
+    if (n) this.startCurrent(0, !stop && this.playing)
+    else this.stopAtEnd(!stop)
   }
 
-  private stopAtEnd(): void {
-    this.engine.stop()
+  /** `autoplay`: autoplay results arriving shortly after may still start playback. */
+  private stopAtEnd(autoplay = true, fadeOut = false): void {
+    this.engine.stop(fadeOut ? this.prefs.fadeMs : 0)
     this.playing = false
     this.buffering = false
     this.pos = 0
-    this.output.setActive(false)
+    this.setActive(false)
+    this.endedAt = autoplay ? performance.now() : 0
     this.emit('ended', null)
+    this.scheduleState()
+  }
+
+  /** Keeps the output element in step; going inactive waits out the engine's fade. */
+  private setActive(on: boolean): void {
+    if (this.activeTimer) clearTimeout(this.activeTimer)
+    this.activeTimer = null
+    if (on) return this.output.setActive(true)
+    this.activeTimer = setTimeout(
+      () => {
+        this.activeTimer = null
+        if (!this.playing) this.output.setActive(false)
+      },
+      Math.max(this.pauseRampMs, this.prefs.fadeMs) + 40,
+    )
+  }
+
+  // ---- stops at a track boundary (sleep timer 'track' / 'album', stop after current) ----------
+
+  /** Whether playback pauses before whatever follows the current item; `album`: an album sleep timer ends here. */
+  private boundaryStop(): { album: boolean } | null {
+    const q = this.queue
+    if (!q.current) return null
+    const mode = this.sleep.mode
+    const album = mode === 'album' && albumEndsBetween(q.current, q.peekNext(), q.peekFrom())
+    return this.stopAfter || mode === 'track' || album ? { album } : null
+  }
+
+  private boundaryFired(b: { album: boolean }): void {
+    this.stopAfter = false
+    if (this.sleep.mode === 'track' || (this.sleep.mode === 'album' && b.album)) this.sleep = SLEEP_OFF
+    this.scheduleState()
+  }
+
+  setStopAfterCurrent(on: boolean): void {
+    this.stopAfter = !!on
+    if (this.queue.current) this.updateNext()
+    this.scheduleState()
+  }
+
+  // ---- sleep timer --------------------------------------------------------------------------
+
+  setSleepTimer(t: SleepTimer): void {
+    this.sleep = normalizeSleep(t)
+    this.armSleep()
+    this.syncFader()
+    if (this.queue.current) this.updateNext()
+    this.scheduleState()
+  }
+
+  /** Wall-clock check, re-armed at least every 30 s (robust to throttled timers and system sleep). */
+  private armSleep(): void {
+    if (this.sleepTimer) clearTimeout(this.sleepTimer)
+    this.sleepTimer = null
+    const s = this.sleep
+    if (s.mode !== 'time') return
+    const left = s.endsAt - Date.now()
+    if (left <= 20) return this.fireSleep()
+    this.sleepTimer = setTimeout(() => this.armSleep(), Math.min(left, 30_000))
+  }
+
+  private fireSleep(): void {
+    this.sleep = SLEEP_OFF
+    if (this.playing) this.pause()
+    // the fader stays down while the pause fades out; play() restores it once the engine is silent
+    if (this.queue.current) this.updateNext()
+    this.scheduleState()
+  }
+
+  /**
+   * Schedules the sleep fader from the wall-clock time left. Without a fading timer it returns to
+   * unity: ramped while audible, at once while silent (paused or about to load).
+   */
+  private syncFader(): void {
+    const g = this.graph.fader.gain
+    const t = this.ctx.currentTime
+    const s = this.sleep
+    const v = g.value
+    if (s.mode === 'time' && this.prefs.sleepFade) {
+      holdParam(g, t, v)
+      for (const p of sleepFadePlan(s.endsAt - Date.now())) g.linearRampToValueAtTime(p.gain, t + p.at / 1000)
+      return
+    }
+    if (this.playing && this.engine?.loaded) {
+      if (v >= 0.9999) return
+      holdParam(g, t, v)
+      g.linearRampToValueAtTime(1, t + 1)
+    } else {
+      g.cancelScheduledValues(0)
+      g.setValueAtTime(1, t)
+    }
+  }
+
+  // ---- autoplay -----------------------------------------------------------------------------
+
+  /** Asks for similar tracks once ≤ 1 item is left to play (checked when the queue changes). */
+  private maybeAutoplay(): void {
+    const fetch = this.opts.autoplay
+    const q = this.queue
+    if (!fetch || !this.prefs.autoplay || this.ap.busy || !q.current || q.repeat !== 'off' || q.version === this.ap.checked) return
+    this.ap.checked = q.version
+    if (q.remaining > 1 || performance.now() < this.ap.retryAt) return
+    const token = this.ap.token
+    this.ap.busy = true
+    const hist = q.history
+    const req: AutoplayRequest = {
+      seed: [...hist.slice(-4), q.current],
+      exclude: [...hist, q.current, ...q.upNext, ...q.upcoming(), ...(q.continuation?.items ?? [])],
+    }
+    const done = (items: PlayItem[] | null) => {
+      if (token !== this.ap.token) return
+      this.ap.busy = false
+      this.ap.checked = -1
+      if (items?.length) this.continueWith(items)
+      else this.ap.retryAt = performance.now() + AUTOPLAY_RETRY_MS
+      this.scheduleState()
+    }
+    Promise.resolve()
+      .then(() => fetch(req))
+      .then(
+        (items) => done(Array.isArray(items) ? items : null),
+        (e: unknown) => {
+          console.warn('[valence] autoplay unavailable:', (e as Error)?.message ?? e)
+          done(null)
+        },
+      )
+  }
+
+  private continueWith(items: PlayItem[]): void {
+    const q = this.queue
+    const cur = q.current
+    if (!cur || !this.prefs.autoplay || q.repeat !== 'off') return
+    const fresh = items.filter((i) => i && typeof i.id === 'string' && i.id !== cur.id)
+    if (!fresh.length) return
+    if (q.source?.kind === 'autoplay') q.appendContext(fresh)
+    else q.setContinuation(fresh, AUTOPLAY_SOURCE)
+    if (this.endedAt && !this.playing && performance.now() - this.endedAt < AUTOPLAY_LATE_MS && q.next(true)) {
+      // the queue already ran out while we were asking: carry on now
+      this.startCurrent(0, true)
+      return
+    }
+    this.updateNext()
     this.scheduleState()
   }
 
@@ -376,10 +609,11 @@ export class Player extends Emitter<PlayerEvents> {
         return this.playing ? this.pause() : this.play()
       case 'stop':
         this.endListen('stopped')
-        this.engine.stop()
+        this.engine.stop(this.prefs.fadeMs)
         this.playing = false
         this.pos = 0
-        this.output.setActive(false)
+        this.endedAt = 0
+        this.setActive(false)
         return this.scheduleState()
       case 'next':
         return this.next()
@@ -424,12 +658,12 @@ export class Player extends Emitter<PlayerEvents> {
         if (c.index < 0 || c.index >= this.queue.upNext.length) return
         this.endListen('skipped')
         this.queue.playUpNextAt(c.index)
-        return this.startCurrent(0, true)
+        return this.startCurrent(0, true, true)
       case 'jumpTo':
         if (c.position < 0 || c.position >= this.queue.contextItems.length) return
         this.endListen('skipped')
         this.queue.jumpTo(c.position)
-        return this.startCurrent(0, true)
+        return this.startCurrent(0, true, true)
       case 'setShuffle':
         this.queue.setShuffle(!!c.shuffle)
         this.save('shuffle', this.queue.shuffle)
@@ -474,40 +708,44 @@ export class Player extends Emitter<PlayerEvents> {
         return void this.setOutputDevice(c.deviceId)
       case 'setEngine':
         return void this.setEngine(c.engine)
+      case 'setSleepTimer':
+        return this.setSleepTimer(c.timer)
+      case 'setStopAfterCurrent':
+        return this.setStopAfterCurrent(c.on)
     }
   }
 
   play(): void {
     if (!this.queue.current) return
+    this.endedAt = 0
     if (!this.engine.loaded) {
       this.startCurrent(this.dur > 0 && this.pos >= this.dur - 500 ? 0 : this.pos, true)
       return
     }
+    // still silent here, so a fader left down by a fired sleep timer can jump back
+    if (!this.playing) this.syncFader()
     this.playing = true
     this.engine.play()
-    this.output.setActive(true)
+    this.setActive(true)
     this.scheduleState()
   }
 
   pause(): void {
     this.playing = false
     this.engine.pause()
-    this.output.setActive(false)
+    this.setActive(false)
     this.scheduleState()
   }
 
   next(): void {
     const n = this.queue.next(false)
-    if (!n) {
-      this.endListen('skipped')
-      return this.stopAtEnd()
-    }
     this.endListen('skipped')
-    this.startCurrent(0, this.playing || !this.engine.loaded)
+    if (!n) return this.stopAtEnd(true, true)
+    this.startCurrent(0, this.playing || !this.engine.loaded, true)
   }
 
   prev(): void {
-    const { item, restart } = this.queue.prev(this.pos)
+    const { item, restart } = this.queue.prev(this.pos, this.prefs.prevRestartMs)
     if (!item) return
     if (restart) {
       if (this.engine.loaded) this.seek(0)
@@ -515,7 +753,7 @@ export class Player extends Emitter<PlayerEvents> {
       return
     }
     this.endListen('skipped')
-    this.startCurrent(0, this.playing || !this.engine.loaded)
+    this.startCurrent(0, this.playing || !this.engine.loaded, true)
   }
 
   seek(ms: number): void {
@@ -534,7 +772,8 @@ export class Player extends Emitter<PlayerEvents> {
   setQueue(items: PlayItem[], startIndex = 0, source?: QueueSource, startMs = 0, autoplay = true): void {
     this.endListen(this.playing ? 'skipped' : 'stopped')
     this.queue.setContext(items, startIndex, source ?? null)
-    this.startCurrent(startMs, autoplay)
+    this.ap = { busy: false, token: this.ap.token + 1, retryAt: 0, checked: -1 }
+    this.startCurrent(startMs, autoplay, true)
   }
 
   private refreshGains(): void {
@@ -625,6 +864,8 @@ export class Player extends Emitter<PlayerEvents> {
       eq: { ...this.st.eq, gains: [...this.st.eq.gains] },
       outputDeviceId: this.st.outputDeviceId,
       engine: this.engine?.kind ?? this.st.engine,
+      sleep: this.sleep,
+      stopAfterCurrent: this.stopAfter,
       error: this.error,
     }
   }
@@ -634,6 +875,7 @@ export class Player extends Emitter<PlayerEvents> {
     if (this.stateTimer) clearTimeout(this.stateTimer)
     this.stateTimer = null
     this.lastStateAt = performance.now()
+    this.maybeAutoplay()
     const s = this.getState()
     this.session?.update(s)
     this.emit('state', s)
@@ -654,8 +896,10 @@ export class Player extends Emitter<PlayerEvents> {
 
   async dispose(): Promise<void> {
     removeEventListener('pagehide', this.onPageHide)
+    this.ctx.removeEventListener('statechange', this.onCtxState)
     this.endListen('stopped')
-    if (this.stateTimer) clearTimeout(this.stateTimer)
+    this.ap.token++
+    for (const t of [this.stateTimer, this.sleepTimer, this.activeTimer]) if (t) clearTimeout(t)
     this.engine.dispose()
     this.output.dispose()
     this.session?.dispose()

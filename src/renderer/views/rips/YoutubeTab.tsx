@@ -89,7 +89,7 @@ export function YoutubeTab() {
   return (
     <>
       <PauseBanner source="youtube" loggedIn />
-      <div className="card glass yt-panel">
+      <div className="card yt-panel">
         <div className="yt-url">
           <Icon name="link" size={16} />
           <CommitInput
@@ -149,7 +149,7 @@ export function YoutubeTab() {
               {plural(entries.length, 'video')} · {inLib} in library
             </span>
           </div>
-          <div className="card glass yt-list">
+          <div className="card yt-list">
             {p.visible.map((e) => (
               <div key={e.id} className="yt-row" onDoubleClick={() => openLink(`https://www.youtube.com/watch?v=${e.id}`)} title="Double-click to open on YouTube">
                 <span className="grow ellipsis">{e.title}</span>

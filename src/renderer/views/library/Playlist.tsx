@@ -5,103 +5,131 @@ import type { SmartField, SmartOp, SmartRule, SmartRules } from '@main/library/p
 import { errorMessage, invoke } from '../../lib/ipc'
 import { longDuration, plural } from '../../lib/format'
 import { useLib, useLibData } from '../../state/library'
-import { addToQueue, playShuffled, playTracks } from '../../state/player'
+import { addToQueue, playNext, playShuffled, playTracks } from '../../state/player'
+import { setLiked } from '../../state/favorites'
 import { navigate, toast, useUi } from '../../state/ui'
 import { TrackTable } from '../../components/TrackTable'
+import { ActionBar, Hero, PlayButton, useSourcePlaying } from '../../components/Hero'
 import { Artwork, Button, Empty, IconButton, Segmented, Spinner, showMenu, usePrompt } from '../../components/ui'
 import { Icon } from '../../components/Icon'
 
-function Mosaic({ rows }: { rows: TrackRow[] }) {
+function Mosaic({ rows, onOpen }: { rows: TrackRow[]; onOpen: (hash: string) => void }) {
   const hashes = [...new Set(rows.map((r) => r.artHash).filter((h): h is string => !!h))].slice(0, 4)
-  if (hashes.length < 4) return <Artwork hash={hashes[0]} px={600} className="hero-art" title={rows[0]?.album} />
+  if (!hashes.length) return null
   return (
-    <div className="hero-art" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', overflow: 'hidden' }}>
-      {hashes.map((h) => (
-        <Artwork key={h} hash={h} px={300} style={{ width: '100%', height: '100%' }} />
-      ))}
-    </div>
+    <button className="hero-art-btn" title="View artwork" onClick={() => onOpen(hashes[0])}>
+      {hashes.length < 4 ? (
+        <Artwork hash={hashes[0]} px={600} className="hero-art" title={rows[0]?.album} />
+      ) : (
+        <span className="hero-art mosaic">
+          {hashes.map((h) => (
+            <Artwork key={h} hash={h} px={300} />
+          ))}
+        </span>
+      )}
+    </button>
   )
 }
 
 export function PlaylistView({ id }: { id: string }) {
   const info = useLib((s) => s.playlists.find((p) => p.id === id))
+  const playlists = useLib((s) => s.playlists)
   const { data: rows, loading } = useLibData(() => invoke<TrackRow[]>(LIB.playlistTracks, id), [id], { playlists: true })
   const [promptNode, prompt] = usePrompt()
-  if (!info) return <div className="view">{loading ? <div className="center-spin"><Spinner /></div> : <Empty icon="playlist" title="Playlist not found" />}</div>
+  const src = { kind: 'playlist' as const, id, title: info?.name }
+  const now = useSourcePlaying((s) => s?.kind === 'playlist' && s.id === id)
+  if (!info)
+    return (
+      <div className="view">
+        {loading ? (
+          <div className="center-spin">
+            <Spinner />
+          </div>
+        ) : (
+          <Empty icon="playlist" title="Playlist not found" />
+        )}
+      </div>
+    )
   const list = rows ?? []
   const ids = list.map((r) => r.id)
-  const src = { kind: 'playlist' as const, id, title: info.name }
   const total = list.reduce((n, r) => n + r.durationMs, 0)
-  const kicker = info.kind === 'smart' ? 'Smart Playlist' : info.kind === 'mirror' ? 'Mirrored Playlist' : 'Playlist'
+  const kicker = info.kind === 'smart' ? 'Smart playlist' : info.kind === 'mirror' ? 'Mirrored playlist' : 'Playlist'
+  const firstArt = list.find((r) => r.artHash)?.artHash
+  const play = () => void playTracks(ids, 0, src)
+  const rename = async () => {
+    const name = await prompt({ title: 'Rename playlist', label: 'Name', initial: info.name, ok: 'Rename' })
+    if (!name || name === info.name) return
+    try {
+      if (info.kind === 'smart') await invoke(LIB.saveSmartPlaylist, name, info.rules, id)
+      else {
+        const nid = await invoke<string>(LIB.renamePlaylist, id, name)
+        if (nid && nid !== id) navigate({ view: 'playlist', id: nid })
+      }
+    } catch (err) {
+      toast(errorMessage(err), 'error')
+    }
+  }
+  const remove = () => {
+    const i = playlists.findIndex((p) => p.id === id)
+    void invoke(LIB.deletePlaylist, id).then(() => {
+      toast(`Deleted “${info.name}”`, 'ok')
+      const next = playlists[i + 1] ?? playlists[i - 1]
+      navigate(next && next.id !== id ? { view: 'playlist', id: next.id } : { view: 'home' })
+    })
+  }
+  const more = (e: React.MouseEvent) =>
+    showMenu(e, [
+      { label: 'Play next', icon: 'queue', disabled: !ids.length, onClick: () => void playNext(ids) },
+      { label: 'Add to queue', disabled: !ids.length, onClick: () => void addToQueue(ids) },
+      { label: 'Add all to Liked Songs', icon: 'heart', disabled: !ids.length, onClick: () => void setLiked({ kind: 'track', ids }, true) },
+      { label: 'Get Info', icon: 'info', disabled: !ids.length, onClick: () => useUi.getState().openGetInfo(ids) },
+      { separator: true },
+      ...(info.kind === 'smart' ? [{ label: 'Edit rules', icon: 'smart' as const, onClick: () => navigate({ view: 'smart', id }) }] : []),
+      { label: 'Rename…', icon: 'edit', disabled: info.kind === 'mirror', onClick: () => void rename() },
+      { label: 'Delete playlist', icon: 'trash', danger: true, onClick: remove },
+    ])
+
   return (
     <div className="view">
-      <div className="hero">
-        {list.length ? <Mosaic rows={list} /> : <div className="hero-art art-empty" style={{ display: 'grid', placeItems: 'center', background: 'var(--surface-2)', color: 'var(--fg-3)' }}><Icon name={info.kind === 'smart' ? 'smart' : 'playlist'} size={64} /></div>}
-        <div className="hero-meta">
-          <span className="hero-kicker">{kicker}</span>
-          <h1 className="hero-title">{info.name}</h1>
-          <span className="hero-info">
+      <Hero
+        art={{ hash: firstArt, title: info.name }}
+        tile={
+          list.length && firstArt ? (
+            <Mosaic rows={list} onOpen={(hash) => useUi.getState().openArt({ hash, title: info.name })} />
+          ) : (
+            <span className="hero-art playlist-tile">
+              <Icon name={info.kind === 'smart' ? 'smart' : 'playlist'} size={72} />
+            </span>
+          )
+        }
+        kicker={kicker}
+        title={info.name}
+        play={ids.length ? play : undefined}
+        info={
+          <>
             {plural(list.length, 'song')}
-            {total > 0 && ` · ${longDuration(total)}`}
-          </span>
-          {info.relPath && <span className="hero-info faint">{info.relPath}</span>}
-          <div className="hero-actions">
-            <Button kind="primary" icon="play" disabled={!ids.length} onClick={() => void playTracks(ids, 0, src)}>
-              Play
-            </Button>
-            <Button icon="shuffle" disabled={!ids.length} onClick={() => void playShuffled(ids, src)}>
-              Shuffle
-            </Button>
-            {info.kind === 'smart' && (
-              <Button icon="smart" onClick={() => navigate({ view: 'smart', id })}>
-                Edit Rules
-              </Button>
-            )}
-            <IconButton
-              icon="more"
-              title="More"
-              onClick={(e) =>
-                showMenu(e, [
-                  { label: 'Add to Up Next', icon: 'queue', onClick: () => void addToQueue(ids) },
-                  { label: 'Get Info', icon: 'info', disabled: !ids.length, onClick: () => useUi.getState().openGetInfo(ids) },
-                  { separator: true },
-                  {
-                    label: 'Rename…',
-                    icon: 'edit',
-                    disabled: info.kind === 'mirror',
-                    onClick: async () => {
-                      const name = await prompt({ title: 'Rename Playlist', label: 'Name', initial: info.name, ok: 'Rename' })
-                      if (!name || name === info.name) return
-                      try {
-                        if (info.kind === 'smart') await invoke(LIB.saveSmartPlaylist, name, info.rules, id)
-                        else {
-                          const nid = await invoke<string>(LIB.renamePlaylist, id, name)
-                          if (nid && nid !== id) navigate({ view: 'playlist', id: nid })
-                        }
-                      } catch (err) {
-                        toast(errorMessage(err), 'error')
-                      }
-                    },
-                  },
-                  {
-                    label: 'Delete Playlist',
-                    icon: 'trash',
-                    danger: true,
-                    onClick: () => void invoke(LIB.deletePlaylist, id).then(() => navigate({ view: 'albums' })),
-                  },
-                ])
-              }
-            />
-          </div>
-        </div>
-      </div>
+            {total > 0 && `, ${longDuration(total)}`}
+            {info.relPath && <span className="hero-dim mono"> · {info.relPath}</span>}
+          </>
+        }
+      />
+      <ActionBar>
+        <PlayButton onPlay={play} current={now.current} playing={now.playing} title={`Play ${info.name}`} />
+        <IconButton icon="shuffle" size={26} title="Shuffle" disabled={!ids.length} onClick={() => void playShuffled(ids, src)} />
+        {info.kind === 'smart' && (
+          <Button icon="smart" onClick={() => navigate({ view: 'smart', id })}>
+            Edit rules
+          </Button>
+        )}
+        <IconButton icon="more" size={26} title={`More options for ${info.name}`} onClick={more} />
+      </ActionBar>
       <TrackTable
         rows={list}
         playlistId={id}
         source={src}
         showArt
-        columns={['title', 'artist', 'album', 'time', 'rating']}
-        emptyText={info.kind === 'static' ? 'Drag songs onto this playlist in the sidebar, or use “Add to Playlist” from a song’s menu.' : 'No songs match these rules.'}
+        columns={['index', 'title', 'album', 'heart', 'time', 'rating']}
+        emptyText={info.kind === 'static' ? 'Drag songs onto this playlist in the sidebar, or use “Add to playlist” from a song’s menu.' : 'No songs match these rules.'}
       />
       {promptNode}
     </div>
@@ -114,22 +142,23 @@ type FieldType = 'text' | 'number' | 'date' | 'bool' | 'rating' | 'duration'
 const FIELDS: Array<{ field: SmartField; label: string; type: FieldType }> = [
   { field: 'title', label: 'Title', type: 'text' },
   { field: 'artist', label: 'Artist', type: 'text' },
-  { field: 'albumArtist', label: 'Album Artist', type: 'text' },
+  { field: 'albumArtist', label: 'Album artist', type: 'text' },
   { field: 'album', label: 'Album', type: 'text' },
   { field: 'genre', label: 'Genre', type: 'text' },
   { field: 'year', label: 'Year', type: 'number' },
   { field: 'rating', label: 'Rating', type: 'rating' },
   { field: 'playCount', label: 'Plays', type: 'number' },
   { field: 'skipCount', label: 'Skips', type: 'number' },
-  { field: 'addedAt', label: 'Date Added', type: 'date' },
-  { field: 'lastPlayed', label: 'Last Played', type: 'date' },
+  { field: 'addedAt', label: 'Date added', type: 'date' },
+  { field: 'lastPlayed', label: 'Last played', type: 'date' },
   { field: 'durationMs', label: 'Duration (s)', type: 'duration' },
   { field: 'codec', label: 'Format', type: 'text' },
   { field: 'lossless', label: 'Lossless', type: 'bool' },
   { field: 'source', label: 'Source', type: 'text' },
   { field: 'compilation', label: 'Compilation', type: 'bool' },
   // SiIvaGunner, SGFR or YouTube; any rule on it brings rips into the playlist ("is not" empty = every rip).
-  { field: 'hqRip', label: 'High Quality Rip', type: 'text' },
+  { field: 'hqRip', label: 'High Quality Rip collection', type: 'text' },
+  { field: 'liked', label: 'Liked', type: 'bool' },
 ]
 const OPS: Record<FieldType, Array<{ op: SmartOp; label: string }>> = {
   text: [
@@ -199,16 +228,16 @@ export function SmartEditorView({ id }: { id?: string }) {
     }
   }
   return (
-    <div className="view" style={{ maxWidth: 860 }}>
+    <div className="view smart-editor">
       <div className="view-head">
         <div>
-          <span className="hero-kicker">{id ? 'Edit Smart Playlist' : 'New Smart Playlist'}</span>
+          <span className="hero-kicker">{id ? 'Edit smart playlist' : 'New smart playlist'}</span>
           <h1 className="view-title">
-            <input value={name} onChange={(e) => setName(e.target.value)} style={{ font: 'inherit', height: 40, width: 460, background: 'transparent' }} />
+            <input className="title-input" value={name} onChange={(e) => setName(e.target.value)} aria-label="Playlist name" />
           </h1>
         </div>
       </div>
-      <div className="card glass">
+      <div className="card">
         <div className="row" style={{ marginBottom: 14 }}>
           <span>Match</span>
           <Segmented
@@ -277,6 +306,7 @@ export function SmartEditorView({ id }: { id?: string }) {
             <option value="lastPlayed">most recently played</option>
             <option value="playCount">most played</option>
             <option value="rating">highest rated</option>
+            <option value="likedAt">most recently liked</option>
           </select>
         </div>
       </div>

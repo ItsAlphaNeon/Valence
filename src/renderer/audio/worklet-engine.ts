@@ -41,6 +41,7 @@ export class WorkletEngine extends Emitter<EngineEvents> implements AudioEngine 
   private played = 0
   private curEof = false
   private wantPlay = false
+  private pauseRampMs = 30
 
   constructor(
     private ctx: AudioContext,
@@ -62,6 +63,7 @@ export class WorkletEngine extends Emitter<EngineEvents> implements AudioEngine 
     node.port.postMessage({ type: 'attach', port }, [port])
     node.connect(this.dest)
     this.node = node
+    this.setPauseRamp(this.pauseRampMs)
   }
 
   private post(c: CoreCommand): void {
@@ -99,6 +101,7 @@ export class WorkletEngine extends Emitter<EngineEvents> implements AudioEngine 
       gain: o.gain ?? 1,
       durationFrames: s.durationMs ? this.frames(s.durationMs) : null,
       play,
+      fadeOutFrames: this.frames(Math.max(0, o.fadeOutMs ?? 0)),
     })
   }
 
@@ -216,9 +219,9 @@ export class WorkletEngine extends Emitter<EngineEvents> implements AudioEngine 
     this.post({ type: 'pause' })
   }
 
-  stop(): void {
+  stop(fadeOutMs = 0): void {
     this.wantPlay = false
-    this.post({ type: 'stop' })
+    this.post({ type: 'stop', fadeOutFrames: this.frames(Math.max(0, fadeOutMs)) })
     this.cur = null
     this.nxt = null
     this.streams.clear()
@@ -230,6 +233,11 @@ export class WorkletEngine extends Emitter<EngineEvents> implements AudioEngine 
     this.pos = Math.max(0, ms)
     this.curEof = false
     this.post({ type: 'seek', frame: this.frames(this.pos) })
+  }
+
+  setPauseRamp(ms: number): void {
+    this.pauseRampMs = Math.max(1, ms)
+    this.post({ type: 'ramps', pauseFrames: this.frames(this.pauseRampMs) })
   }
 
   setGain(itemId: string, gain: number): void {

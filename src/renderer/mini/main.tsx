@@ -3,6 +3,7 @@
 
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import { createRoot } from 'react-dom/client'
+import '@fontsource-variable/figtree'
 import '../theme/theme.css'
 import '../app.css'
 import './mini.css'
@@ -11,9 +12,8 @@ import { SETTINGS } from '@shared/ipc/settings'
 import { invoke, on, send } from '../lib/ipc'
 import { cx, duration } from '../lib/format'
 import { Artwork, IconButton, Slider } from '../components/ui'
-import { applyAccent, setFixedAccent } from '../theme/accent'
+import { accentHex, applyAccent, artThemeSetting, configureAccent } from '../theme/accent'
 import { applyTheme, findTheme, watchUserThemes } from '../theme/themes'
-import { applyTier } from '../theme/tiers'
 
 const remote = new RemotePlayer()
 const subscribe = (cb: () => void) => remote.on('state', cb)
@@ -28,11 +28,10 @@ async function initAppearance(): Promise<void> {
   const apply = (all: Record<string, unknown>) => {
     const th = findTheme(all['ui.theme'])
     applyTheme(th)
-    // Never more than blur here: the refraction filter is sized for the main player bar.
-    const tier = localStorage.getItem('valence.tier.auto')
-    applyTier(th.maxTier === 'minimal' || tier === 'minimal' ? 'minimal' : tier === 'flat' ? 'flat' : 'glass')
-    const accent = all['ui.accent']
-    setFixedAccent(typeof accent === 'string' && /^#[0-9a-f]{6}$/i.test(accent) ? accent : (th.accent ?? null))
+    const chosen = all['ui.accent']
+    const accent = typeof chosen === 'string' && chosen !== 'art' ? accentHex(chosen) : (th.accent ?? accentHex(null))
+    // Small enough that a full album-colored wash always looks right, unless art theming is off.
+    configureAccent({ accent, artTheme: th.artTint === false || artThemeSetting(all) === 'off' ? 'off' : 'full' })
   }
   let all = await invoke<Record<string, unknown>>(SETTINGS.all).catch(() => ({}) as Record<string, unknown>)
   await watchUserThemes(() => apply(all))
@@ -75,7 +74,6 @@ function Mini() {
   const muted = !!s?.muted
   return (
     <div className={cx('mini', !cur && 'mini-idle')} onDoubleClick={(e) => e.target === e.currentTarget && send('app:showMain')}>
-      {hash && <div className="mini-backdrop" style={{ backgroundImage: `url(valence-art://img/${hash}?s=300)` }} />}
       <button className="mini-art" title="Show Valence" onClick={() => send('app:showMain')}>
         <Artwork hash={hash} px={300} title={cur?.album ?? 'Valence'} />
       </button>

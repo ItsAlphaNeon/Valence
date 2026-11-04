@@ -1,5 +1,10 @@
 // Local index database (never synced; rebuildable from a scan of the library). Each entry is one
 // migration, applied in order and recorded in PRAGMA user_version.
+//
+// Backward compatibility is a hard rule: only append migrations, and only additive ones (CREATE
+// TABLE/INDEX IF NOT EXISTS, ADD COLUMN with a default). Never edit a shipped entry, never DROP,
+// RENAME or rebuild a table, and never delete user rows. Older builds must keep opening the
+// database; tests/unit/db-migrations.test.ts enforces this.
 
 export const MIGRATIONS: string[] = [
   /* 1 */ `
@@ -235,5 +240,22 @@ export const MIGRATIONS: string[] = [
   CREATE INDEX albums_hq_rip ON albums(hq_rip);
   -- Existing rows predate these columns: the next start rescans every file once.
   INSERT OR REPLACE INTO kv(key, value) VALUES ('library.fullRescanPending', '1');
+  `,
+  /* 3: favorites (liked tracks/albums/artists) materialized from every device's synced favorites.jsonl */ `
+  -- kind: 't' track (item_key = valence id or 'path:<rel>'), 'a' album (album_key), 'r' artist
+  -- (lower-cased album artist). Unliked rows stay (liked = 0) so last-writer-wins by hlc works.
+  CREATE TABLE IF NOT EXISTS favorites (
+    kind TEXT NOT NULL,
+    item_key TEXT NOT NULL,
+    liked INTEGER NOT NULL,
+    hlc TEXT NOT NULL,
+    at INTEGER NOT NULL,
+    PRIMARY KEY (kind, item_key)
+  );
+  CREATE INDEX IF NOT EXISTS favorites_liked ON favorites(kind, liked, at);
+  -- Listening stats read plays by time range.
+  CREATE INDEX IF NOT EXISTS plays_played_at ON plays(played_at);
+  -- The key plays and favorites use for a track, so joins from them can look tracks up.
+  CREATE INDEX IF NOT EXISTS tracks_item_key ON tracks(coalesce(valence_id, 'path:' || rel_path));
   `,
 ]

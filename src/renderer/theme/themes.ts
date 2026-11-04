@@ -1,20 +1,20 @@
-// Bundled themes plus user themes (JSON with the same shape) from ~/Music/.valence/themes/, which
-// sync across devices. A theme is token overrides plus optional CSS, applied as one <style>.
+// Bundled palettes plus user themes (JSON with the same shape) from ~/Music/.valence/themes/, which
+// sync across devices. Bundled palettes live in theme.css under html[data-theme]; a user theme is
+// token overrides plus optional CSS, applied as one <style>.
 
 import { useSyncExternalStore } from 'react'
 import { SETTINGS, type UserThemes } from '@shared/ipc/settings'
 import { invoke, on } from '../lib/ipc'
-import type { Tier } from './tiers'
 
 export interface ThemeDef {
   id: string
   name: string
   description?: string
-  /** Forces light/dark; omitted = follow system. */
+  /** Forces light/dark; omitted = follow the system. */
   scheme?: 'light' | 'dark'
-  /** Highest tier this theme allows (e.g. Performance caps at "glass"). */
-  maxTier?: Tier
-  /** Uses album-art tint unless false. */
+  /** Legacy (Liquid Glass tiers); ignored. */
+  maxTier?: string
+  /** false = never take the accent from album art. */
   artTint?: boolean
   accent?: string
   tokens?: Record<string, string>
@@ -23,20 +23,26 @@ export interface ThemeDef {
   css?: string
   /** User themes: file name in the themes folder. */
   file?: string
+  /** Bundled palettes: preview colors for the picker (base, panel, card, text). */
+  preview?: [string, string, string, string]
 }
 
 export const BUILTIN_THEMES: ThemeDef[] = [
-  { id: 'liquid-glass', name: 'Liquid Glass' },
-  { id: 'liquid-glass-performance', name: 'Liquid Glass (Performance)', maxTier: 'glass' },
-  { id: 'solid-dark', name: 'Solid Dark', scheme: 'dark', maxTier: 'minimal' },
-  { id: 'solid-light', name: 'Solid Light', scheme: 'light', maxTier: 'minimal' },
+  { id: 'dark', name: 'Dark', scheme: 'dark', description: 'Deep black around soft charcoal panels.', preview: ['#000', '#121212', '#282828', '#fff'] },
+  { id: 'system', name: 'Match System', description: 'Dark or Light, following your system setting.', preview: ['#000', '#121212', '#f6f6f8', '#fff'] },
+  { id: 'midnight', name: 'Midnight', scheme: 'dark', description: 'Inky blue-black, cool and calm.', preview: ['#04060c', '#0d1120', '#1c2238', '#fff'] },
+  { id: 'ember', name: 'Ember', scheme: 'dark', description: 'Warm, low-light browns. Cozy for late nights.', preview: ['#0b0806', '#16110d', '#2b221b', '#fbf3ea'] },
+  { id: 'oled', name: 'OLED Black', scheme: 'dark', description: 'Pure black everywhere, outlined panels.', preview: ['#000', '#000', '#161616', '#fff'] },
+  { id: 'light', name: 'Light', scheme: 'light', description: 'Clean white panels on soft gray.', preview: ['#e6e6ea', '#fff', '#f0f0f3', '#121212'] },
+  { id: 'paper', name: 'Paper', scheme: 'light', description: 'Warm cream, like a liner note.', preview: ['#e9e2d6', '#fbf8f2', '#f1ebe1', '#2b241e'] },
 ]
 
-const TIER_ORDER: Tier[] = ['full', 'glass', 'flat', 'minimal']
-
-export function capTier(t: Tier, theme: ThemeDef): Tier {
-  if (!theme.maxTier) return t
-  return TIER_ORDER[Math.max(TIER_ORDER.indexOf(t), TIER_ORDER.indexOf(theme.maxTier))]
+/** Theme ids from earlier versions. */
+const LEGACY: Record<string, string> = {
+  'liquid-glass': 'dark',
+  'liquid-glass-performance': 'dark',
+  'solid-dark': 'dark',
+  'solid-light': 'light',
 }
 
 // --- user themes -----------------------------------------------------------------------------
@@ -60,7 +66,8 @@ export function userThemes(): UserThemes {
 }
 
 export function findTheme(id: unknown): ThemeDef {
-  return snapshot.find((t) => t.id === id) ?? BUILTIN_THEMES[0]
+  const key = typeof id === 'string' ? (LEGACY[id] ?? id) : 'dark'
+  return snapshot.find((t) => t.id === key) ?? BUILTIN_THEMES[0]
 }
 
 export async function loadUserThemes(): Promise<void> {
@@ -88,36 +95,31 @@ const decls = (m: Record<string, string> | undefined) =>
     .map(([k, v]) => `${k.startsWith('--') ? k : `--${k}`}: ${v};`)
     .join(' ')
 
-/** Stylesheet for a theme. Selectors out-rank theme.css's scheme rules; flat/minimal keep opaque surfaces. */
+/** Stylesheet for a user theme. Selectors out-rank theme.css's palette rules. */
 export function themeCss(theme: ThemeDef): string {
   const out: string[] = []
-  if (theme.tokens && Object.keys(theme.tokens).length) out.push(`:root:root { ${decls(theme.tokens)} }`)
-  if (theme.light && Object.keys(theme.light).length) {
-    const d = decls(theme.light)
-    out.push(`@media (prefers-color-scheme: light) { :root:root:not([data-scheme='dark']) { ${d} } }`, `:root:root[data-scheme='light'] { ${d} }`)
-  }
-  if (theme.dark && Object.keys(theme.dark).length) {
-    const d = decls(theme.dark)
-    out.push(`@media (prefers-color-scheme: dark) { :root:root:not([data-scheme='light']) { ${d} } }`, `:root:root[data-scheme='dark'] { ${d} }`)
-  }
-  if (out.length) {
-    out.push(
-      `:root:root:root[data-tier='flat'] { --glass-bg: color-mix(in srgb, var(--surface) 92%, transparent); --glass-bg-strong: var(--surface); --bg: var(--bg-solid); }`,
-      `:root:root:root[data-tier='minimal'] { --glass-bg: var(--surface); --glass-bg-strong: var(--surface); --bg: var(--bg-solid); }`,
-    )
-  }
+  if (theme.tokens && Object.keys(theme.tokens).length) out.push(`:root:root:root { ${decls(theme.tokens)} }`)
+  if (theme.light && Object.keys(theme.light).length) out.push(`:root:root:root[data-scheme='light'] { ${decls(theme.light)} }`)
+  if (theme.dark && Object.keys(theme.dark).length) out.push(`:root:root:root[data-scheme='dark'] { ${decls(theme.dark)} }`)
   if (theme.css) out.push(theme.css)
   return out.join('\n')
+}
+
+const systemDark = () => matchMedia('(prefers-color-scheme: dark)').matches
+
+/** The light/dark a theme resolves to right now. */
+export function resolvedScheme(theme: ThemeDef): 'light' | 'dark' {
+  return theme.scheme ?? (systemDark() ? 'dark' : 'light')
 }
 
 let styleEl: HTMLStyleElement | null = null
 
 export function applyTheme(theme: ThemeDef): void {
   const root = document.documentElement
-  if (theme.scheme) root.dataset.scheme = theme.scheme
-  else delete root.dataset.scheme
-  root.dataset.theme = theme.id
+  root.dataset.scheme = resolvedScheme(theme)
+  // User themes build on the plain dark/light palette.
+  root.dataset.theme = theme.file ? root.dataset.scheme : theme.id
   styleEl ??= document.head.appendChild(document.createElement('style'))
   styleEl.id = 'valence-theme'
-  styleEl.textContent = themeCss(theme)
+  styleEl.textContent = theme.file ? themeCss(theme) : ''
 }

@@ -1,9 +1,10 @@
 // Mini player: a small frameless, always-on-top window that mirrors the main window's player
 // through the relay (src/main/audio/relay.ts). Position is remembered per machine.
 
-import { BrowserWindow, nativeTheme, screen } from 'electron'
+import { BrowserWindow, screen } from 'electron'
 import { join } from 'node:path'
 import type { SettingsStore } from '../context'
+import { MINI_BACKGROUND } from './chrome-state'
 
 export const MINI_SIZE = { width: 400, height: 124 }
 const BOUNDS_KEY = 'ui.mini.position'
@@ -37,8 +38,6 @@ export function openMini(settings: SettingsStore, load: Loader): BrowserWindow {
     return mini
   }
   const pos = initialPosition(settings)
-  const win32 = process.platform === 'win32'
-  const mac = process.platform === 'darwin'
   const win = new BrowserWindow({
     ...MINI_SIZE,
     ...pos,
@@ -51,9 +50,8 @@ export function openMini(settings: SettingsStore, load: Loader): BrowserWindow {
     skipTaskbar: true,
     alwaysOnTop: settings.get('ui.mini.onTop', true),
     show: false,
-    ...(win32 ? { backgroundMaterial: 'acrylic' as const, backgroundColor: '#00000000' } : {}),
-    ...(mac ? { vibrancy: 'hud' as const, visualEffectState: 'active' as const, backgroundColor: '#00000000' } : {}),
-    ...(!win32 && !mac ? { backgroundColor: nativeTheme.shouldUseDarkColors ? '#1c1c1e' : '#f2f2f7' } : {}),
+    // Opaque; the renderer can recolour it with 'window:chrome' { background }.
+    backgroundColor: MINI_BACKGROUND,
     webPreferences: {
       preload: join(import.meta.dirname, '../preload/index.cjs'),
       sandbox: false,
@@ -61,6 +59,8 @@ export function openMini(settings: SettingsStore, load: Loader): BrowserWindow {
     },
   })
   win.setAlwaysOnTop(settings.get('ui.mini.onTop', true), 'floating')
+  // The main window's zoom must not carry over (both pages share an origin).
+  win.webContents.setZoomMode('isolated')
   win.once('ready-to-show', () => win.show())
   let saveTimer: ReturnType<typeof setTimeout> | null = null
   win.on('moved', () => {

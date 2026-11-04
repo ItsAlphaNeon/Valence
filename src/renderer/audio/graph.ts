@@ -1,6 +1,7 @@
-// Web Audio graph: engine -> preamp -> 10-band peaking EQ -> [limiter] -> tap -> master -> analyser -> output.
+// Web Audio graph: engine -> preamp -> 10-band peaking EQ -> [limiter] -> tap -> fader -> channels
+// (mono mix, balance) -> master -> analyser -> output.
 
-import { clamp, dbToGain, volumeToGain } from './policy'
+import { balanceGains, clamp, dbToGain, volumeToGain } from './policy'
 import type { EqPresetName, EqState } from './types'
 
 export const EQ_FREQS = [31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000]
@@ -34,11 +35,22 @@ export class AudioGraph {
   readonly limiter: DynamicsCompressorNode
   /** Pre-master signal (after EQ/limiter), for captures and meters that ignore volume. */
   readonly tap: GainNode
+  /** Sleep-timer fade, independent of the volume (the Player schedules it). */
+  readonly fader: GainNode
   readonly master: GainNode
   readonly analyser: AnalyserNode
+  private stereo: GainNode
+  private monoMix: GainNode
+  private sum: GainNode
+  private split: ChannelSplitterNode
+  private left: GainNode
+  private right: GainNode
+  private merge: ChannelMergerNode
   private limiterOn = false
   private eq: EqState = defaultEq()
   private preampDb = 0
+  private mono = false
+  private balance = 0
 
   constructor(
     readonly ctx: BaseAudioContext,
@@ -48,6 +60,16 @@ export class AudioGraph {
     this.bands = EQ_FREQS.map((frequency) => new BiquadFilterNode(ctx, { type: 'peaking', frequency, Q: EQ_Q, gain: 0 }))
     this.limiter = new DynamicsCompressorNode(ctx, { threshold: -1, knee: 0, ratio: 20, attack: 0.003, release: 0.25 })
     this.tap = new GainNode(ctx, { gain: 1 })
+    this.fader = new GainNode(ctx, { gain: 1 })
+    // Mono: a 1-channel 'speakers' node downmixes (L+R)/2; `sum` (explicit stereo) upmixes it back to
+    // both sides. The stereo and mono paths cross-ramp, so toggling never clicks.
+    this.stereo = new GainNode(ctx, { gain: 1 })
+    this.monoMix = new GainNode(ctx, { gain: 0, channelCount: 1, channelCountMode: 'explicit', channelInterpretation: 'speakers' })
+    this.sum = new GainNode(ctx, { gain: 1, channelCount: 2, channelCountMode: 'explicit', channelInterpretation: 'speakers' })
+    this.split = new ChannelSplitterNode(ctx, { numberOfOutputs: 2 })
+    this.left = new GainNode(ctx, { gain: 1, channelCount: 1, channelCountMode: 'explicit' })
+    this.right = new GainNode(ctx, { gain: 1, channelCount: 1, channelCountMode: 'explicit' })
+    this.merge = new ChannelMergerNode(ctx, { numberOfInputs: 2 })
     this.master = new GainNode(ctx, { gain: 0 })
     this.analyser = new AnalyserNode(ctx, { fftSize: 2048, smoothingTimeConstant: 0.8 })
     let prev: AudioNode = this.input
@@ -57,7 +79,15 @@ export class AudioGraph {
     }
     prev.connect(this.tap)
     this.limiter.connect(this.tap)
-    this.tap.connect(this.master)
+    this.tap.connect(this.fader)
+    this.fader.connect(this.stereo).connect(this.sum)
+    this.fader.connect(this.monoMix).connect(this.sum)
+    this.sum.connect(this.split)
+    this.split.connect(this.left, 0)
+    this.split.connect(this.right, 1)
+    this.left.connect(this.merge, 0, 0)
+    this.right.connect(this.merge, 0, 1)
+    this.merge.connect(this.master)
     this.master.connect(this.analyser)
   }
 
@@ -92,6 +122,23 @@ export class AudioGraph {
     this.ramp(this.master.gain, this.forceMute || muted ? 0 : volumeToGain(volume))
   }
 
+  setMono(on: boolean): void {
+    if (on === this.mono) return
+    this.mono = on
+    this.ramp(this.stereo.gain, on ? 0 : 1)
+    this.ramp(this.monoMix.gain, on ? 1 : 0)
+  }
+
+  /** -1 (left only) .. 1 (right only). */
+  setBalance(balance: number): void {
+    const b = clamp(Number.isFinite(balance) ? balance : 0, -1, 1)
+    if (b === this.balance) return
+    this.balance = b
+    const [l, r] = balanceGains(b)
+    this.ramp(this.left.gain, l)
+    this.ramp(this.right.gain, r)
+  }
+
   private updateLimiter(): void {
     const on = needsLimiter(this.eq, this.preampDb)
     if (on === this.limiterOn) return
@@ -102,6 +149,7 @@ export class AudioGraph {
   }
 
   dispose(): void {
-    for (const n of [this.input, ...this.bands, this.limiter, this.tap, this.master, this.analyser]) n.disconnect()
+    const nodes = [this.input, ...this.bands, this.limiter, this.tap, this.fader, this.stereo, this.monoMix, this.sum, this.split, this.left, this.right, this.merge, this.master, this.analyser]
+    for (const n of nodes) n.disconnect()
   }
 }

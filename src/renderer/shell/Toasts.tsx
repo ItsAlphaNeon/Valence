@@ -8,7 +8,7 @@ export function Toasts() {
   return (
     <div className="toasts" role="status" aria-live="polite">
       {toasts.map((t) => (
-        <div key={t.id} className={`toast glass glass-strong ${t.kind}`}>
+        <div key={t.id} className={`toast pop ${t.kind}`}>
           <Icon name={t.kind === 'error' ? 'warning' : t.kind === 'ok' ? 'check' : 'info'} size={15} />
           <span>{t.text}</span>
           {t.action && (

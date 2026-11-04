@@ -15,9 +15,15 @@ import { toAbs } from './organizer'
 
 export const PLAYLISTS_DIR = 'Playlists'
 
+/**
+ * Rule fields. Boolean fields (lossless, compilation, liked) take op 'is' or 'isNot' with a
+ * boolean value: { field: 'liked', op: 'is', value: true } is "is liked",
+ * { field: 'liked', op: 'is', value: false } (or op 'isNot', value true) is "is not liked".
+ * `liked` means the track itself is in favorites.
+ */
 export type SmartField =
   | 'title' | 'artist' | 'album' | 'albumArtist' | 'genre' | 'year' | 'rating' | 'playCount' | 'skipCount'
-  | 'addedAt' | 'lastPlayed' | 'durationMs' | 'codec' | 'lossless' | 'source' | 'compilation' | 'hqRip'
+  | 'addedAt' | 'lastPlayed' | 'durationMs' | 'codec' | 'lossless' | 'source' | 'compilation' | 'hqRip' | 'liked'
 export type SmartOp = 'is' | 'isNot' | 'contains' | 'notContains' | 'startsWith' | 'gt' | 'lt' | 'between' | 'inLast' | 'notInLast'
 export interface SmartRule {
   field: SmartField
@@ -29,7 +35,7 @@ export interface SmartRules {
   match: 'all' | 'any'
   rules: SmartRule[]
   limit?: number
-  sort?: 'random' | 'title' | 'artist' | 'addedAt' | 'lastPlayed' | 'playCount' | 'rating'
+  sort?: 'random' | 'title' | 'artist' | 'addedAt' | 'lastPlayed' | 'playCount' | 'rating' | 'likedAt'
 }
 
 export interface PlaylistInfo {
@@ -61,6 +67,7 @@ const FIELD_SQL: Record<SmartField, string> = {
   source: 't.source',
   compilation: 't.compilation',
   hqRip: 't.hq_rip',
+  liked: "(SELECT count(*) FROM favorites f WHERE f.kind = 't' AND f.item_key = coalesce(t.valence_id, 'path:' || t.rel_path) AND f.liked = 1)",
 }
 
 export function smartSql(rules: SmartRules, now = Date.now()): { sql: string; params: unknown[] } {
@@ -125,9 +132,11 @@ export function smartSql(rules: SmartRules, now = Date.now()): { sql: string; pa
             ? 'coalesce(ps.play_count, 0) DESC'
             : rules.sort === 'rating'
               ? 't.rating DESC'
-              : rules.sort === 'title'
-                ? 't.title COLLATE NOCASE'
-                : 't.album_artist COLLATE NOCASE, t.year, t.album COLLATE NOCASE, coalesce(t.disc_no, 1), t.track_no'
+              : rules.sort === 'likedAt'
+                ? "(SELECT f.at FROM favorites f WHERE f.kind = 't' AND f.item_key = coalesce(t.valence_id, 'path:' || t.rel_path) AND f.liked = 1) DESC"
+                : rules.sort === 'title'
+                  ? 't.title COLLATE NOCASE'
+                  : 't.album_artist COLLATE NOCASE, t.year, t.album COLLATE NOCASE, coalesce(t.disc_no, 1), t.track_no'
   // Rips stay out of smart playlists unless a rule asks about them.
   const rips = rules.rules.some((r) => r.field === 'hqRip') ? '' : " AND t.hq_rip = ''"
   const sql = `SELECT t.rel_path FROM tracks t LEFT JOIN play_stats ps ON ps.track_key = coalesce(t.valence_id, 'path:' || t.rel_path)

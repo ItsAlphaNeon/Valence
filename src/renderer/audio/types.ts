@@ -36,9 +36,28 @@ export interface EqState {
 }
 
 export interface QueueSource {
-  kind: 'album' | 'playlist' | 'search' | 'artist' | 'library' | 'other'
+  kind: 'album' | 'playlist' | 'search' | 'artist' | 'library' | 'autoplay' | 'other'
   id?: string
   title?: string
+}
+
+/** 'time' pauses at endsAt (epoch ms); 'track' at the end of the current track; 'album' when the album changes or the queue context ends. */
+export type SleepTimer = { mode: 'off' } | { mode: 'time'; endsAt: number; minutes: number } | { mode: 'track' } | { mode: 'album' }
+
+/** Preferences the host app mirrors into the Player (Player.setPrefs). */
+export interface PlaybackPrefs {
+  /** Continue with similar tracks when the queue runs out (needs PlayerOptions.autoplay). */
+  autoplay: boolean
+  /** Fade out over the last 20 s of a timed sleep timer. */
+  sleepFade: boolean
+  /** Sum both channels to mono. */
+  mono: boolean
+  /** -1 (left only) .. 0 (center) .. 1 (right only). */
+  balance: number
+  /** Gain ramp for play/pause/stop and manual track changes; 0 = the engines' short anti-click ramps. */
+  fadeMs: number
+  /** Previous restarts the current track when more than this far in; 0 = always go back. */
+  prevRestartMs: number
 }
 
 export interface QueueSnapshot {
@@ -52,6 +71,8 @@ export interface QueueSnapshot {
     position: number
     length: number
   }
+  /** Queued to follow when the context runs out (autoplay picks); becomes the context when reached. */
+  continuation?: { source: QueueSource | null; upcoming: PlayItem[] } | null
   history: PlayItem[]
 }
 
@@ -72,6 +93,9 @@ export interface PlayerState {
   eq: EqState
   outputDeviceId: string
   engine: EngineKind
+  sleep: SleepTimer
+  /** Pause at the end of the current track (then turns itself off). */
+  stopAfterCurrent: boolean
   error: string | null
 }
 
@@ -106,6 +130,8 @@ export type PlayerCommand =
   | { type: 'setEqBand'; index: number; gainDb: number }
   | { type: 'setOutputDevice'; deviceId: string }
   | { type: 'setEngine'; engine: EngineKind }
+  | { type: 'setSleepTimer'; timer: SleepTimer }
+  | { type: 'setStopAfterCurrent'; on: boolean }
 
 export interface PlayLoggedEvent {
   item: PlayItem

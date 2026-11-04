@@ -170,7 +170,7 @@ export function CollectionGrid({ items }: { items: BandcampItemSummary[] }) {
   return (
     <>
       <div className="bc-toolbar">
-        <label className="search-box glass bc-filter">
+        <label className="search-box bc-filter">
           <Icon name="search" size={15} />
           <input type="search" value={text} placeholder="Filter by title or artist" aria-label="Filter purchases" onChange={(e) => set({ text: e.target.value })} />
           {text && (

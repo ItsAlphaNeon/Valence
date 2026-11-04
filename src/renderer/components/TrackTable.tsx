@@ -9,16 +9,18 @@ import type { QueueSource } from '../audio'
 import { invoke, revealLabel } from '../lib/ipc'
 import { cx, duration, quality, relativeTime } from '../lib/format'
 import { useLib } from '../state/library'
-import { addToQueue, playQuery, playNext, playTracks, usePlayer } from '../state/player'
+import { addToQueue, cmd, playQuery, playNext, playTracks, usePlayer } from '../state/player'
+import { setLiked } from '../state/favorites'
 import { Artwork, Stars, showMenu, type MenuItem } from './ui'
 import { Icon } from './Icon'
+import { HeartButton } from './Heart'
 import { albumRoute, navigate, toast, useUi } from '../state/ui'
 
 export const ScrollParent = createContext<React.RefObject<HTMLElement | null> | null>(null)
 
 export type ColumnKey =
   | 'index' | 'title' | 'artist' | 'album' | 'albumArtist' | 'time' | 'genre' | 'year' | 'rating' | 'plays' | 'added' | 'lastPlayed' | 'quality'
-  | 'game' | 'composer'
+  | 'game' | 'composer' | 'heart' | 'likedAt'
 
 interface Column {
   key: ColumnKey
@@ -29,7 +31,8 @@ interface Column {
 }
 
 const COLUMNS: Record<ColumnKey, Column> = {
-  index: { key: 'index', label: '#', width: '44px', align: 'right', sort: 'trackNo' },
+  index: { key: 'index', label: '#', width: '40px', align: 'right', sort: 'trackNo' },
+  heart: { key: 'heart', label: '', width: '40px', align: 'center', sort: 'likedAt' },
   title: { key: 'title', label: 'Title', width: 'minmax(180px, 3fr)', sort: 'title' },
   artist: { key: 'artist', label: 'Artist', width: 'minmax(120px, 2fr)', sort: 'artist' },
   album: { key: 'album', label: 'Album', width: 'minmax(120px, 2fr)', sort: 'album' },
@@ -42,6 +45,7 @@ const COLUMNS: Record<ColumnKey, Column> = {
   rating: { key: 'rating', label: 'Rating', width: '86px', sort: 'rating' },
   plays: { key: 'plays', label: 'Plays', width: '56px', align: 'right', sort: 'playCount' },
   added: { key: 'added', label: 'Added', width: '96px', sort: 'addedAt' },
+  likedAt: { key: 'likedAt', label: 'Liked', width: '104px', sort: 'likedAt' },
   lastPlayed: { key: 'lastPlayed', label: 'Last Played', width: '104px', sort: 'lastPlayed' },
   quality: { key: 'quality', label: 'Format', width: '104px', sort: 'bitrate' },
 }
@@ -154,7 +158,8 @@ export function TrackTable(props: TrackTableProps) {
     return () => ro.disconnect()
   }, [scrollRef, props.header])
 
-  const rowH = props.showArt ? 44 : 34
+  const compact = useLib((s) => s.settings['ui.density'] === 'compact')
+  const rowH = props.showArt ? (compact ? 48 : 56) : compact ? 34 : 42
   // Multi-disc albums get "Disc N" header rows mixed into the virtual list.
   const display = useMemo(() => {
     if (!props.discHeaders || !rows || new Set(rows.map((r) => r.discNo ?? 1)).size < 2) return null
@@ -231,15 +236,18 @@ export function TrackTable(props: TrackTableProps) {
     const n = chosen.length
     const items: MenuItem[] = [
       { label: 'Play', icon: 'play', onClick: () => (n === 1 ? void play(i) : void playTracks(chosen, 0, source)) },
-      { label: 'Play Next', icon: 'queue', onClick: () => void playNext(chosen) },
-      { label: 'Add to Up Next', onClick: () => void addToQueue(chosen) },
+      { label: 'Play next', icon: 'queue', onClick: () => void playNext(chosen) },
+      { label: 'Add to queue', onClick: () => void addToQueue(chosen) },
       { separator: true },
+      n === 1 && r?.liked
+        ? { label: 'Remove from Liked Songs', icon: 'heart', onClick: () => void setLiked({ kind: 'track', ids: chosen }, false) }
+        : { label: n > 1 ? `Add ${n} to Liked Songs` : 'Add to Liked Songs', icon: 'heart', onClick: () => void setLiked({ kind: 'track', ids: chosen }, true) },
       {
-        label: 'Add to Playlist',
+        label: 'Add to playlist',
         icon: 'playlist',
         submenu: [
           {
-            label: 'New Playlist…',
+            label: 'New playlist…',
             icon: 'plus',
             onClick: () => window.dispatchEvent(new CustomEvent('valence:new-playlist', { detail: chosen })),
           },
@@ -265,14 +273,15 @@ export function TrackTable(props: TrackTableProps) {
       { separator: true },
     ]
     if (r && n === 1) {
-      if (r.albumId != null) items.push({ label: 'Go to Album', icon: 'albums', onClick: () => navigate(albumRoute(r.albumId!, r.hqRip)) })
-      items.push({ label: 'Go to Artist', icon: 'artists', onClick: () => navigate({ view: 'artist', artist: r.albumArtist || r.artist }) })
+      if (r.albumId != null) items.push({ label: 'Go to album', icon: 'albums', onClick: () => navigate(albumRoute(r.albumId!, r.hqRip)) })
+      items.push({ label: 'Go to artist', icon: 'artists', onClick: () => navigate({ view: 'artist', artist: r.albumArtist || r.artist }) })
+      items.push({ label: 'View artwork', icon: 'zoomIn', onClick: () => useUi.getState().openArt({ hash: r.artHash, albumId: r.albumId, title: r.album || r.title, sub: r.albumArtist || r.artist }) })
       items.push({ label: revealLabel, icon: 'folder', onClick: () => void invoke(LIB.reveal, r.id) })
     }
     if (props.playlistId && playlists.find((p) => p.id === props.playlistId)?.kind === 'static' && rows) {
       items.push({ separator: true })
       items.push({
-        label: n > 1 ? `Remove ${n} from Playlist` : 'Remove from Playlist',
+        label: n > 1 ? `Remove ${n} from this playlist` : 'Remove from this playlist',
         icon: 'trash',
         danger: true,
         onClick: () => {
@@ -291,12 +300,17 @@ export function TrackTable(props: TrackTableProps) {
   const onKey = async (e: React.KeyboardEvent) => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
       e.preventDefault()
+      e.stopPropagation()
       setSel(new Set(Array.from({ length: count }, (_, k) => k)))
     } else if (e.key === 'Enter' && sel.size) {
+      e.stopPropagation()
       const idx = selectedIndices()
       if (idx.length === 1) void play(idx[0])
       else void playTracks(await ids(idx), 0, source)
     } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'i' && sel.size) {
+      // Get Info for the selection rather than the global "now playing info" panel.
+      e.preventDefault()
+      e.stopPropagation()
       useUi.getState().openGetInfo(await ids(selectedIndices()))
     } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault()
@@ -367,7 +381,7 @@ export function TrackTable(props: TrackTableProps) {
           return (
             <div
               key={it.key}
-              className={cx('tt-row', sel.has(i) && 'sel', isCur && 'current', i % 2 === 1 && 'odd')}
+              className={cx('tt-row', sel.has(i) && 'sel', isCur && 'current')}
               style={{ transform: `translateY(${top}px)`, height: rowH, gridTemplateColumns: grid }}
               onClick={(e) => onRowClick(e, i)}
               onDoubleClick={() => void play(i)}
@@ -381,7 +395,18 @@ export function TrackTable(props: TrackTableProps) {
               }}
             >
               {columns.map((c) => (
-                <Cell key={c} col={COLUMNS[c]} r={r} index={i} isCur={isCur} playing={playing} showArt={props.showArt} onRate={(s) => void invoke(LIB.setRating, [r.id], s)} />
+                <Cell
+                  key={c}
+                  col={COLUMNS[c]}
+                  r={r}
+                  num={props.discHeaders ? (r.trackNo ?? i + 1) : i + 1}
+                  isCur={isCur}
+                  playing={playing}
+                  showArt={props.showArt}
+                  subArtist={props.showArt && !columns.includes('artist')}
+                  onPlay={() => (isCur ? cmd({ type: 'toggle' }) : void play(i))}
+                  onRate={(s) => void invoke(LIB.setRating, [r.id], s)}
+                />
               ))}
             </div>
           )
@@ -401,23 +426,80 @@ function NowBars({ playing }: { playing: boolean }) {
   )
 }
 
-function Cell({ col, r, index, isCur, playing, showArt, onRate }: { col: Column; r: TrackRow; index: number; isCur: boolean; playing: boolean; showArt?: boolean; onRate: (s: number) => void }) {
+function Cell({
+  col,
+  r,
+  num,
+  isCur,
+  playing,
+  showArt,
+  subArtist,
+  onPlay,
+  onRate,
+}: {
+  col: Column
+  r: TrackRow
+  num: number
+  isCur: boolean
+  playing: boolean
+  showArt?: boolean
+  subArtist?: boolean
+  onPlay: () => void
+  onRate: (s: number) => void
+}) {
   const cls = cx('tt-cell', col.align && `al-${col.align}`, `c-${col.key}`)
   switch (col.key) {
     case 'index':
-      return <span className={cls}>{isCur ? <NowBars playing={playing} /> : (r.trackNo ?? index + 1)}</span>
+      return (
+        <span className={cls}>
+          <span className="tt-num">{isCur && playing ? <NowBars playing /> : num}</span>
+          <button
+            className="tt-play"
+            title={isCur && playing ? 'Pause' : `Play ${r.title}`}
+            onClick={(e) => {
+              e.stopPropagation()
+              onPlay()
+            }}
+            onDoubleClick={(e) => e.stopPropagation()}
+          >
+            <Icon name={isCur && playing ? 'pause' : 'play'} size={14} />
+          </button>
+        </span>
+      )
+    case 'heart':
+      return (
+        <span className={cls}>
+          <HeartButton className="tt-heart" target={{ kind: 'track', id: r.id }} liked={r.liked} size={16} />
+        </span>
+      )
     case 'title':
       return (
         <span className={cls}>
           {showArt && (
             <span className="tt-art">
-              <Artwork hash={r.artHash} px={64} size={32} radius={5} title={r.album} />
-              {isCur && <NowBars playing={playing} />}
+              <Artwork hash={r.artHash} px={96} size={40} radius={4} title={r.album} />
             </span>
           )}
           <span className="tt-title">
-            <span className="ellipsis">{r.title}</span>
-            {r.lyricsKind === 'synced' && <span className="tt-flag" title="Synced lyrics">LRC</span>}
+            <span className="tt-title-line">
+              <span className="ellipsis">{r.title}</span>
+              {r.lyricsKind === 'synced' && (
+                <span className="tt-flag" title="Synced lyrics">
+                  LRC
+                </span>
+              )}
+            </span>
+            {subArtist && (
+              <a
+                className="tt-title-sub ellipsis link-muted"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  navigate({ view: 'artist', artist: r.albumArtist || r.artist })
+                }}
+              >
+                {r.artist}
+              </a>
+            )}
           </span>
         </span>
       )
@@ -471,6 +553,8 @@ function Cell({ col, r, index, isCur, playing, showArt, onRate }: { col: Column;
       return <span className={cx(cls, 'tnum')}>{r.playCount || ''}</span>
     case 'added':
       return <span className={cx(cls, 'ellipsis')}>{relativeTime(r.addedAt)}</span>
+    case 'likedAt':
+      return <span className={cx(cls, 'ellipsis')}>{relativeTime(r.likedAt)}</span>
     case 'lastPlayed':
       return <span className={cx(cls, 'ellipsis')}>{relativeTime(r.lastPlayed)}</span>
     case 'quality':

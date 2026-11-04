@@ -18,7 +18,7 @@ export function SearchField({ initial }: { initial: string }) {
   return (
     <>
       <form
-        className="search-box glass tidal-search"
+        className="search-box tidal-search"
         onSubmit={(e) => {
           e.preventDefault()
           const s = q.trim()
@@ -58,7 +58,7 @@ export function LinkField() {
   return (
     <>
       <form
-        className={cx('search-box glass tidal-link', busy && 'busy')}
+        className={cx('search-box tidal-link', busy && 'busy')}
         onSubmit={(e) => {
           e.preventDefault()
           void open()

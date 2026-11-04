@@ -138,6 +138,10 @@ export interface TrackRow {
   composer: string | null
   ripGame: string | null
   youtubeVideoId: string | null
+  /** In the user's favorites (synced across devices). */
+  liked: boolean
+  /** When it was liked (ms), null when not liked. */
+  likedAt: number | null
 }
 
 /** Which half of the library a query covers: normal music, SiIvaGunner rips, or both. */
@@ -157,6 +161,7 @@ export interface AlbumRow {
   addedAt: number
   compilation: boolean
   hqRip: string
+  liked: boolean
 }
 
 export interface ArtistRow {
@@ -164,7 +169,20 @@ export interface ArtistRow {
   albumCount: number
   trackCount: number
   artHash: string | null
+  liked: boolean
 }
+
+/** What can be liked. Artists are keyed by album artist name (case-insensitive). */
+export type FavoriteKind = 'track' | 'album' | 'artist'
+
+export interface FavoriteCounts {
+  tracks: number
+  albums: number
+  artists: number
+}
+
+/** Height (px, at zoom 1) of the renderer's top bar; the native window controls overlay matches it. */
+export const TOPBAR_HEIGHT = 64
 
 export interface GenreRow {
   name: string
@@ -189,6 +207,11 @@ export interface TrackQuery {
   collection?: LibraryCollection
   /** With collection 'rips': only these rip collections (e.g. ['YouTube'] for season albums). */
   ripKinds?: string[]
+  /**
+   * Only liked tracks (collection defaults to 'all', like album/playlist lookups). Without an
+   * explicit sort, most recently liked first.
+   */
+  liked?: boolean
 }
 
 export interface LibraryStats {

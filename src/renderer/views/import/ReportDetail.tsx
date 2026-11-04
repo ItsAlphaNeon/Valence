@@ -233,7 +233,7 @@ export function ReportDetailView({ id }: { id: string }) {
               <span>{KIND_INFO[g.kind].title}</span>
               <span className="faint tnum">{g.actions.length}</span>
             </div>
-            <div className="card glass imp-group-card imp-actions">
+            <div className="card imp-group-card imp-actions">
               {g.actions.map((a, i) => (
                 <ActionRow key={i} a={a} />
               ))}

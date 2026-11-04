@@ -11,7 +11,7 @@ vi.hoisted(() => {
   g.window ??= { valence: { platform: 'win32', invoke: async () => null, on: () => () => {}, send: () => {} } }
 })
 
-const { themeCss, capTier, BUILTIN_THEMES } = await import('@renderer/theme/themes')
+const { themeCss, findTheme, BUILTIN_THEMES } = await import('@renderer/theme/themes')
 
 describe('parseTheme', () => {
   it('normalizes token names and keeps the optional fields', () => {
@@ -92,17 +92,20 @@ describe('themeCss', () => {
     for (const t of BUILTIN_THEMES) expect(themeCss(t)).toBe('')
   })
 
-  it('scopes light and dark tokens and keeps flat/minimal surfaces opaque', () => {
+  it('scopes light and dark tokens above the bundled palettes', () => {
     const t = parseTheme(EXAMPLE_THEME, 'example.json')
     const css = themeCss(t)
-    expect(css).toContain(':root:root { --r-lg: 16px; --glass-blur: 34px; }')
-    expect(css).toContain("@media (prefers-color-scheme: dark) { :root:root:not([data-scheme='light']) { --bg-solid: #141010;")
-    expect(css).toContain(":root:root[data-scheme='light'] { --bg-solid: #f6f1ec;")
-    expect(css).toMatch(/:root:root:root\[data-tier='minimal'\] \{ --glass-bg: var\(--surface\)/)
+    expect(css).toContain(':root:root:root { --r-lg: 14px; }')
+    expect(css).toContain(":root:root:root[data-scheme='dark'] { --base: #0c0807; --panel: #181110;")
+    expect(css).toContain(":root:root:root[data-scheme='light'] { --base: #efe6dc;")
     expect(css.trim().endsWith('.sidebar { letter-spacing: 0.01em; }')).toBe(true)
   })
 
-  it('caps the tier for user themes too', () => {
-    expect(capTier('full', parseTheme({ maxTier: 'flat' }, 'x.json'))).toBe('flat')
+  it('maps themes from earlier versions onto the new palettes', () => {
+    expect(findTheme('liquid-glass').id).toBe('dark')
+    expect(findTheme('liquid-glass-performance').id).toBe('dark')
+    expect(findTheme('solid-light').id).toBe('light')
+    expect(findTheme('no-such-theme').id).toBe('dark')
+    expect(findTheme(undefined).id).toBe('dark')
   })
 })

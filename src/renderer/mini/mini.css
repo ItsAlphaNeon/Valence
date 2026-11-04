@@ -8,30 +8,21 @@
   padding: 14px 14px 12px;
   overflow: hidden;
   -webkit-app-region: drag;
-  background: var(--glass-bg);
+  background: var(--panel);
   isolation: isolate;
 }
-:root[data-tier='flat'] .mini,
-:root[data-tier='minimal'] .mini {
-  background: var(--bg-solid);
-}
-/* Linux has no native material behind the window; paint one. */
-.platform-linux .mini {
-  background: var(--bg-solid);
-}
-
-.mini-backdrop {
+/* A soft wash of the album's color from the art side. */
+.mini::before {
+  content: '';
   position: absolute;
-  inset: -40px;
+  inset: 0;
   z-index: -1;
-  background-size: cover;
-  background-position: center;
-  filter: blur(36px) saturate(1.5);
-  opacity: 0.42;
-  transition: background-image 600ms var(--ease);
+  background: linear-gradient(100deg, color-mix(in oklab, var(--art) 55%, transparent) 0%, transparent 85%);
+  opacity: 0;
+  transition: opacity var(--dur-slow) var(--ease);
 }
-:root[data-tier='minimal'] .mini-backdrop {
-  display: none;
+:root[data-art='full'] .mini::before {
+  opacity: 1;
 }
 
 .mini button,
@@ -79,7 +70,7 @@
 .mini-title {
   font-family: var(--font-display);
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -124,9 +115,16 @@
   height: 30px;
 }
 .mini-controls .mini-play {
-  width: 36px;
-  height: 36px;
-  color: var(--fg);
+  width: 34px;
+  height: 34px;
+  margin: 0 2px;
+  border-radius: 50%;
+  background: var(--fg);
+  color: var(--base);
+}
+.mini-controls .mini-play:hover:not(:disabled) {
+  background: var(--fg);
+  transform: scale(1.06);
 }
 .mini-spacer {
   flex: 1;

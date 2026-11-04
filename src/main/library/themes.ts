@@ -100,14 +100,14 @@ export function loadUserThemes(libraryRoot: string): UserThemes {
 }
 
 export const EXAMPLE_THEME = {
-  name: 'Midnight Ember',
-  description: 'Example theme: warm fixed accent, deeper glass. Edit or copy this file; changes apply live.',
+  name: 'Rosewood',
+  description: 'Example theme: warm panels and a fixed copper accent. Edit or copy this file; changes apply live.',
   scheme: 'auto',
   artTint: false,
   accent: '#ff7a45',
-  tokens: { 'r-lg': '16px', 'glass-blur': '34px' },
-  light: { 'bg-solid': '#f6f1ec', 'glass-bg': 'rgb(255 250 245 / 0.58)' },
-  dark: { 'bg-solid': '#141010', 'glass-bg': 'rgb(40 30 28 / 0.5)', fg: '#f7efe9' },
+  tokens: { 'r-lg': '14px' },
+  light: { base: '#efe6dc', panel: '#fbf6f0', elev: '#f1e8de' },
+  dark: { base: '#0c0807', panel: '#181110', elev: '#2a201d', fg: '#f7efe9' },
   css: ['/* Any CSS works here, e.g.: */', '.sidebar { letter-spacing: 0.01em; }'],
 }
 

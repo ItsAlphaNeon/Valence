@@ -37,10 +37,18 @@ interface Registered {
   afterDone?: (payload: unknown, release: SourceRelease) => Promise<void>
 }
 
+type JobFields = Partial<Pick<JobInfo, 'status' | 'stage' | 'progress' | 'message' | 'error' | 'attempts' | 'reportId' | 'review'>>
+
 interface Running {
   ctrl: AbortController
   lastBroadcast: number
+  /** Progress held back by the throttle; a trailing timer sends the latest. */
+  pending: JobFields | null
+  timer: NodeJS.Timeout | null
 }
+
+/** Progress updates (DB write + IMPORT.job broadcast) per job are at most one per this interval. */
+export const PROGRESS_INTERVAL_MS = 250
 
 const ACTIVE: JobStatus[] = ['queued', 'running', 'review']
 const RETRYABLE: JobStatus[] = ['failed', 'cancelled', 'done']
@@ -78,6 +86,7 @@ export class ImportQueueImpl implements ImportQueue {
   private pipelineWaiters: Array<() => void> = []
   private timer: NodeJS.Timeout | null = null
   private stopped = false
+  private activity = new Set<() => void>()
 
   constructor(private deps: QueueDeps) {
     this.paused = kvGet<Record<string, string>>(deps.db, 'import.pausedSources', {})
@@ -214,6 +223,31 @@ export class ImportQueueImpl implements ImportQueue {
     for (const r of this.running.values()) r.ctrl.abort()
   }
 
+  /** Called (synchronously) whenever a job changes; listeners should throttle their own work. */
+  onActivity(cb: () => void): () => void {
+    this.activity.add(cb)
+    return () => this.activity.delete(cb)
+  }
+
+  /** Queued and running jobs with their progress (cheap; for the taskbar progress bar). */
+  activeProgress(): Array<{ id: string; status: 'queued' | 'running'; progress: number }> {
+    return this.deps.db.prepare("SELECT id, status, coalesce(progress, 0) AS progress FROM jobs WHERE status IN ('queued', 'running')").all() as Array<{
+      id: string
+      status: 'queued' | 'running'
+      progress: number
+    }>
+  }
+
+  private notify(): void {
+    for (const cb of this.activity) {
+      try {
+        cb()
+      } catch {
+        /* a listener's problem */
+      }
+    }
+  }
+
   /** Resolves once nothing is queued or running (tests, CLI import). */
   async idle(pollMs = 100): Promise<void> {
     for (;;) {
@@ -243,7 +277,9 @@ export class ImportQueueImpl implements ImportQueue {
     return true
   }
 
-  private update(id: string, f: Partial<Pick<JobInfo, 'status' | 'stage' | 'progress' | 'message' | 'error' | 'attempts' | 'reportId' | 'review'>>): void {
+  private update(id: string, f: JobFields, fromProgress = false): void {
+    // Any other change supersedes throttled progress (and must not be overwritten by it later).
+    if (!fromProgress) this.dropPendingProgress(id)
     const cols: string[] = []
     const vals: unknown[] = []
     const map: Record<string, string> = { status: 'status', stage: 'stage', progress: 'progress', message: 'message', error: 'error', attempts: 'attempts', reportId: 'report_id', review: 'review_json' }
@@ -256,10 +292,45 @@ export class ImportQueueImpl implements ImportQueue {
     this.deps.db.prepare(`UPDATE jobs SET ${cols.join(', ')} WHERE id = ?`).run(...vals)
     const job = this.get(id)
     if (job) this.deps.broadcast(IMPORT.job, job)
+    this.notify()
+  }
+
+  private dropPendingProgress(id: string): void {
+    const run = this.running.get(id)
+    if (!run) return
+    if (run.timer) clearTimeout(run.timer)
+    run.timer = null
+    run.pending = null
+  }
+
+  /**
+   * Throttled progress: the first update in an interval goes out at once, later ones in the same
+   * interval are merged and sent when it ends, so the last state always arrives. Completion
+   * (fraction 1) and status changes are never delayed.
+   */
+  private reportProgress(id: string, state: Running, f: JobFields): void {
+    const now = Date.now()
+    const wait = state.lastBroadcast + PROGRESS_INTERVAL_MS - now
+    if (wait <= 0 || (f.progress ?? 0) >= 1) {
+      this.dropPendingProgress(id)
+      state.lastBroadcast = now
+      this.update(id, f, true)
+      return
+    }
+    state.pending = { ...state.pending, ...f }
+    state.timer ??= setTimeout(() => {
+      state.timer = null
+      const pending = state.pending
+      state.pending = null
+      if (!pending || this.running.get(id) !== state) return
+      state.lastBroadcast = Date.now()
+      this.update(id, pending, true)
+    }, wait)
   }
 
   private changed(): void {
     this.deps.broadcast(IMPORT.jobsChanged, this.list())
+    this.notify()
   }
 
   private schedule(delayMs = 0): void {
@@ -325,7 +396,7 @@ export class ImportQueueImpl implements ImportQueue {
 
   private async run(job: JobInfo, payload: unknown, reg: Registered): Promise<void> {
     const ctrl = new AbortController()
-    const state: Running = { ctrl, lastBroadcast: 0 }
+    const state: Running = { ctrl, lastBroadcast: 0, pending: null, timer: null }
     this.running.set(job.id, state)
     this.archiveHeld.delete(job.id)
     const claimKeys = job.releaseKeys.filter((k) => !k.startsWith('import:'))
@@ -339,12 +410,8 @@ export class ImportQueueImpl implements ImportQueue {
     }
     const remote = job.source !== 'import'
     const split = remote ? 0.6 : 0.05
-    const progress = (fraction: number, message?: string, stage?: string) => {
-      const now = Date.now()
-      if (now - state.lastBroadcast < 250 && fraction < 1) return
-      state.lastBroadcast = now
-      this.update(job.id, { progress: Math.max(0, Math.min(1, fraction)), ...(message !== undefined ? { message } : {}), ...(stage ? { stage } : {}) })
-    }
+    const progress = (fraction: number, message?: string, stage?: string) =>
+      this.reportProgress(job.id, state, { progress: Math.max(0, Math.min(1, fraction)), ...(message !== undefined ? { message } : {}), ...(stage ? { stage } : {}) })
     this.update(job.id, { status: 'running', stage: 'acquire', progress: 0, error: null, message: remote ? 'Downloading' : 'Preparing' })
     this.changed()
     try {
@@ -376,6 +443,7 @@ export class ImportQueueImpl implements ImportQueue {
     } catch (e) {
       await this.fail(job, e, ctrl.signal.aborted)
     } finally {
+      this.dropPendingProgress(job.id)
       this.running.delete(job.id)
       if (claims && claimKeys.length) claims.release(claimKeys)
       this.changed()

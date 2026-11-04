@@ -44,13 +44,21 @@ async function refreshStats(): Promise<void> {
 
 let bumpTimer: ReturnType<typeof setTimeout> | null = null
 
+const favoriteListeners = new Set<() => void>()
+/** Runs right away whenever favorites change (before the debounced library refresh). */
+export function onFavoritesChanged(fn: () => void): () => void {
+  favoriteListeners.add(fn)
+  return () => favoriteListeners.delete(fn)
+}
+
 export function initLibraryState(): void {
   void refreshPlaylists()
   void refreshStats()
   void invoke<Record<string, unknown>>(SETTINGS.all).then((settings) => useLib.setState({ settings }))
   void invoke<JobInfo[]>(IMPORT.jobs).then((jobs) => useLib.setState({ jobs }))
   void invoke<Record<string, string>>(IMPORT.pausedSources).then((pausedSources) => useLib.setState({ pausedSources }))
-  on<[{ playlists?: boolean; plays?: boolean } | undefined]>(LIB.changed, (what) => {
+  on<[{ playlists?: boolean; plays?: boolean; favorites?: boolean } | undefined]>(LIB.changed, (what) => {
+    if (what?.favorites) for (const fn of favoriteListeners) fn()
     if (what?.playlists) {
       void refreshPlaylists()
       useLib.setState((s) => ({ playlistsVersion: s.playlistsVersion + 1 }))

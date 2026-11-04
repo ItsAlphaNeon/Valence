@@ -1,88 +1,51 @@
-// Applies appearance settings (ui.theme, ui.tier, ui.accent) at startup and whenever they change.
-// "auto" tier: a static guess from GPU status/OS preferences, refined once by a short frame-time
-// benchmark (remembered per machine) and downgraded later if the UI starts dropping frames.
+// Applies appearance settings at startup and whenever one changes: palette (ui.theme), accent
+// (ui.accent + ui.artTheme), density, motion, text size, zoom and colorful headers. Also tells the
+// main process which colors to use for the window controls.
 
-import { SETTINGS, type AppInfo } from '@shared/ipc/settings'
-import { invoke, on } from '../lib/ipc'
-import { applyAccent, setFixedAccent } from './accent'
-import { applyTheme, capTier, findTheme, watchUserThemes, type ThemeDef } from './themes'
-import { applyTier, downgrade, guessTier, measureFrames, TIERS, type Tier } from './tiers'
+import { SETTINGS } from '@shared/ipc/settings'
+import { invoke, on, send } from '../lib/ipc'
+import { accentHex, applyAccent, artThemeSetting, configureAccent } from './accent'
+import { applyTheme, findTheme, watchUserThemes } from './themes'
 import { usePlayer } from '../state/player'
 
-const AUTO_KEY = 'valence.tier.auto'
 let settings: Record<string, unknown> = {}
-let gpu: Record<string, string> | undefined
 
-function theme(): ThemeDef {
-  return findTheme(settings['ui.theme'])
-}
+const TEXT_SCALE: Record<string, number> = { small: 0.93, default: 1, large: 1.07, larger: 1.14 }
+const LYRICS_SCALE: Record<string, number> = { small: 0.82, default: 1, large: 1.22 }
 
-function autoTier(): Tier {
-  const saved = localStorage.getItem(AUTO_KEY) as Tier | null
-  return saved && TIERS.includes(saved) ? saved : guessTier(gpu)
-}
-
-function currentTier(): Tier {
-  const pref = settings['ui.tier'] as Tier | 'auto' | undefined
-  const t = pref && pref !== 'auto' && TIERS.includes(pref) ? pref : autoTier()
-  return capTier(t, theme())
-}
+export { artThemeSetting }
 
 function apply(): void {
-  const th = theme()
+  const th = findTheme(settings['ui.theme'])
   applyTheme(th)
-  applyTier(currentTier())
-  const accent = settings['ui.accent']
-  if (typeof accent === 'string' && /^#[0-9a-f]{6}$/i.test(accent)) setFixedAccent(accent)
-  else if (th.accent) setFixedAccent(th.accent)
-  else setFixedAccent(null)
-  if (th.artTint === false && !th.accent && !(typeof accent === 'string' && accent.startsWith('#'))) setFixedAccent('#5e5ce6')
+  const root = document.documentElement
+  const chosen = settings['ui.accent']
+  const accent = typeof chosen === 'string' && chosen !== 'art' ? accentHex(chosen) : (th.accent ?? accentHex(null))
+  configureAccent({ accent, artTheme: th.artTint === false ? 'off' : artThemeSetting(settings) })
+  root.dataset.density = settings['ui.density'] === 'compact' ? 'compact' : 'comfortable'
+  const motion = settings['ui.motion']
+  root.dataset.motion = motion === 'off' || motion === 'on' ? motion : 'system'
+  root.dataset.headers = settings['ui.headerColors'] === false ? 'off' : 'on'
+  root.style.setProperty('--font-scale', String(TEXT_SCALE[String(settings['ui.textSize'] ?? 'default')] ?? 1))
+  root.style.setProperty('--lyrics-scale', String(LYRICS_SCALE[String(settings['ui.lyrics.size'] ?? 'default')] ?? 1))
+  const zoom = Number(settings['ui.zoom'] ?? 1)
+  send('window:zoom', Number.isFinite(zoom) && zoom > 0 ? zoom : 1)
+  // Window controls (Windows/Linux) follow the palette, not the OS.
+  requestAnimationFrame(() => {
+    const cs = getComputedStyle(root)
+    send('window:chrome', { symbolColor: cs.getPropertyValue('--fg').trim() || '#ffffff', background: cs.getPropertyValue('--base').trim() || '#000000' })
+  })
   void applyAccent(usePlayer.getState().currentArtHash)
 }
 
 export async function initAppearance(): Promise<void> {
-  const [all, info] = await Promise.all([
-    invoke<Record<string, unknown>>(SETTINGS.all).catch(() => ({})),
-    invoke<AppInfo>(SETTINGS.appInfo).catch(() => null),
-    watchUserThemes(() => apply()),
-  ])
+  const [all] = await Promise.all([invoke<Record<string, unknown>>(SETTINGS.all).catch(() => ({})), watchUserThemes(() => apply())])
   settings = all
-  gpu = info?.gpu
   apply()
   on<[string, unknown]>(SETTINGS.changed, (k, v) => {
     if (!k.startsWith('ui.')) return
     settings = { ...settings, [k]: v }
     apply()
   })
-  matchMedia('(prefers-reduced-transparency: reduce)').addEventListener('change', apply)
-}
-
-/** First-run benchmark for "auto", then a light watchdog that steps down on sustained jank. */
-export function startTierWatch(): void {
-  const isAuto = () => (settings['ui.tier'] ?? 'auto') === 'auto'
-  if (isAuto() && !localStorage.getItem(AUTO_KEY)) {
-    setTimeout(async () => {
-      const p90 = await measureFrames(2000)
-      let t = guessTier(gpu)
-      if (p90 > 34) t = downgrade(downgrade(t))
-      else if (p90 > 22) t = downgrade(t)
-      localStorage.setItem(AUTO_KEY, t)
-      apply()
-    }, 2500)
-  }
-  let strikes = 0
-  setInterval(async () => {
-    if (!isAuto() || document.hidden) return
-    const p90 = await measureFrames(1000)
-    strikes = p90 > 40 ? strikes + 1 : 0
-    if (strikes >= 3) {
-      strikes = 0
-      const cur = autoTier()
-      const next = downgrade(cur)
-      if (next !== cur) {
-        localStorage.setItem(AUTO_KEY, next)
-        apply()
-      }
-    }
-  }, 60_000)
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', apply)
 }

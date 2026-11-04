@@ -1,6 +1,6 @@
 // Library IPC contract (renderer <-> main).
 
-import type { AlbumRow, ArtistRow, GenreRow, LibraryStats, TrackQuery, TrackRow, TrackTags } from '../types'
+import type { AlbumRow, ArtistRow, FavoriteCounts, FavoriteKind, GenreRow, LibraryCollection, LibraryStats, TrackQuery, TrackRow, TrackTags } from '../types'
 
 export const LIB = {
   stats: 'library:stats',
@@ -32,7 +32,24 @@ export const LIB = {
   deletePlaylist: 'library:deletePlaylist',
   saveSmartPlaylist: 'library:saveSmartPlaylist',
   playItems: 'library:playItems',
-  /** broadcast: library contents changed ({ tracks?: number[]; albums?: number[]; full?: boolean }) */
+  /** (SetLikedRequest, liked: boolean) → void; then broadcasts `changed` with { favorites: true, tracks?, albums? }. */
+  setLiked: 'library:setLiked',
+  /** () → FavoriteCounts */
+  favoriteCounts: 'library:favoriteCounts',
+  /** (AlbumQuery with offset/limit) → AlbumsPage */
+  albumsPage: 'library:albumsPage',
+  /** () → HomeData */
+  home: 'library:home',
+  /** (StatsRange) → ListeningStats */
+  listeningStats: 'library:listeningStats',
+  /** (seedTrackIds: number[], excludeIds: number[], n: number) → number[] track ids (main library), for autoplay. */
+  similar: 'library:similar',
+  /** (albumId) → ArtOriginal | null: the archived cover-original if there is one, else the full-size embedded art. */
+  artOriginal: 'library:artOriginal',
+  /**
+   * broadcast: library contents changed
+   * ({ tracks?: number[]; albums?: number[]; full?: boolean; plays?: boolean; playlists?: boolean; favorites?: boolean })
+   */
   changed: 'library:changed',
   /** broadcast: scan progress ({ done, total } | null when finished) */
   scanProgress: 'library:scanProgress',
@@ -78,4 +95,82 @@ export interface LibraryPlayItem {
   rg?: { trackGain?: number; trackPeak?: number; albumGain?: number; albumPeak?: number }
 }
 
-export type { AlbumRow, ArtistRow, GenreRow, LibraryStats, TrackQuery, TrackRow }
+/** library:setLiked's first argument. Artists are named by album artist (matched case-insensitively). */
+export type SetLikedRequest = { kind: 'track' | 'album'; ids: number[] } | { kind: 'artist'; names: string[] }
+
+/** library:albums / library:albumsPage query. */
+export interface AlbumQuery {
+  albumArtist?: string
+  genre?: string
+  search?: string
+  /** Default 'artist'; with `liked` and no sort, most recently liked first. */
+  sort?: 'artist' | 'title' | 'year' | 'added' | 'likedAt'
+  limit?: number
+  offset?: number
+  /** Default 'main' ('all' with `liked`). */
+  collection?: LibraryCollection
+  ripKinds?: string[]
+  /** Only liked albums. */
+  liked?: boolean
+}
+
+export interface AlbumsPage {
+  rows: AlbumRow[]
+  /** Albums matching the query, ignoring offset/limit. */
+  total: number
+}
+
+/** Home screen shelves. Main library only (no rips). */
+export interface HomeData {
+  /** Albums by most recent play (≤ 12). */
+  recentlyPlayed: AlbumRow[]
+  /** Newest albums (≤ 12). */
+  recentlyAdded: AlbumRow[]
+  /** Most recently liked albums (≤ 12). */
+  favoriteAlbums: AlbumRow[]
+  /** Most played tracks of the last 90 days (≤ 10). */
+  mostPlayed: Array<TrackRow & { plays: number }>
+  /** Most played album artists of the last 90 days (≤ 10; Various Artists left out). */
+  topArtists: Array<ArtistRow & { plays: number }>
+  /** Albums played before but not in the last 60 days (topped up with never-played ones); changes daily (≤ 12). */
+  rediscover: AlbumRow[]
+  /** Liked tracks in the library. */
+  likedCount: number
+}
+
+/** '7d' / '30d' / '90d' are calendar days including today; 'year' is the last 365 days. */
+export type StatsRange = '7d' | '30d' | '90d' | 'year' | 'all'
+
+export interface ListeningStats {
+  /** Plays (not skips) in range. */
+  plays: number
+  skips: number
+  /** Time listened in range, skips included. */
+  ms: number
+  distinctTracks: number
+  distinctArtists: number
+  /** All collections (rips included); `hqRip` tells them apart. */
+  topTracks: Array<TrackRow & { plays: number }>
+  topAlbums: Array<AlbumRow & { plays: number }>
+  /** By album artist (track artist on Various Artists compilations). */
+  topArtists: Array<{ name: string; plays: number; ms: number; artHash: string | null }>
+  /** Every local day from the range start (for 'year' / 'all': the first play, at most 400 days back) to today. */
+  byDay: Array<{ day: string /* YYYY-MM-DD local */; plays: number; ms: number }>
+  /** Plays per local hour 0..23. */
+  byHour: number[]
+  /** Plays per weekday, Monday = 0. */
+  byWeekday: number[]
+  /** Main-library tracks per format, most common first ('FLAC', 'FLAC 24/96', 'MP3 320', 'AAC 256'...). */
+  formats: Array<{ label: string; tracks: number }>
+  library: LibraryStats
+  /** Earliest play in range (ever, for 'all'), or null. */
+  firstPlay: number | null
+}
+
+export interface ArtOriginal {
+  /** valence-art://original/<albumId>?v=<mtime> (archive) or valence-art://img/<hash>?s=0 (embedded, full size). */
+  url: string
+  source: 'archive' | 'embedded'
+}
+
+export type { AlbumRow, ArtistRow, FavoriteCounts, FavoriteKind, GenreRow, LibraryStats, TrackQuery, TrackRow }
