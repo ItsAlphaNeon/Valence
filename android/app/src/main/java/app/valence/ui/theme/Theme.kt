@@ -5,6 +5,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
@@ -12,6 +13,7 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
@@ -116,5 +118,9 @@ fun ValenceTheme(mode: String, dynamic: Boolean, art: Color?, content: @Composab
     val target = if (dynamic) base else base.tinted(art, isDark)
     val primary by animateColorAsState(target.primary, tween(600), label = "primary")
     val primaryContainer by animateColorAsState(target.primaryContainer, tween(600), label = "primaryContainer")
-    MaterialTheme(colorScheme = target.copy(primary = primary, primaryContainer = primaryContainer, tertiary = primary), typography = type, content = content)
+    val scheme = target.copy(primary = primary, primaryContainer = primaryContainer, tertiary = primary)
+    MaterialTheme(colorScheme = scheme, typography = type) {
+        // Screens drawn outside a Surface (Now Playing's gradient) would otherwise get black text and icons.
+        CompositionLocalProvider(LocalContentColor provides scheme.onBackground, content = content)
+    }
 }
