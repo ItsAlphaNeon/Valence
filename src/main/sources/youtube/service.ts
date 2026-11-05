@@ -1,6 +1,11 @@
 // YouTube playlist → season albums. Syncs the user's public SiIvaGunner playlist on startup, every six
 // hours and on demand; queues uploads not yet in the library; keeps each season album numbered by
 // upload time; owns the season table and covers (re-filing and re-embedding when they change).
+//
+// Numbering is per season: an import renumbers its own season once the batch is done, and startup
+// renumbers only the seasons left out of order (a renumber cut short by quitting, or rips numbered
+// by an older version). Ties in upload time go by video id, then path, so every device numbers a
+// season the same way and they never fight over the tags through Syncthing.
 
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -19,6 +24,13 @@ const SYNC_EVERY_MS = 6 * 3600_000
 const FIRST_SYNC_DELAY_MS = 20_000
 const RENUMBER_DELAY_MS = 15_000
 
+type SeasonRow = { id: number; rel_path: string; youtube_uploaded: string | null; track_no: number | null; track_total: number | null }
+
+/** Tracks whose number isn't their place in the season (rows in upload order), with the right one. */
+export function misnumbered(rows: SeasonRow[]): Array<{ id: number; track: number; total: number }> {
+  return rows.flatMap((r, i) => (r.track_no === i + 1 && r.track_total === rows.length ? [] : [{ id: r.id, track: i + 1, total: rows.length }]))
+}
+
 interface StateFile {
   lastSync: number | null
   playlistTitle: string | null
@@ -33,6 +45,7 @@ export class YoutubeService {
   private timer: NodeJS.Timeout | null = null
   private firstTimer: NodeJS.Timeout | null = null
   private renumberTimers = new Map<string, NodeJS.Timeout>()
+  private renumbering: Promise<unknown> = Promise.resolve()
   private placeholders = new Map<string, Buffer>()
   readonly seasons: SeasonStore
 
@@ -80,17 +93,27 @@ export class YoutubeService {
         this.broadcast()
       }
     })
+    // Once the startup scan has the index matching the disk, fix any season left out of order.
+    void this.library.idle().then(() => {
+      for (const album of this.misnumberedSeasons()) this.scheduleRenumber(album)
+    })
   }
 
   stop(): void {
+    this.stopSync()
+    for (const t of this.renumberTimers.values()) clearTimeout(t)
+    this.renumberTimers.clear()
+  }
+
+  private stopSync(): void {
     if (this.timer) clearInterval(this.timer)
     if (this.firstTimer) clearTimeout(this.firstTimer)
-    for (const t of this.renumberTimers.values()) clearTimeout(t)
     this.timer = this.firstTimer = null
   }
 
   private reschedule(): void {
-    this.stop()
+    // Only the sync timers: a pending renumber still has to happen.
+    this.stopSync()
     if (!this.autoSync || !this.url) return
     const due = (this.state.lastSync ?? 0) + SYNC_EVERY_MS - Date.now()
     this.firstTimer = setTimeout(() => void this.sync().catch(() => {}), Math.max(FIRST_SYNC_DELAY_MS, Math.min(due, SYNC_EVERY_MS)))
@@ -185,10 +208,17 @@ export class YoutubeService {
 
   // ---- season albums ----
 
-  private albumTracks(album: string): Array<{ id: number; rel_path: string; youtube_uploaded: string | null; track_no: number | null; track_total: number | null }> {
+  /** A season's rips in upload order (the same order on every device). */
+  private albumTracks(album: string): SeasonRow[] {
     return this.library.db
-      .prepare("SELECT id, rel_path, youtube_uploaded, track_no, track_total FROM tracks WHERE hq_rip = 'YouTube' AND album = ? ORDER BY coalesce(youtube_uploaded, date), id")
+      .prepare("SELECT id, rel_path, youtube_uploaded, track_no, track_total FROM tracks WHERE hq_rip = 'YouTube' AND album = ? ORDER BY coalesce(youtube_uploaded, date), youtube_video_id, rel_path")
       .all(album) as never
+  }
+
+  /** Season albums with any track whose number doesn't match its place by upload time. */
+  misnumberedSeasons(): string[] {
+    const albums = this.library.db.prepare("SELECT DISTINCT album FROM tracks WHERE hq_rip = 'YouTube' AND album IS NOT NULL").all() as Array<{ album: string }>
+    return albums.map((r) => r.album).filter((a) => misnumbered(this.albumTracks(a)).length > 0)
   }
 
   /** Provisional position for a new upload in its season album. */
@@ -210,17 +240,22 @@ export class YoutubeService {
     this.renumberTimers.set(album, t)
   }
 
-  /** Writes track N of M (by upload time) into every track of a season album whose number is off. */
-  async renumber(album: string): Promise<number> {
-    const rows = this.albumTracks(album)
-    let changed = 0
-    for (const [i, r] of rows.entries()) {
-      if (r.track_no === i + 1 && r.track_total === rows.length) continue
-      const res = await this.library.editTags({ ids: [r.id], patch: { tracknumber: i + 1, totaltracks: rows.length } })
-      if (res.errors.length) this.ctx.log.warn(`youtube: could not renumber ${r.rel_path}`, res.errors[0].error)
-      else changed++
-    }
-    return changed
+  /**
+   * Writes track N of M (by upload time) into every track of a season album whose number is off.
+   * One season at a time; returns how many tracks were rewritten.
+   */
+  renumber(album: string): Promise<number> {
+    const run = this.renumbering.then(() => this.doRenumber(album))
+    this.renumbering = run.catch(() => {})
+    return run
+  }
+
+  private async doRenumber(album: string): Promise<number> {
+    const edits = misnumbered(this.albumTracks(album))
+    if (!edits.length) return 0
+    const res = await this.library.editTagsEach(edits.map((e) => ({ id: e.id, patch: { tracknumber: e.track, totaltracks: e.total } })))
+    if (res.errors.length) this.ctx.log.warn(`youtube: could not renumber ${res.errors.length} rip(s) in ${album}`, res.errors[0].error)
+    return res.updated
   }
 
   async coverFor(season: SeasonDef, dir: string): Promise<string> {

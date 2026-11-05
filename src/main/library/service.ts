@@ -145,6 +145,11 @@ export class LibraryService {
     else await this.rescan()
   }
 
+  /** Resolves once no scan is running (the startup scan included), so the index matches the disk. */
+  async idle(): Promise<void> {
+    while (this.scanPromise) await this.scanPromise.catch(() => {})
+  }
+
   /** Full diff scan; concurrent calls coalesce. */
   rescan(force = false): Promise<ScanResult> {
     if (this.scanPromise) {
@@ -343,26 +348,38 @@ export class LibraryService {
   }
 
   /** Get Info edits: rewrite tags, then re-path the file per the template (user edits move on this device). */
-  async editTags(req: EditTagsRequest, artwork?: { data: Buffer; mime: string } | null): Promise<EditTagsResult> {
+  editTags(req: EditTagsRequest, artwork?: { data: Buffer; mime: string } | null): Promise<EditTagsResult> {
+    return this.editTagsEach(req.ids.map((id) => ({ id, patch: req.patch })), artwork)
+  }
+
+  /** editTags with a patch per track (a season renumber); everything is re-indexed together at the end. */
+  async editTagsEach(edits: Array<{ id: number; patch: EditTagsRequest['patch'] }>, artwork?: { data: Buffer; mime: string } | null): Promise<EditTagsResult> {
     const res: EditTagsResult = { updated: 0, moved: 0, errors: [] }
     const changed: string[] = []
     const taken = new Set<string>()
-    const albumsBefore = this.albumKeysOf(req.ids)
-    for (const t of tracksByIds(this.db, req.ids)) {
+    const patches = new Map(edits.map((e) => [e.id, e.patch]))
+    const ids = [...patches.keys()]
+    const albumsBefore = this.albumKeysOf(ids)
+    for (const t of tracksByIds(this.db, ids)) {
       try {
         const abs = toAbs(this.root, t.relPath)
         const p = await probeFile(abs, { covers: true })
         const tags: TrackTags = { ...p.tags }
-        for (const [k, v] of Object.entries(req.patch)) {
+        for (const [k, v] of Object.entries(patches.get(t.id) ?? {})) {
           if (v === null || v === '') delete (tags as Record<string, unknown>)[k]
           else (tags as Record<string, unknown>)[k] = v
         }
         await writeTags(abs, tags, { artwork: artwork === undefined ? p.picture : artwork })
         res.updated++
         const ext = t.relPath.slice(t.relPath.lastIndexOf('.') + 1)
-        const target = await chooseRelPath(this.root, tags, ext, { template: this.templateFor(tags), isSelf: (r) => r.toLowerCase() === t.relPath.toLowerCase(), taken })
-        taken.add(target.toLowerCase())
-        if (target !== t.relPath) {
+        // pathKey folds case and Unicode normalization: on macOS, Syncthing stores "é" as "e" + a
+        // combining accent, and the file must still count as itself (or it becomes "Title (2)").
+        const self = pathKey(t.relPath)
+        const target = await chooseRelPath(this.root, tags, ext, { template: this.templateFor(tags), isSelf: (r) => pathKey(r) === self, taken })
+        taken.add(pathKey(target))
+        // A target that differs only in normalization is the same name: leave the file where it is.
+        const moving = target.normalize('NFC') !== t.relPath.normalize('NFC')
+        if (moving) {
           await moveWithinLibrary(this.root, t.relPath, target)
           // Keep the row (id, added_at, path-keyed plays) by renaming it in place before re-indexing.
           this.db.prepare('UPDATE tracks SET rel_path = ?, path_key = ? WHERE id = ?').run(target, pathKey(target), t.id)
@@ -372,7 +389,7 @@ export class LibraryService {
           this.playlists.pathMoved(t.relPath, target)
           res.moved++
         }
-        changed.push(target)
+        changed.push(moving ? target : t.relPath)
       } catch (e) {
         res.errors.push({ id: t.id, error: (e as Error).message })
       }

@@ -101,3 +101,76 @@ describe('opus renumber', () => {
     expect(await pcmMd5(path)).toBe(audio)
   })
 })
+
+// Ogg packets that are a multiple of 255 bytes long need a closing 0 lacing value.
+describe('ogg comment packets of a multiple of 255 bytes', () => {
+  const sb = sandbox('taglib-ogg')
+  afterAll(() => sb.cleanup())
+
+  interface PageInfo { start: number; flags: number; segs: number[]; dataStart: number; end: number }
+  function pages(buf: Buffer): PageInfo[] {
+    const out: PageInfo[] = []
+    for (let pos = 0; pos + 27 <= buf.length && buf.toString('latin1', pos, pos + 4) === 'OggS'; ) {
+      const n = buf[pos + 26]
+      const segs = [...buf.subarray(pos + 27, pos + 27 + n)]
+      const dataStart = pos + 27 + n
+      const end = dataStart + segs.reduce((a, b) => a + b, 0)
+      out.push({ start: pos, flags: buf[pos + 5], segs, dataStart, end })
+      pos = end
+    }
+    return out
+  }
+  /** The comment packet (second header packet, from page 1): its length and whether a lacing value below 255 closes it. */
+  function comment(buf: Buffer): { length: number; closed: boolean; page: PageInfo } {
+    const all = pages(buf)
+    let length = 0
+    for (let i = 1; i < all.length; i++) {
+      for (const s of all[i].segs) {
+        length += s
+        if (s < 255) return { length, closed: true, page: all[i] }
+      }
+      if (!(all[i + 1] && all[i + 1].flags & 1)) return { length, closed: false, page: all[i] }
+    }
+    throw new Error('no comment packet')
+  }
+
+  let path: string
+  let audio: string
+  let fill = -1
+  beforeAll(async () => {
+    path = await genAudio(join(sb.dir, 'rip.opus'), 'opus', { seconds: 20 })
+    audio = await pcmMd5(path)
+    // Grow the comment a byte at a time until the packet is an exact multiple of 255.
+    for (let k = 0; k < 300 && fill < 0; k++) {
+      writeTags(path, { title: 'Rip', album: 'SiIvaGunner: Season X', tracknumber: 1, comment: 'x'.repeat(k) })
+      if (comment(readFileSync(path)).length % 255 === 0) fill = k
+    }
+    expect(fill).toBeGreaterThanOrEqual(0)
+  })
+
+  it('closes the packet when writing it', () => {
+    const c = comment(readFileSync(path))
+    expect(c.length % 255).toBe(0)
+    expect(c.closed).toBe(true)
+  })
+
+  it('reads and rewrites a file written without the closing value, keeping the audio', async () => {
+    // Recreate what earlier writes left: drop the closing 0 and re-checksum the page.
+    const buf = readFileSync(path)
+    const c = comment(buf)
+    expect(buf[c.page.dataStart - 1]).toBe(0)
+    const page = Buffer.concat([buf.subarray(c.page.start, c.page.dataStart - 1), buf.subarray(c.page.dataStart, c.page.end)])
+    page[26] -= 1
+    page.writeUInt32LE(0, 22)
+    page.writeUInt32LE(ByteVector.fromByteArray(page).checksum, 22)
+    const broken = join(sb.dir, 'broken.opus')
+    fs.writeFileSync(broken, Buffer.concat([buf.subarray(0, c.page.start), page, buf.subarray(c.page.end)]))
+    expect(comment(readFileSync(broken)).closed).toBe(false)
+
+    expect((await probeFile(broken)).tags.tracknumber).toBe(1)
+    writeTags(broken, { title: 'Rip', album: 'SiIvaGunner: Season X', tracknumber: 85, totaltracks: 231, comment: 'x'.repeat(fill) })
+    expect(comment(readFileSync(broken)).closed).toBe(true)
+    expect((await probeFile(broken)).tags).toMatchObject({ tracknumber: 85, totaltracks: 231 })
+    expect(await pcmMd5(broken)).toBe(audio)
+  })
+})

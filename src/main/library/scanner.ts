@@ -1,7 +1,7 @@
 // Walks the library root, diffs against the index by size+mtime and (re)probes changed files.
 
 import { opendir, stat } from 'node:fs/promises'
-import { existsSync } from 'node:fs'
+import { readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { isIgnoredName, isReservedTopLevel, isSyncConflict } from '@shared/sanitize'
 import { isAudioPath, probeFile } from '@main/tags/read'
@@ -18,6 +18,37 @@ export interface WalkResult {
   files: WalkEntry[]
   conflicts: WalkEntry[]
   playlists: WalkEntry[]
+}
+
+/**
+ * Whether each path is on disk under exactly that spelling. existsSync also says yes for another
+ * spelling of the same file on macOS and Windows (case, and on macOS Unicode normalization: Syncthing
+ * there renames "é" to "e" + combining accent), which kept the old row of a renamed file alive next
+ * to its new one. Directory listings are cached for the life of the checker.
+ */
+export function exactPaths(root: string): (rel: string) => boolean {
+  const listings = new Map<string, Set<string> | null>()
+  const names = (dir: string) => {
+    let set = listings.get(dir)
+    if (set === undefined) {
+      try {
+        set = new Set(readdirSync(join(root, ...dir.split('/').filter(Boolean))))
+      } catch {
+        set = null
+      }
+      listings.set(dir, set)
+    }
+    return set
+  }
+  return (rel) => {
+    const parts = rel.split('/')
+    return parts.every((part, i) => !!names(parts.slice(0, i).join('/'))?.has(part))
+  }
+}
+
+/** A file name the library indexes as a track (not a Syncthing conflict copy, temp or hidden file). */
+export function isTrackName(name: string): boolean {
+  return !isSyncConflict(name) && !isIgnoredName(name) && !name.startsWith('.') && isAudioPath(name)
 }
 
 export function shouldSkipDir(name: string, depth: number): boolean {
@@ -53,7 +84,7 @@ export async function walkLibrary(root: string, signal?: AbortSignal): Promise<W
           if (st) out.conflicts.push({ rel: childRel, size: st.size, mtimeMs: st.mtimeMs })
           continue
         }
-        if (isIgnoredName(ent.name) || ent.name.startsWith('.') || !isAudioPath(ent.name)) continue
+        if (!isTrackName(ent.name)) continue
         const st = await stat(childAbs).catch(() => null)
         if (st) out.files.push({ rel: childRel, size: st.size, mtimeMs: st.mtimeMs })
       }
@@ -118,12 +149,14 @@ export interface ScanOptions {
 export async function scanLibrary(opts: ScanOptions): Promise<ScanResult> {
   const t0 = Date.now()
   const { root, db, indexer } = opts
+  const onDisk = exactPaths(root)
   let walk: WalkResult
   if (opts.only) {
     const files: WalkEntry[] = []
     for (const rel of opts.only) {
       const st = await stat(join(root, rel)).catch(() => null)
-      if (st?.isFile() && isAudioPath(rel)) files.push({ rel, size: st.size, mtimeMs: st.mtimeMs })
+      // The watcher reports Syncthing conflict copies too; like the full walk, they aren't tracks.
+      if (st?.isFile() && isTrackName(rel.slice(rel.lastIndexOf('/') + 1)) && onDisk(rel)) files.push({ rel, size: st.size, mtimeMs: st.mtimeMs })
     }
     walk = { files, conflicts: [], playlists: [] }
   } else {
@@ -161,7 +194,7 @@ export async function scanLibrary(opts: ScanOptions): Promise<ScanResult> {
 
   // Probe in parallel, write in batched transactions.
   const pending: Array<{ f: WalkEntry; probe: Awaited<ReturnType<typeof probeFile>> }> = []
-  const pathExists = (rel: string) => seen.has(rel) || existsSync(join(root, rel))
+  const pathExists = (rel: string) => seen.has(rel) || onDisk(rel)
   const flush = () => {
     if (!pending.length) return
     const batch = pending.splice(0)
@@ -198,7 +231,8 @@ export async function scanLibrary(opts: ScanOptions): Promise<ScanResult> {
   if (gone.length) {
     db.transaction(() => {
       for (const rel of gone) {
-        if (existsSync(join(root, rel))) continue
+        // A conflict copy indexed by an earlier version goes too, though the file stays for Syncthing.
+        if (onDisk(rel) && isTrackName(rel.slice(rel.lastIndexOf('/') + 1))) continue
         if (indexer.removeByPath(rel)) result.removed++
       }
     })()

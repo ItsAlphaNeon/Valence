@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, statSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
 import { sandbox } from '../helpers/sandbox'
 import { genAudio } from '../helpers/audio'
 import { openDb } from '@main/db/db'
@@ -11,6 +11,7 @@ import { createLibraryLookup } from '@main/library/lookup'
 import { queryAlbums, queryArtists, queryTracks, libraryStats } from '@main/library/queries'
 import { PlaylistStore } from '@main/library/playlists'
 import { writeTags } from '@main/tags/write'
+import { probeFile } from '@main/tags/read'
 import { HlcClock } from '@main/sync/hlc'
 import { DeviceLog, readNewEvents } from '@main/sync/device-log'
 import { PlayLog } from '@main/sync/plays'
@@ -34,6 +35,79 @@ describe('sanitize additions', () => {
     for (const n of ['a.sync-conflict-20250101-120000-ABCDEFG.mp3', 'x.valence-tmp', '~syncthing~a.mp3.tmp', '.stfolder', 'desktop.ini'])
       expect(isIgnoredName(n)).toBe(true)
     expect(isIgnoredName('Song.mp3')).toBe(false)
+  })
+})
+
+describe('file names in another Unicode normalization', () => {
+  // On macOS, Syncthing renames every synced file to NFD ("é" as "e" + a combining accent), and the
+  // disk treats both spellings as one file. The index keeps one row per file, under the disk's spelling.
+  const sb = sandbox('nfd')
+  const root = join(sb.dir, 'Music')
+  const db = openDb(join(sb.dir, 'valence.db'))
+  const indexer = new Indexer(db)
+  const nfc = 'SiIvaGunner/Rips (2025)/Littleroot Town - Pokémon Ruby.mp3'
+  const nfd = nfc.normalize('NFD')
+  const abs = (rel: string) => join(root, ...rel.split('/'))
+  const rows = () => db.prepare('SELECT id, rel_path FROM tracks ORDER BY id').all() as Array<{ id: number; rel_path: string }>
+  afterAll(() => {
+    db.close()
+    sb.cleanup()
+  })
+
+  it('follows a rename to the other spelling instead of adding a second row', async () => {
+    mkdirSync(dirname(abs(nfc)), { recursive: true })
+    await genAudio(abs(nfc), 'mp3_128', { seconds: 1 })
+    writeTags(abs(nfc), { title: 'Littleroot Town - Pokémon Ruby', artist: 'SiIvaGunner', valence_id: 'v-nfd' })
+    await scanLibrary({ root, db, indexer })
+    const [before] = rows()
+    renameSync(abs(nfc), abs(nfd))
+    expect(readdirSync(dirname(abs(nfc)))).toEqual([nfd.slice(nfd.lastIndexOf('/') + 1)])
+    // The watcher reports both spellings in one batch.
+    await scanLibrary({ root, db, indexer, only: [nfc, nfd] })
+    expect(rows()).toEqual([{ id: before.id, rel_path: nfd }])
+    const again = await scanLibrary({ root, db, indexer })
+    expect(again.added + again.removed).toBe(0)
+  })
+
+  it('drops the leftover row an earlier version kept under the old spelling', async () => {
+    const st = statSync(abs(nfd))
+    indexer.upsert(nfc, { size: st.size, mtimeMs: st.mtimeMs }, await probeFile(abs(nfd)))
+    expect(rows()).toHaveLength(2)
+    const r = await scanLibrary({ root, db, indexer })
+    expect(r.removed).toBe(1)
+    expect(rows().map((x) => x.rel_path)).toEqual([nfd])
+  })
+})
+
+describe('Syncthing conflict copies', () => {
+  const sb = sandbox('conflict')
+  const root = join(sb.dir, 'Music')
+  const db = openDb(join(sb.dir, 'valence.db'))
+  const indexer = new Indexer(db)
+  const rel = 'SiIvaGunner/Rips (2025)/Lancer - DELTARUNE.opus'
+  const copy = 'SiIvaGunner/Rips (2025)/Lancer - DELTARUNE.sync-conflict-20261104-204122-UYQHYMI.opus'
+  const abs = (r: string) => join(root, ...r.split('/'))
+  const paths = () => (db.prepare('SELECT rel_path FROM tracks ORDER BY id').all() as Array<{ rel_path: string }>).map((r) => r.rel_path)
+  afterAll(() => {
+    db.close()
+    sb.cleanup()
+  })
+
+  it('are not indexed when the watcher reports them, and an indexed one is dropped (the file stays)', async () => {
+    mkdirSync(dirname(abs(rel)), { recursive: true })
+    await genAudio(abs(rel), 'opus', { seconds: 1 })
+    writeTags(abs(rel), { title: 'Lancer - DELTARUNE', artist: 'SiIvaGunner', valence_id: 'v-lancer' })
+    writeFileSync(abs(copy), readFileSync(abs(rel)))
+    await scanLibrary({ root, db, indexer })
+    await scanLibrary({ root, db, indexer, only: [copy] })
+    expect(paths()).toEqual([rel])
+    // What earlier versions did: index the copy as a track of its own.
+    const st = statSync(abs(copy))
+    indexer.upsert(copy, { size: st.size, mtimeMs: st.mtimeMs }, await probeFile(abs(copy)))
+    expect(paths()).toEqual([rel, copy])
+    await scanLibrary({ root, db, indexer })
+    expect(paths()).toEqual([rel])
+    expect(existsSync(abs(copy))).toBe(true)
   })
 })
 

@@ -9,7 +9,7 @@ import { extname, join } from 'node:path'
 import type { AudioFormat, TrackTags } from '@shared/types'
 import { encodeSourceQuality, decodeSourceQuality } from '@shared/quality'
 import { RIP_GENRE } from '@shared/types'
-import { cleanText } from '@shared/sanitize'
+import { cleanText, foldKey } from '@shared/sanitize'
 import type { Logger, SettingsStore, ValenceEnv } from '@main/context'
 import { SourceError, type SourceRelease, type Transport } from './source-types'
 import { probeFile, type ProbeResult } from '@main/tags/read'
@@ -309,9 +309,10 @@ export async function runPipeline(release: SourceRelease, deps: PipelineDeps, op
       const libRel = await chooseRelPath(env.libraryRoot, p.tags, ext, {
         template,
         taken,
-        isSelf: p.decision.kind === 'upgrade' ? (r) => r.toLowerCase() === (p.decision as { existing: { rel_path: string } }).existing.rel_path.toLowerCase() : undefined,
+        // foldKey: the file being upgraded may be spelled with another case or Unicode normalization.
+        isSelf: p.decision.kind === 'upgrade' ? (r) => foldKey(r) === foldKey((p.decision as { existing: { rel_path: string } }).existing.rel_path) : undefined,
       })
-      taken.add(libRel.toLowerCase())
+      taken.add(foldKey(libRel))
       if (needsMaster(p)) {
         const master = join(workDir, `${n}.master.flac`)
         if (fmt.codec === 'flac') await copyFile(p.src, master)

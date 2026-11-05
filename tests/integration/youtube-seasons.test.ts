@@ -13,8 +13,8 @@ vi.mock('electron', () => ({
   safeStorage: {},
 }))
 
-import { mkdirSync } from 'node:fs'
-import { join } from 'node:path'
+import { mkdirSync, readdirSync, renameSync } from 'node:fs'
+import { dirname, join } from 'node:path'
 import { sandbox } from '../helpers/sandbox'
 import { genAudio, genImage } from '../helpers/audio'
 import type { AppContext, SettingsStore, ValenceEnv } from '@main/context'
@@ -49,6 +49,8 @@ describe('YouTube season albums (integration)', () => {
   let yt: YoutubeService
   const s8 = seasonAlbum(DEFAULT_SEASONS.find((s) => s.key === 's8')!)
   const s7 = seasonAlbum(DEFAULT_SEASONS.find((s) => s.key === 's7')!)
+  const s9 = seasonAlbum(DEFAULT_SEASONS.find((s) => s.key === 's9')!)
+  const sx = seasonAlbum(DEFAULT_SEASONS.find((s) => s.key === 'sx')!)
 
   /** Writes a season rip straight into the library (as an import would) and indexes it. */
   async function addRip(id: string, title: string, uploaded: string, album = s8, track = 1) {
@@ -129,5 +131,49 @@ describe('YouTube season albums (integration)', () => {
     }
     const reset = await yt.setSeasonCover('s8', null)
     expect(reset.find((s) => s.key === 's8')).toMatchObject({ customCover: false, cover: expect.stringMatching(/^data:image\/jpeg;base64,/) })
+  })
+
+  it('breaks upload-time ties by video id, so every device numbers a season the same way', async () => {
+    // Added in the opposite order: the device-local row id would put "Zed" first.
+    await addRip('zz9', 'Zed', '2025-03-01T10:00:00.000Z', s9, 1)
+    await addRip('aa1', 'Ace', '2025-03-01T10:00:00.000Z', s9, 1)
+    await yt.renumber(s9)
+    expect(order(s9)).toEqual([[1, 2, 'Ace'], [2, 2, 'Zed']])
+  })
+
+  it('at startup, renumbers only the seasons left out of order', async () => {
+    // What a batch import leaves when the app quits before the season is renumbered: each rip numbered
+    // by what was there when it arrived.
+    const days = ['2026-02-01', '2026-02-02', '2026-02-03', '2026-02-04', '2026-02-05']
+    for (const [i, day] of days.entries()) await addRip(`x${i}`, `Rip ${i + 1}`, `${day}T12:00:00.000Z`, sx, [1, 1, 2, 1, 3][i])
+    expect(yt.misnumberedSeasons()).toEqual([sx])
+
+    const scheduled = vi.spyOn(yt, 'scheduleRenumber').mockImplementation(() => {})
+    yt.start()
+    await vi.waitFor(() => expect(scheduled).toHaveBeenCalled())
+    expect(scheduled.mock.calls).toEqual([[sx]])
+    scheduled.mockRestore()
+
+    // Renumbers run one at a time, so a second request for the same season finds nothing left to do.
+    expect(await Promise.all([yt.renumber(sx), yt.renumber(sx)])).toEqual([5, 0])
+    expect(order(sx)).toEqual(days.map((_, i) => [i + 1, 5, `Rip ${i + 1}`]))
+    expect(yt.misnumberedSeasons()).toEqual([])
+  })
+
+  it('renumbers a rip whose name the disk spells in NFD without renaming it', async () => {
+    // Syncthing on macOS stores "é" as "e" + a combining accent. The renumber used to take the file's
+    // own name for someone else's and move it to "… (2)".
+    const s6 = seasonAlbum(DEFAULT_SEASONS.find((s) => s.key === 's6')!)
+    await addRip('p1', 'Littleroot Town - Pokémon Ruby', '2022-03-01T12:00:00.000Z', s6, 1)
+    const rel = 'High Quality Rips/SiIvaGunner - Season 6/Littleroot Town - Pokémon Ruby.opus'
+    const nfd = rel.normalize('NFD')
+    renameSync(join(root, ...rel.split('/')), join(root, ...nfd.split('/')))
+    await library.indexPaths([rel, nfd])
+    await addRip('p0', 'Earlier Rip', '2022-02-01T12:00:00.000Z', s6, 1)
+    expect(await yt.renumber(s6)).toBe(2)
+    expect(order(s6)).toEqual([[1, 2, 'Earlier Rip'], [2, 2, 'Littleroot Town - Pokémon Ruby']])
+    expect(readdirSync(dirname(join(root, ...nfd.split('/')))).sort()).toEqual(['Earlier Rip.opus', nfd.slice(nfd.lastIndexOf('/') + 1)])
+    const rows = queryTracks(library.db, { collection: 'rips', search: 'Littleroot' }).rows
+    expect(rows.map((r) => r.relPath)).toEqual([nfd])
   })
 })
