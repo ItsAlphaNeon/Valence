@@ -11,7 +11,7 @@ import { scanLibrary, type ScanResult } from './scanner'
 import { watchLibrary, type WatchHandle } from './watcher'
 import { createLibraryLookup, type LibraryLookupEx } from './lookup'
 import { PlaylistStore, type SmartRules } from './playlists'
-import { albumById, favoriteCounts, libraryStats, listeningHistory, queryAlbums, ripGames, queryAlbumsPage, queryArtists, queryGenres, queryTracks, trackById, tracksByIds } from './queries'
+import { albumById, favoriteCounts, libraryStats, listeningHistory, queryAlbums, ripGames, queryAlbumsPage, queryArtists, queryGenres, queryTracks, searchLibrary, trackById, tracksByIds } from './queries'
 import { listeningStats, similarTracks } from './insights'
 import { ArtCache, artUrl } from './art'
 import { chooseRelPath, moveWithinLibrary, toAbs } from './organizer'
@@ -416,11 +416,9 @@ export class LibraryService {
     handle(LIB.artists, (q) => queryArtists(db, q ?? {}))
     handle(LIB.genres, (q) => queryGenres(db, q ?? {}))
     handle(LIB.artColor, (hash: string) => (hash ? this.art.color(String(hash)) : null))
-    handle(LIB.search, (text: string, collection: LibraryCollection = 'main') => ({
-      tracks: queryTracks(db, { search: text, limit: 50, collection }).rows,
-      albums: queryAlbums(db, { search: text, limit: 24, collection }),
-      artists: collection === 'rips' ? [] : queryArtists(db, { search: text, collection }).slice(0, 12),
-    }))
+    handle(LIB.search, (text: string, collection?: LibraryCollection) =>
+      searchLibrary(db, String(text ?? ''), collection === 'rips' || collection === 'all' ? collection : 'main'),
+    )
     handle(LIB.rescan, (force?: boolean) => this.rescan(!!force).then((r) => ({ ...r, conflicts: r.conflicts.length, playlists: r.playlists.length })))
     handle(LIB.setRating, (ids: number[], stars: number) => this.setRating(ids, stars))
     handle(LIB.getTags, (id: number) => this.getTags(id))

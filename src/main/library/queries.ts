@@ -1,7 +1,7 @@
 // Read-side queries backing the library views.
 
 import type { AlbumRow, ArtistRow, FavoriteCounts, GenreRow, HistoryEntry, RipGameRow, LibraryCollection, LibraryStats, TrackQuery, TrackRow } from '@shared/types'
-import type { AlbumQuery, AlbumsPage } from '@shared/ipc/library'
+import type { AlbumQuery, AlbumsPage, SearchResult } from '@shared/ipc/library'
 import type { DB } from '@main/db/db'
 import { artistFavoriteKey, trackKeySql } from '@main/sync/favorites'
 
@@ -217,6 +217,52 @@ export function ripGames(db: DB): RipGameRow[] {
     )
     .all() as Array<{ name: string; n: number; art: string | null }>
   return rows.map((r) => ({ name: r.name, trackCount: r.n, artHash: r.art }))
+}
+
+/** Lower case without accents, so "pokemon" finds "Pokémon". */
+const fold = (s: string) => s.normalize('NFKD').replace(/\p{M}/gu, '').toLowerCase()
+const words = (s: string) => fold(s).split(/[^\p{L}\p{N}]+/u).filter(Boolean)
+
+/** Games whose name has a word starting with each search word (as FTS matches), most rips first. */
+export function searchRipGames(db: DB, text: string, limit = 12): RipGameRow[] {
+  const terms = words(text).slice(0, 8)
+  if (!terms.length) return []
+  return ripGames(db)
+    .filter((g) => {
+      const name = words(g.name)
+      return terms.every((t) => name.some((w) => w.startsWith(t)))
+    })
+    .sort((a, b) => b.trackCount - a.trackCount)
+    .slice(0, limit)
+}
+
+/**
+ * The search box, for one half of the library (or both): songs (the first 50, and how many in
+ * all), albums, artists and, for rips, games. A rip album (a season or volume) only matches on its
+ * own title, since nearly any search would otherwise turn up every season.
+ */
+export function searchLibrary(db: DB, text: string, collection: LibraryCollection = 'main'): SearchResult {
+  const { rows: tracks, total: trackTotal } = queryTracks(db, { search: text, limit: 50, collection })
+  let albums: AlbumRow[]
+  if (collection === 'rips') {
+    const fts = ftsQuery(text)
+    albums = fts
+      ? (db
+          .prepare(
+            `${ALBUM_SELECT} WHERE a.hq_rip <> '' AND a.id IN (SELECT album_id FROM tracks WHERE id IN (SELECT rowid FROM tracks_fts WHERE tracks_fts MATCH ?))
+             GROUP BY a.id ORDER BY a.year, a.title COLLATE NOCASE, a.id LIMIT 24`,
+          )
+          .all(`{album album_artist} : (${fts})`) as Record<string, any>[]).map(toAlbumRow)
+      : []
+  } else albums = queryAlbums(db, { search: text, limit: 24, collection })
+  return {
+    tracks,
+    trackTotal,
+    albums,
+    // Every rip is by SiIvaGunner, so rips list games instead of artists.
+    artists: collection === 'rips' ? [] : queryArtists(db, { search: text, collection }).slice(0, 12),
+    games: collection === 'main' ? [] : searchRipGames(db, text),
+  }
 }
 
 export function trackById(db: DB, id: number): TrackRow | null {

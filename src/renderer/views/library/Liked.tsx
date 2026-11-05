@@ -73,7 +73,7 @@ export function LikedView({ tab = 'songs' }: { tab?: Tab }) {
           </div>
         </div>
         <Segmented<FavSide>
-          className="fav-switch"
+          className="scope-switch"
           label="Show favorites from"
           value={side}
           onChange={setFavSide}
