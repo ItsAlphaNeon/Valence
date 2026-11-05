@@ -1,6 +1,9 @@
-// Import claims in <library>/.valence/locks/. A device claims a release before importing it so a
-// second desktop (seeing the claim via Syncthing) skips it. Syncthing is not instant, so claims are
-// only a best effort; post-hoc dedupe by source id/MBID resolves the rare double import.
+// Import claims in <library>/.valence/locks/. A device claims a release while it imports it, so a
+// second desktop that sees the claim through Syncthing waits. A claim is only a best effort for that
+// window: Syncthing isn't instant, so two devices can both claim, and the claim is released as soon as
+// the files are placed, while the files themselves can take hours to reach the other devices. A claim
+// says nothing about that gap; YouTube imports close it with the ledger (ledger.ts) and a last check
+// of the disk before filing (import/pipeline.ts).
 
 import { createHash } from 'node:crypto'
 import { mkdirSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from 'node:fs'

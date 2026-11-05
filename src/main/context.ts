@@ -85,8 +85,12 @@ export interface EnqueueRequest {
 }
 
 export interface ImportQueue {
-  /** `afterDone` runs once a job of this source imported successfully (e.g. to renumber a season album). */
-  registerAcquirer(source: string, fn: Acquirer, opts?: { concurrency?: number; afterDone?: (payload: any, release: SourceRelease) => Promise<void> }): void
+  /**
+   * `afterDone` runs once a job of this source imported successfully (e.g. to renumber a season album).
+   * `skipReason` is asked just before a job starts, however long it waited: a reason ends the job as
+   * done, with that message and without downloading anything.
+   */
+  registerAcquirer(source: string, fn: Acquirer, opts?: { concurrency?: number; afterDone?: (payload: any, release: SourceRelease) => Promise<void>; skipReason?: (payload: any) => string | null }): void
   enqueue(req: EnqueueRequest): string
   /** Release keys currently queued or running (for "Queued/Downloading" badges). */
   activeKeys(): Map<string, 'queued' | 'running'>

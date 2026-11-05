@@ -18,6 +18,10 @@ export const HQRIP_IPC = {
   youtubeSync: 'hqrip:youtubeSync',
   /** main → renderer: (status: YoutubeStatus) */
   youtubeChanged: 'hqrip:youtubeChanged',
+  /** () → RipDuplicateGroup[] (reads only) */
+  youtubeDuplicates: 'hqrip:youtubeDuplicates',
+  /** (relPaths: string[]) → TrashDuplicatesResult. Moves exactly these files to the Trash, if they are still duplicates. */
+  youtubeTrashDuplicates: 'hqrip:youtubeTrashDuplicates',
   /** () → SeasonInfo[] */
   seasons: 'hqrip:seasons',
   /** (seasons: SeasonDef[]) → SeasonInfo[] (re-files tracks whose season changed) */
@@ -72,7 +76,8 @@ export interface HqrDownloadAllResult {
 
 // ---- YouTube playlist → season albums ----
 
-export type YoutubeEntryState = 'in-library' | 'queued' | 'running' | 'missing' | 'not-siivagunner' | 'unavailable'
+/** 'arriving': another device has filed this video and its file is on the way through Syncthing. */
+export type YoutubeEntryState = 'in-library' | 'arriving' | 'queued' | 'running' | 'missing' | 'not-siivagunner' | 'unavailable'
 
 export interface YoutubeEntry {
   id: string
@@ -94,6 +99,21 @@ export interface YoutubeStatus {
   summary: string | null
   error: string | null
   ytDlpVersion: string | null
+}
+
+/** Copies of one YouTube video beyond the first (same length; an edit cut from a rip doesn't count). */
+export interface RipDuplicateGroup {
+  videoId: string
+  title: string
+  /** Library-relative path of the copy that stays. */
+  keep: string
+  /** Library-relative paths of the copies that would go to the Trash. */
+  trash: string[]
+}
+
+export interface TrashDuplicatesResult {
+  trashed: string[]
+  errors: Array<{ relPath: string; error: string }>
 }
 
 export interface SeasonDef {

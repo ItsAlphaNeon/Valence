@@ -12,6 +12,8 @@ import { DEFAULT_SEASONS, placeholderSvg, seasonAlbum, seasonFor, SeasonStore, v
 import { parseFlatPlaylist, playlistUrl } from '@main/sources/youtube/playlist'
 import { downloadFraction, sumFor, ytDlpAsset, ytDlpError } from '@main/sources/youtube/ytdlp'
 import { createAcquirer } from '@main/sources/youtube/acquire'
+import { planDuplicates, type RipCopy } from '@main/sources/youtube/duplicates'
+import { keysFiledElsewhere } from '@main/sync/ledger'
 
 const fx = (name: string) => readFileSync(join(__dirname, '../fixtures/youtube', name), 'utf8')
 const info = JSON.parse(fx('video-info.json')) as YtInfo
@@ -194,5 +196,53 @@ describe('youtube acquirer', () => {
     }
     const acquire = createAcquirer({ ytdlp: ytdlp as never, seasons: () => DEFAULT_SEASONS, coverFor: async () => '', positionFor: () => ({ track: 1, total: 1 }) })
     await expect(acquire({ videoId: 'x1' }, { stagingDir, signal: new AbortController().signal, progress: () => {} })).rejects.toMatchObject({ kind: 'unavailable' })
+  })
+})
+
+describe('duplicate rips: which copy stays', () => {
+  const copy = (relPath: string, durationMs = 48_000, videoId = 'v1'): RipCopy => ({ videoId, relPath, title: 'T', durationMs })
+
+  it('keeps the plain name over numbered copies, whatever order they come in', () => {
+    const plan = planDuplicates([copy('S/T (10).opus'), copy('S/T (2).opus'), copy('S/T.opus')])
+    expect(plan).toEqual([{ videoId: 'v1', title: 'T', keep: 'S/T.opus', trash: ['S/T (2).opus', 'S/T (10).opus'] }])
+  })
+
+  it('keeps a numbered copy over a conflict copy, and a title that really ends in a number works', () => {
+    expect(planDuplicates([copy('S/T.sync-conflict-20261105-123456-ABCDEFG.opus'), copy('S/T (2).opus')])[0].keep).toBe('S/T (2).opus')
+    expect(planDuplicates([copy('S/T (2) (2).opus'), copy('S/T (2).opus')])[0].keep).toBe('S/T (2).opus')
+  })
+
+  it('leaves single copies, other videos and edit cuts out of it', () => {
+    expect(planDuplicates([copy('S/A.opus', 48_000, 'a'), copy('S/B.opus', 48_000, 'b')])).toEqual([])
+    expect(planDuplicates([copy('S/T.opus', 48_000), copy('S/T edit.opus', 20_000)])).toEqual([])
+    // A cut with the shortest name doesn't get in the way of the real copies.
+    expect(planDuplicates([copy('S/C.opus', 20_000), copy('S/Long Title.opus', 48_000), copy('S/Long Title (2).opus', 48_500)])).toEqual([
+      { videoId: 'v1', title: 'T', keep: 'S/Long Title.opus', trash: ['S/Long Title (2).opus'] },
+    ])
+  })
+
+  it('never lists a file it knows too little about, or conflict copies with nothing to keep', () => {
+    expect(planDuplicates([copy('S/T.opus', 48_000), copy('S/T (2).opus', 0)])).toEqual([])
+    expect(planDuplicates([copy('S/T.sync-conflict-20261105-123456-ABCDEFG.opus'), copy('S/T.sync-conflict-20261105-123457-HIJKLMN.opus')])).toEqual([])
+  })
+})
+
+describe('other devices\' import ledgers', () => {
+  const sb = sandbox('ledger')
+  afterAll(() => sb.cleanup())
+  const device = (id: string, lines: string) => {
+    mkdirSync(join(sb.dir, '.valence', 'devices', id), { recursive: true })
+    writeFileSync(join(sb.dir, '.valence', 'devices', id, 'ledger.jsonl'), lines)
+  }
+
+  it('reads the keys other devices filed, and nothing else', () => {
+    device('me', '{"op":"add","keys":["youtube:mine"]}\n')
+    device('windows', '{"op":"add","keys":["youtube:a"]}\n{"op":"add","keys":["tidal:album:1","upc:2"]}\n{"op":"upgrade","keys":["youtube:b"]}\n{"op":"add","keys":["youtube:cut-off"')
+    mkdirSync(join(sb.dir, '.valence', 'devices', 'phone'), { recursive: true })
+    expect([...keysFiledElsewhere(sb.dir, 'me', 'youtube:')].sort()).toEqual(['youtube:a', 'youtube:b'])
+  })
+
+  it('is empty for a library with no device folders', () => {
+    expect(keysFiledElsewhere(join(sb.dir, 'nowhere'), 'me', 'youtube:').size).toBe(0)
   })
 })

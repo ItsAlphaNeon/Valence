@@ -6,13 +6,21 @@
 // renumbers only the seasons left out of order (a renumber cut short by quitting, or rips numbered
 // by an older version). Ties in upload time go by video id, then path, so every device numbers a
 // season the same way and they never fight over the tags through Syncthing.
+//
+// Every desktop syncs the playlist, so a video one device filed can look missing on another for as
+// long as Syncthing takes to deliver it (hours on a big library). The other devices' ledgers say it's
+// on its way, so nothing downloads it again unless it hasn't turned up after ARRIVAL_GRACE_MS.
 
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import sharp from 'sharp'
 import type { AppContext } from '@main/context'
 import type { LibraryService } from '@main/library/service'
-import { HQRIP_IPC, type SeasonDef, type SeasonInfo, type YoutubeEntry, type YoutubeStatus } from '@shared/ipc/hqrip'
+import { exactPaths, walkLibrary } from '@main/library/scanner'
+import { keysFiledElsewhere } from '@main/sync/ledger'
+import { isAudioPath, probeFile } from '@main/tags/read'
+import { HQRIP_IPC, type RipDuplicateGroup, type SeasonDef, type SeasonInfo, type TrashDuplicatesResult, type YoutubeEntry, type YoutubeStatus } from '@shared/ipc/hqrip'
+import { planDuplicates, type RipCopy } from './duplicates'
 import { SIIVAGUNNER_CHANNEL_ID } from './metadata'
 import { parseFlatPlaylist, playlistUrl, type PlaylistEntry } from './playlist'
 import { placeholderSvg, seasonAlbum, seasonFor, SeasonStore, validateSeasons } from './seasons'
@@ -23,6 +31,9 @@ export const AUTOSYNC_KEY = 'rips.youtube.autoSync'
 const SYNC_EVERY_MS = 6 * 3600_000
 const FIRST_SYNC_DELAY_MS = 20_000
 const RENUMBER_DELAY_MS = 15_000
+/** How long a video another device filed may take to get here, from when this device first needed it. */
+export const ARRIVAL_GRACE_MS = 3 * 24 * 3600_000
+const VIDEO_KEY = 'youtube:'
 
 type SeasonRow = { id: number; rel_path: string; youtube_uploaded: string | null; track_no: number | null; track_total: number | null }
 
@@ -37,10 +48,12 @@ interface StateFile {
   entries: PlaylistEntry[]
   summary: string | null
   error: string | null
+  /** Videos another device filed that aren't here yet → when this device first noticed. */
+  awaiting: Record<string, number>
 }
 
 export class YoutubeService {
-  private state: StateFile = { lastSync: null, playlistTitle: null, entries: [], summary: null, error: null }
+  private state: StateFile = { lastSync: null, playlistTitle: null, entries: [], summary: null, error: null, awaiting: {} }
   private syncing: Promise<YoutubeStatus> | null = null
   private timer: NodeJS.Timeout | null = null
   private firstTimer: NodeJS.Timeout | null = null
@@ -135,9 +148,33 @@ export class YoutubeService {
           ? 'unavailable'
           : e.channelId !== SIIVAGUNNER_CHANNEL_ID
             ? 'not-siivagunner'
-            : (q ?? 'missing')
+            : (q ?? (this.stillArriving(e.id) ? 'arriving' : 'missing'))
       return { id: e.id, title: e.title, durationSec: e.durationSec, channel: e.channel, state }
     })
+  }
+
+  private stillArriving(videoId: string): boolean {
+    const since = this.state.awaiting[videoId]
+    return since !== undefined && Date.now() - since < ARRIVAL_GRACE_MS
+  }
+
+  /** Videos another device filed that are on their way here, and not worth downloading yet. */
+  private arriving(have: Set<string>): Set<string> {
+    const now = Date.now()
+    const awaiting: Record<string, number> = {}
+    for (const key of keysFiledElsewhere(this.ctx.env.libraryRoot, this.ctx.env.deviceId, VIDEO_KEY)) {
+      const id = key.slice(VIDEO_KEY.length)
+      if (!have.has(id)) awaiting[id] = this.state.awaiting[id] ?? now
+    }
+    this.state.awaiting = awaiting
+    return new Set(Object.keys(awaiting).filter((id) => this.stillArriving(id)))
+  }
+
+  /** Why a queued video needs no download any more, or null. Jobs can wait a long time for their turn. */
+  skipReason(videoId: string): string | null {
+    const have = this.ctx.library.youtubeVideoIds?.() ?? new Set<string>()
+    if (have.has(videoId)) return 'Already in library'
+    return this.arriving(have).has(videoId) ? 'Filed by another device; waiting for Syncthing to bring it here' : null
   }
 
   async status(): Promise<YoutubeStatus> {
@@ -179,13 +216,14 @@ export class YoutubeService {
       const list = parseFlatPlaylist(r.stdout)
       const have = this.ctx.library.youtubeVideoIds?.() ?? new Set<string>()
       const active = this.ctx.imports.activeKeys()
+      const arriving = this.arriving(have)
       let queued = 0
       let skipped = 0
       let unavailable = 0
       for (const e of list.entries) {
         if (e.unavailable) unavailable++
         else if (e.channelId !== SIIVAGUNNER_CHANNEL_ID) skipped++
-        else if (!have.has(e.id) && !active.has(`youtube:${e.id}`)) {
+        else if (!have.has(e.id) && !active.has(`youtube:${e.id}`) && !arriving.has(e.id)) {
           this.ctx.imports.enqueue({ source: 'youtube', title: `YouTube · ${e.title}`, releaseKeys: [`youtube:${e.id}`], payload: { videoId: e.id, title: e.title } })
           queued++
         }
@@ -194,16 +232,72 @@ export class YoutubeService {
       const waiting = list.entries.filter((e) => !have.has(e.id) && active.has(`youtube:${e.id}`)).length
       const parts = [queued ? `Queued ${queued} rip${queued === 1 ? '' : 's'}` : 'Nothing new']
       if (waiting) parts.push(`${waiting} still downloading`)
+      const coming = list.entries.filter((e) => !have.has(e.id) && !active.has(`youtube:${e.id}`) && arriving.has(e.id)).length
+      if (coming) parts.push(`${coming} on the way from another device`)
       if (inLib) parts.push(`${inLib} already in library`)
       if (skipped) parts.push(`${skipped} skipped (other channels)`)
       if (unavailable) parts.push(`${unavailable} unavailable`)
-      this.state = { lastSync: Date.now(), playlistTitle: list.title, entries: list.entries, summary: parts.join(' · '), error: null }
+      this.state = { ...this.state, lastSync: Date.now(), playlistTitle: list.title, entries: list.entries, summary: parts.join(' · '), error: null }
     } catch (e) {
       this.state = { ...this.state, error: (e as Error).message }
       this.ctx.log.warn('youtube: playlist sync failed', (e as Error).message)
     }
     this.saveState()
     return this.status()
+  }
+
+  // ---- duplicate rips ----
+
+  /**
+   * Extra copies of videos in the library, with the one that would stay. Reads only. Index rows count
+   * only if their file is on disk under exactly that spelling: a stale row must never be "the copy that
+   * stays", and two rows for one file (macOS spells a name two ways) must never look like two copies.
+   */
+  async duplicates(): Promise<RipDuplicateGroup[]> {
+    const root = this.ctx.env.libraryRoot
+    const onDisk = exactPaths(root)
+    const rows = this.library.db
+      .prepare("SELECT youtube_video_id AS videoId, rel_path AS relPath, title, duration_ms AS durationMs FROM tracks WHERE youtube_video_id IS NOT NULL AND youtube_video_id <> ''")
+      .all() as RipCopy[]
+    const copies = rows.filter((r) => onDisk(r.relPath))
+    // Syncthing conflict copies aren't tracks, so they aren't in the index: the last resort of a race.
+    for (const c of (await walkLibrary(root)).conflicts) {
+      if (!isAudioPath(c.rel)) continue
+      const p = await probeFile(join(root, ...c.rel.split('/'))).catch(() => null)
+      if (p?.tags.youtube_video_id) copies.push({ videoId: p.tags.youtube_video_id, relPath: c.rel, title: p.tags.title ?? c.rel, durationMs: p.format.durationMs })
+    }
+    return planDuplicates(copies)
+  }
+
+  /**
+   * Moves exactly these files to the Trash, after the user agreed to that list. The list is checked
+   * against a fresh plan, so a file that stopped being a duplicate since (the other copy is gone, say)
+   * stays, and the copy a group keeps can't go.
+   */
+  async trashDuplicates(relPaths: string[]): Promise<TrashDuplicatesResult> {
+    const plan = await this.duplicates()
+    const keepFor = new Map(plan.flatMap((g) => g.trash.map((rel) => [rel, g.keep] as const)))
+    const albumOf = this.library.db.prepare("SELECT album FROM tracks WHERE hq_rip = 'YouTube' AND rel_path = ?")
+    const res: TrashDuplicatesResult = { trashed: [], errors: [] }
+    const albums = new Set<string>()
+    for (const relPath of new Set(relPaths)) {
+      const keep = keepFor.get(relPath)
+      if (!keep) {
+        res.errors.push({ relPath, error: 'Not a duplicate any more, so it stays' })
+        continue
+      }
+      try {
+        const album = (albumOf.get(relPath) as { album: string } | undefined)?.album
+        await this.library.trashCopy(relPath, keep)
+        if (album) albums.add(album)
+        res.trashed.push(relPath)
+      } catch (e) {
+        res.errors.push({ relPath, error: (e as Error).message })
+      }
+    }
+    for (const album of albums) await this.renumber(album)
+    this.broadcast()
+    return res
   }
 
   // ---- season albums ----

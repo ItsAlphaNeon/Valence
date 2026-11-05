@@ -3,18 +3,19 @@
 import { shell } from 'electron'
 import { createHash } from 'node:crypto'
 import { existsSync, statSync } from 'node:fs'
+import { readdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { AppContext } from '@main/context'
 import { openDb, type DB } from '@main/db/db'
 import { Indexer, pathKey } from './indexer'
-import { scanLibrary, type ScanResult } from './scanner'
+import { isTrackName, scanLibrary, type ScanResult } from './scanner'
 import { watchLibrary, type WatchHandle } from './watcher'
 import { createLibraryLookup, type LibraryLookupEx } from './lookup'
 import { PlaylistStore, type SmartRules } from './playlists'
 import { albumById, favoriteCounts, libraryStats, listeningHistory, queryAlbums, ripGames, queryAlbumsPage, queryArtists, queryGenres, queryTracks, searchLibrary, trackById, tracksByIds } from './queries'
 import { listeningStats, similarTracks } from './insights'
 import { ArtCache, artUrl } from './art'
-import { chooseRelPath, moveWithinLibrary, toAbs } from './organizer'
+import { chooseRelPath, moveWithinLibrary, resolveDirCasing, toAbs } from './organizer'
 import { probeFile, type ProbeResult } from '@main/tags/read'
 import { writeRating, writeTags } from '@main/tags/write'
 import { handle } from '@main/ipc'
@@ -199,6 +200,39 @@ export class LibraryService {
     }
     if (r.added) void this.repairSharedIds()
     return r
+  }
+
+  /**
+   * Indexes the audio in one folder that the index doesn't have yet, for a check that can't wait for
+   * the watcher (it reports files Syncthing delivered after a debounce, and can drop them).
+   */
+  async indexNewIn(relDir: string): Promise<void> {
+    const dir = await resolveDirCasing(this.root, relDir)
+    const names = await readdir(toAbs(this.root, dir)).catch(() => [] as string[])
+    const known = this.db.prepare('SELECT 1 FROM tracks WHERE path_key = ?')
+    const fresh = names
+      .filter(isTrackName)
+      .map((n) => (dir ? `${dir}/${n}` : n))
+      .filter((rel) => !known.get(pathKey(rel)))
+    if (fresh.length) await this.indexPaths(fresh)
+  }
+
+  /**
+   * Moves one copy of a track to the Trash. Its plays, like, rating and playlist entries go to the
+   * copy that stays. The caller is responsible for the user having agreed to this exact file.
+   */
+  async trashCopy(rel: string, keepRel: string): Promise<void> {
+    type Row = { id: number; valence_id: string | null; rating: number | null }
+    const row = this.db.prepare('SELECT id, valence_id, rating FROM tracks WHERE rel_path = ?')
+    const copy = row.get(rel) as Row | undefined
+    const keep = row.get(keepRel) as Row | undefined
+    await shell.trashItem(toAbs(this.root, rel))
+    if (copy && keep) {
+      this.rekeyTrack(copy.valence_id ?? `path:${rel}`, keep.valence_id ?? `path:${keepRel}`)
+      if (copy.rating && !keep.rating) await this.setRating([keep.id], copy.rating)
+    }
+    this.playlists.pathMoved(rel, keepRel)
+    await this.indexPaths([rel])
   }
 
   /**

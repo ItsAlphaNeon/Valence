@@ -160,6 +160,12 @@ playlists, dedupe and TIDAL/Bandcamp badges leave them out.
   merge newest-wins per key.
 - **Any desktop can import.** Background reorganizing only touches files that device imported. An
   explicit edit renames the file on the device where you made it.
+- **One file per YouTube video.** Every desktop syncs the playlist, so a video one device filed can
+  look missing on another until Syncthing delivers it, which can take hours. Before downloading, a
+  device checks the index and the other devices' ledgers (a line there means the file is on its way;
+  it downloads anyway after three days without it). Before filing, it checks the folder as well, by
+  video ID. If two devices still file at the same moment, Syncthing keeps a conflict copy. The YouTube
+  tab's **Duplicates…** lists extra copies and moves them to the Trash only when you confirm.
 - **Phone:** regular playlists are `~/Music/Playlists/*.m3u8` with relative paths. The Android app
   reads and writes the same `.valence` logs, so favorites, playlists and plays made on the phone
   reach the desktops.

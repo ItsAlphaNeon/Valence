@@ -37,6 +37,7 @@ interface Registered {
   fn: Acquirer
   concurrency: number
   afterDone?: (payload: unknown, release: SourceRelease) => Promise<void>
+  skipReason?: (payload: unknown) => string | null
 }
 
 type JobFields = Partial<Pick<JobInfo, 'status' | 'stage' | 'progress' | 'message' | 'error' | 'attempts' | 'reportId' | 'review'>>
@@ -98,8 +99,8 @@ export class ImportQueueImpl implements ImportQueue {
 
   // ---- ImportQueue (used by source modules) ----
 
-  registerAcquirer(source: string, fn: Acquirer, opts: { concurrency?: number; afterDone?: Registered['afterDone'] } = {}): void {
-    this.acquirers.set(source, { fn, concurrency: Math.max(1, opts.concurrency ?? 1), afterDone: opts.afterDone })
+  registerAcquirer(source: string, fn: Acquirer, opts: { concurrency?: number; afterDone?: Registered['afterDone']; skipReason?: Registered['skipReason'] } = {}): void {
+    this.acquirers.set(source, { fn, concurrency: Math.max(1, opts.concurrency ?? 1), afterDone: opts.afterDone, skipReason: opts.skipReason })
     this.schedule()
   }
 
@@ -415,6 +416,13 @@ export class ImportQueueImpl implements ImportQueue {
   }
 
   private async run(job: JobInfo, payload: unknown, reg: Registered): Promise<void> {
+    const skip = reg.skipReason?.(payload)
+    if (skip) {
+      this.update(job.id, { status: 'done', stage: null, progress: 1, message: skip })
+      this.changed()
+      this.schedule()
+      return
+    }
     const ctrl = new AbortController()
     const state: Running = { ctrl, lastBroadcast: 0, pending: null, timer: null }
     this.running.set(job.id, state)

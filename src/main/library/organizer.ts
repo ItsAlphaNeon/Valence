@@ -35,6 +35,13 @@ export async function resolveDirCasing(root: string, relDir: string): Promise<st
   return out.join('/')
 }
 
+/** The folder a track files into, spelled as it already is on disk. */
+export async function relDirFor(root: string, tags: TrackTags, template: string = DEFAULT_TEMPLATE): Promise<string> {
+  const stem = renderRelStem(template, tags)
+  const slash = stem.lastIndexOf('/')
+  return resolveDirCasing(root, slash < 0 ? '' : stem.slice(0, slash))
+}
+
 export interface CollisionContext {
   tags: TrackTags
   /** True when the existing file at that path is this same track (re-placing over itself). */
@@ -142,7 +149,8 @@ export interface PlaceResult {
 
 /**
  * Copies `src` into the library at `relPath` (or the next free collision name, re-chosen via
- * `rechoose` if the path got taken concurrently).
+ * `rechoose` if the path got taken concurrently). A `rechoose` that throws abandons the placement,
+ * leaving no temp file behind.
  */
 export async function placeFile(
   src: string,
@@ -151,6 +159,7 @@ export async function placeFile(
   opts: { rechoose?: () => Promise<string>; move?: boolean } = {},
 ): Promise<PlaceResult> {
   let rel = relPath
+  const original = src
   for (let attempt = 0; attempt < 5; attempt++) {
     const final = toAbs(root, rel)
     const dir = dirname(final)
@@ -182,7 +191,12 @@ export async function placeFile(
     if (opts.move) src = tmp
     else await unlink(tmp).catch(() => {})
     if (!opts.rechoose) throw new Error(`Target exists: ${rel}`)
-    rel = await opts.rechoose()
+    try {
+      rel = await opts.rechoose()
+    } catch (e) {
+      if (opts.move) await moveBack(tmp, original).catch(() => {})
+      throw e
+    }
   }
   throw new Error(`Could not place file at ${relPath}`)
 }

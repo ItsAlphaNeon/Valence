@@ -108,6 +108,11 @@ export function findExisting(db: DB, tags: TrackTags, durationMs: number): Exist
   )
 }
 
+/** Any library copy of a YouTube video, whatever its length or quality. */
+export function findYoutubeVideo(db: DB, videoId: string): ExistingTrack | null {
+  return (db.prepare(`SELECT ${COLS} FROM tracks WHERE youtube_video_id = ? LIMIT 1`).get(videoId) as ExistingTrack | undefined) ?? null
+}
+
 export type DedupeDecision =
   | { kind: 'add' }
   | { kind: 'upgrade'; existing: ExistingTrack }

@@ -150,6 +150,21 @@ describe('organizer', () => {
     expect(existsSync(src)).toBe(true)
   })
 
+  it('puts a moved file back and leaves no temp file when rechoose gives up', async () => {
+    const root = join(sb.dir, 'lib3b')
+    const src = join(sb.dir, 'src-moved.bin')
+    writeFileSync(src, 'new')
+    mkdirSync(join(root, 'A'), { recursive: true })
+    writeFileSync(join(root, 'A', 'T.mp3'), 'old')
+    const giveUp = async () => {
+      throw new Error('same video')
+    }
+    await expect(placeFile(src, root, 'A/T.mp3', { move: true, rechoose: giveUp })).rejects.toThrow('same video')
+    expect(readdirSync(join(root, 'A'))).toEqual(['T.mp3'])
+    expect(readFileSync(join(root, 'A', 'T.mp3'), 'utf8')).toBe('old')
+    expect(readFileSync(src, 'utf8')).toBe('new')
+  })
+
   it('moves within the library, including case-only renames, and prunes empty folders', async () => {
     const root = join(sb.dir, 'lib4')
     mkdirSync(join(root, 'Old', 'Album'), { recursive: true })

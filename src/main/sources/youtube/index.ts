@@ -28,6 +28,7 @@ export function registerYoutube(ctx: AppContext, library: LibraryService): Youtu
     }),
     {
       concurrency: 2,
+      skipReason: (payload: YoutubePayload) => service.skipReason(payload.videoId),
       afterDone: async (_payload: YoutubePayload, release) => {
         const album = release.tracks[0]?.tags.album
         if (album) service.scheduleRenumber(album)
@@ -36,6 +37,8 @@ export function registerYoutube(ctx: AppContext, library: LibraryService): Youtu
   )
   handle(HQRIP_IPC.youtubeStatus, () => service.status())
   handle(HQRIP_IPC.youtubeSync, () => service.sync())
+  handle(HQRIP_IPC.youtubeDuplicates, () => service.duplicates())
+  handle(HQRIP_IPC.youtubeTrashDuplicates, (relPaths: string[]) => service.trashDuplicates(Array.isArray(relPaths) ? relPaths : []))
   handle(HQRIP_IPC.seasons, () => service.seasonInfo())
   handle(HQRIP_IPC.setSeasons, (seasons: SeasonDef[]) => service.setSeasons(seasons))
   handle(HQRIP_IPC.setSeasonCover, (key: string, data: Uint8Array | null) => service.setSeasonCover(String(key), data))

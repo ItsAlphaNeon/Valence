@@ -74,3 +74,13 @@
   gap: 6px;
   justify-content: flex-end;
 }
+
+.yt-dup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.yt-dup-file {
+  overflow-wrap: anywhere;
+}

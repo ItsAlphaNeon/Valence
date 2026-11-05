@@ -1,11 +1,11 @@
 // YouTube tab of Get Rips: your public SiIvaGunner playlist, synced into one album per channel season.
 
 import { useEffect, useMemo, useState } from 'react'
-import { HQRIP_IPC, type YoutubeEntryState, type YoutubeStatus } from '@shared/ipc/hqrip'
+import { HQRIP_IPC, type RipDuplicateGroup, type TrashDuplicatesResult, type YoutubeEntryState, type YoutubeStatus } from '@shared/ipc/hqrip'
 import { errorMessage, invoke, on } from '../../lib/ipc'
 import { cx, duration, plural, relativeTime } from '../../lib/format'
 import { navigate, toast } from '../../state/ui'
-import { Button, Empty, Segmented, Spinner } from '../../components/ui'
+import { Button, Empty, Modal, Segmented, Spinner } from '../../components/ui'
 import { Icon } from '../../components/Icon'
 import { CommitInput, useSettingValue } from '../settings/controls'
 import { PauseBanner, openLink, useProgressive, LoadMore } from '../tidal/source-kit'
@@ -57,6 +57,7 @@ export function useYoutubeStatus(): { status: YoutubeStatus | null; sync: () => 
 
 const STATE_LABEL: Record<YoutubeEntryState, { label: string; cls: string }> = {
   'in-library': { label: 'In Library', cls: 'ok' },
+  arriving: { label: 'Syncing from another device', cls: 'accent' },
   queued: { label: 'Queued', cls: 'accent' },
   running: { label: 'Downloading', cls: 'accent' },
   missing: { label: 'Not downloaded', cls: '' },
@@ -70,6 +71,7 @@ export function YoutubeTab() {
   const { status, sync, syncing } = useYoutubeStatus()
   const [url, setUrl] = useSettingValue<string | null>(PLAYLIST_KEY, null)
   const [scope, setScope] = useState<Scope>('all')
+  const [duplicates, setDuplicates] = useState(false)
   const entries = status?.entries ?? []
   const shown = useMemo(
     () =>
@@ -80,7 +82,7 @@ export function YoutubeTab() {
             ? e.state === 'in-library'
             : scope === 'skipped'
               ? e.state === 'not-siivagunner' || e.state === 'unavailable'
-              : e.state === 'missing' || e.state === 'queued' || e.state === 'running',
+              : e.state === 'missing' || e.state === 'arriving' || e.state === 'queued' || e.state === 'running',
       ),
     [entries, scope],
   )
@@ -105,6 +107,9 @@ export function YoutubeTab() {
           </Button>
           <Button icon="settings" onClick={() => navigate({ view: 'settings', section: 'siivagunner' })}>
             Seasons…
+          </Button>
+          <Button icon="trash" onClick={() => setDuplicates(true)}>
+            Duplicates…
           </Button>
         </div>
         <div className="yt-meta faint">
@@ -163,6 +168,78 @@ export function YoutubeTab() {
           <LoadMore hasMore={p.more} loading={false} onMore={p.showMore} shown={p.visible.length} total={shown.length} noun="videos" />
         </>
       )}
+      {duplicates && <DuplicatesDialog onClose={() => setDuplicates(false)} />}
     </>
+  )
+}
+
+/** Lists extra copies of videos, file by file. Nothing moves until the button that names the count. */
+function DuplicatesDialog({ onClose }: { onClose: () => void }) {
+  const [groups, setGroups] = useState<RipDuplicateGroup[] | null>(null)
+  const [busy, setBusy] = useState(false)
+  useEffect(() => {
+    invoke<RipDuplicateGroup[]>(HQRIP_IPC.youtubeDuplicates).then(setGroups, (e) => {
+      toast(errorMessage(e), 'error')
+      onClose()
+    })
+  }, [onClose])
+  const files = groups?.flatMap((g) => g.trash) ?? []
+  const trash = async () => {
+    setBusy(true)
+    try {
+      const r = await invoke<TrashDuplicatesResult>(HQRIP_IPC.youtubeTrashDuplicates, files)
+      toast(r.errors.length ? `Moved ${plural(r.trashed.length, 'file')} to the Trash. ${r.errors[0].relPath}: ${r.errors[0].error}` : `Moved ${plural(r.trashed.length, 'file')} to the Trash`, r.errors.length ? 'error' : 'ok')
+      onClose()
+    } catch (e) {
+      toast(errorMessage(e), 'error')
+      setBusy(false)
+    }
+  }
+  return (
+    <Modal
+      title="Duplicate rips"
+      width={720}
+      onClose={onClose}
+      footer={
+        <>
+          <Button kind="ghost" onClick={onClose}>
+            {files.length ? 'Cancel' : 'Close'}
+          </Button>
+          {files.length > 0 && (
+            <Button kind="danger" icon="trash" disabled={busy} onClick={() => void trash()}>
+              Move {plural(files.length, 'File')} to the Trash
+            </Button>
+          )}
+        </>
+      }
+    >
+      {!groups ? (
+        <div className="center-spin">
+          <Spinner />
+        </div>
+      ) : !groups.length ? (
+        <p>Every video in your library has one copy.</p>
+      ) : (
+        <div className="stack">
+          <p>
+            {plural(groups.length, 'video')} {groups.length === 1 ? 'has' : 'have'} more than one copy. Syncthing will remove the listed files from your other
+            devices too. Plays, likes and playlist entries move to the copy that stays.
+          </p>
+          {groups.map((g) => (
+            <div key={g.keep} className="yt-dup">
+              <b>{g.title}</b>
+              <div className="yt-dup-file">
+                <span className="chip ok">Stays</span> {g.keep}
+              </div>
+              {g.trash.map((rel) => (
+                <div key={rel} className="yt-dup-file">
+                  <span className="chip warn">Trash</span> {rel}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+    </Modal>
   )
 }

@@ -17,10 +17,10 @@ import { writeTags } from '@main/tags/write'
 import { encode, planFor, toFlacMaster, type ProfileId } from '@main/media/transcode'
 import { albumGain, measureLoudness, trackGain, type Loudness } from '@main/media/replaygain'
 import { embeddable, extForMime, fetchImage, loadImage, pickBest, type Image } from '@main/media/artwork'
-import { chooseRelPath, placeFile, toAbs } from '@main/library/organizer'
+import { chooseRelPath, placeFile, relDirFor, toAbs } from '@main/library/organizer'
 import { pool } from '@main/library/scanner'
 import type { LibraryService } from '@main/library/service'
-import { claimValenceId, decide, formatQuality, type DedupeDecision } from './dedupe'
+import { claimValenceId, decide, findYoutubeVideo, formatQuality, type DedupeDecision, type ExistingTrack } from './dedupe'
 import type { Archive } from './archive'
 import type { ImportAction, Reports, ReportSummary } from './report'
 import { inferLooseCluster, mergeTags, pickGenre, type IdentifyInput, type IdentifyResult, type MetadataService, type ReleaseCandidate } from '@main/metadata'
@@ -71,6 +71,15 @@ interface Prepared {
   loudness?: Loudness | null
 }
 
+const VIDEO_IN_LIBRARY = 'This video is already in the library'
+
+/** Thrown when another device's copy of a YouTube video turns up while this one is being filed. */
+class VideoArrived extends Error {
+  constructor(readonly existing: ExistingTrack) {
+    super(VIDEO_IN_LIBRARY)
+  }
+}
+
 function singleGenre(g: string | undefined): string | undefined {
   if (!g) return undefined
   const first = g.split(/\s*(?:;|\/|,|\|)\s*/)[0]
@@ -97,6 +106,15 @@ export async function runPipeline(release: SourceRelease, deps: PipelineDeps, op
   const reportId = randomUUID()
   const actions: ImportAction[] = []
   const summary: ReportSummary = { added: 0, upgraded: 0, skipped: 0, archived: 0, errors: 0, identified: release.source === 'import' ? 'unmatched' : 'source', release: release.title }
+
+  // A YouTube import goes by video alone, so a copy never becomes "Title (2)", an upgrade or a re-download
+  // on every sync. Another device's copy can reach this folder through Syncthing at any point in the
+  // job and the watcher reports it late, so this looks at the folder as well as the index.
+  const youtubeVideo = (tags: TrackTags) => (release.source === 'youtube' ? tags.youtube_video_id : undefined)
+  const youtubeCopy = async (tags: TrackTags, videoId: string): Promise<ExistingTrack | null> => {
+    await library.indexNewIn(await relDirFor(env.libraryRoot, tags, library.templateFor(tags)))
+    return findYoutubeVideo(library.db, videoId)
+  }
 
   // 1. Probe.
   progress(0.02, 'Reading files')
@@ -200,7 +218,12 @@ export async function runPipeline(release: SourceRelease, deps: PipelineDeps, op
     }
     if (!tags.title) tags.title = relPaths[k].split('/').pop()?.replace(/\.[^.]+$/, '') ?? 'Untitled'
     const quality = decodeSourceQuality(tags.source_quality) ?? formatQuality(probe.format)
-    const decision = decide(library.db, tags, probe.format.durationMs, quality)
+    const videoId = youtubeVideo(tags)
+    let decision: DedupeDecision
+    if (videoId) {
+      const copy = await youtubeCopy(tags, videoId)
+      decision = copy ? { kind: 'skip', existing: copy, reason: VIDEO_IN_LIBRARY } : { kind: 'add' }
+    } else decision = decide(library.db, tags, probe.format.durationMs, quality)
     if (decision.kind === 'upgrade') {
       // A better copy replaces the track rather than starting a new one: it keeps the track's
       // Valence ID (plays, likes and playlists follow on every device) and its rating.
@@ -295,6 +318,11 @@ export async function runPipeline(release: SourceRelease, deps: PipelineDeps, op
     const n = String(p.index).padStart(3, '0')
     const fmt: AudioFormat = p.probe.format
     const plan = planFor(fmt, profile, extname(p.src).slice(1))
+    const stopIfArrived = async () => {
+      const videoId = youtubeVideo(p.tags)
+      const copy = videoId && (await youtubeCopy(p.tags, videoId))
+      if (copy) throw new VideoArrived(copy)
+    }
     try {
       // Library file.
       const ext = plan.kind === 'encode' ? plan.profile.ext : plan.ext
@@ -306,6 +334,7 @@ export async function runPipeline(release: SourceRelease, deps: PipelineDeps, op
       // Lossless master to the archive.
       let archived: { where: 'archive' | 'pending'; rel: string } | null = null
       const template = templateFor(p.tags)
+      await stopIfArrived()
       const libRel = await chooseRelPath(env.libraryRoot, p.tags, ext, {
         template,
         taken,
@@ -335,7 +364,10 @@ export async function runPipeline(release: SourceRelease, deps: PipelineDeps, op
       try {
         const r = await placeFile(out, env.libraryRoot, libRel, {
           move: true,
-          rechoose: () => chooseRelPath(env.libraryRoot, p.tags, ext, { template, taken }),
+          rechoose: async () => {
+            await stopIfArrived()
+            return chooseRelPath(env.libraryRoot, p.tags, ext, { template, taken })
+          },
         })
         finalRel = r.relPath
       } catch (e) {
@@ -364,10 +396,15 @@ export async function runPipeline(release: SourceRelease, deps: PipelineDeps, op
         actions.push({ kind: 'add', relPath: finalRel, detail: { title: p.tags.title, artist: p.tags.artist, quality }, undo: { removeLibrary: finalRel, removeArchive: archived ?? undefined } })
       }
     } catch (e) {
-      if (signal?.aborted) throw e
-      summary.errors++
-      actions.push({ kind: 'error', detail: { title: p.tags.title, file: p.src, error: (e as Error).message } })
-      log.error(`import: failed ${p.src}`, e)
+      if (e instanceof VideoArrived) {
+        summary.skipped++
+        actions.push({ kind: 'skip', relPath: e.existing.rel_path, detail: { title: p.tags.title, artist: p.tags.artist, reason: e.message } })
+      } else {
+        if (signal?.aborted) throw e
+        summary.errors++
+        actions.push({ kind: 'error', detail: { title: p.tags.title, file: p.src, error: (e as Error).message } })
+        log.error(`import: failed ${p.src}`, e)
+      }
     }
     done++
     progress(0.3 + 0.65 * (done / todo.length), `Imported ${done} of ${todo.length}`)
