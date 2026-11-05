@@ -100,7 +100,7 @@ export function TopBar() {
           <input
             ref={input}
             type="search"
-            placeholder="Search songs, albums and artists"
+            placeholder="Search songs, albums, artists and rips"
             value={q}
             spellCheck={false}
             onChange={(e) => search(e.target.value)}

@@ -15,6 +15,7 @@ import { useViewHeader } from '../../shell/header'
 import { AlbumGrid } from '../../components/AlbumGrid'
 import { TrackTable } from '../../components/TrackTable'
 import { Artwork, Button, Empty, Segmented, Spinner } from '../../components/ui'
+import { Icon } from '../../components/Icon'
 
 const ALBUM_KINDS = ['SiIvaGunner', 'SGFR']
 const SEASON_KINDS = ['YouTube']
@@ -224,10 +225,38 @@ function RipGames() {
   )
 }
 
+/** The queue source for a game's rips (GameView, search). */
+export const gameSource = (game: string) => ({ kind: 'other' as const, id: `game:${game}`, title: game })
+
+/** A game as a cover tile (search results): opens the game, the play button plays its rips. */
+export function GameTile({ g }: { g: RipGameRow }) {
+  return (
+    <div className="tile" onClick={() => navigate({ view: 'game', game: g.name })}>
+      <div className="tile-art">
+        <Artwork hash={g.artHash} px={300} title={g.name} />
+        <button
+          className="tile-play"
+          title={`Play ${g.name}`}
+          onClick={(e) => {
+            e.stopPropagation()
+            void playQuery({ ripGame: g.name }, undefined, gameSource(g.name))
+          }}
+        >
+          <Icon name="play" size={20} />
+        </button>
+      </div>
+      <div className="tile-title ellipsis" title={g.name}>
+        {g.name}
+      </div>
+      <div className="tile-sub">{plural(g.trackCount, 'rip')}</div>
+    </div>
+  )
+}
+
 /** A game's rips, oldest upload first. */
 export function GameView({ game }: { game: string }) {
   const query: TrackQuery = { ripGame: game }
-  const src = { kind: 'other' as const, id: `game:${game}`, title: game }
+  const src = gameSource(game)
   const count = useLibData(() => invoke<{ total: number }>(LIB.tracks, { ...query, limit: 0 }), [game]).data
   useViewHeader({ color: null, title: game })
   return (

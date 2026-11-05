@@ -1,6 +1,6 @@
 // Library IPC contract (renderer <-> main).
 
-import type { AlbumRow, ArtistRow, FavoriteCounts, FavoriteKind, GenreRow, LibraryCollection, LibraryStats, TrackQuery, TrackRow, TrackTags } from '../types'
+import type { AlbumRow, ArtistRow, FavoriteCounts, FavoriteKind, GenreRow, LibraryCollection, LibraryStats, RipGameRow, TrackQuery, TrackRow, TrackTags } from '../types'
 
 export const LIB = {
   stats: 'library:stats',
@@ -15,6 +15,7 @@ export const LIB = {
   genres: 'library:genres',
   /** (artHash) → { r, g, b, luminance } | null */
   artColor: 'library:artColor',
+  /** (text, collection?: LibraryCollection, default 'main') → SearchResult */
   search: 'library:search',
   rescan: 'library:rescan',
   setRating: 'library:setRating',
@@ -34,7 +35,7 @@ export const LIB = {
   playItems: 'library:playItems',
   /** (SetLikedRequest, liked: boolean) → void; then broadcasts `changed` with { favorites: true, tracks?, albums? }. */
   setLiked: 'library:setLiked',
-  /** () → FavoriteCounts */
+  /** (collection?: LibraryCollection, default 'all') → FavoriteCounts */
   favoriteCounts: 'library:favoriteCounts',
   /** (AlbumQuery with offset/limit) → AlbumsPage */
   albumsPage: 'library:albumsPage',
@@ -55,10 +56,16 @@ export const LIB = {
   scanProgress: 'library:scanProgress',
 } as const
 
+/** library:search (text, collection = 'main'). */
 export interface SearchResult {
+  /** The first 50 matching songs; `trackTotal` counts them all. */
   tracks: TrackRow[]
+  trackTotal: number
   albums: AlbumRow[]
+  /** Empty for rips (they're all by SiIvaGunner). */
   artists: ArtistRow[]
+  /** Games whose name matches (rips only). */
+  games: RipGameRow[]
 }
 
 export interface AlbumDetail {

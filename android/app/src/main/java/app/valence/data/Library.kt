@@ -218,7 +218,7 @@ class Library(private val db: Db, private val rootPath: () -> String) {
     fun autoList(list: AutoList, c: Collection): Flow<List<Track>> = watch(*trackTopics) { autoListNow(list, c) }
 
     fun autoListNow(list: AutoList, c: Collection): List<Track> = when (list) {
-        AutoList.Liked -> tracks("coalesce(f.liked, 0) = 1", "f.at DESC, t.sort_title")
+        AutoList.Liked -> tracks("coalesce(f.liked, 0) = 1 AND ${c.where()}", "f.at DESC, t.sort_title")
         AutoList.RecentlyAdded -> tracks(c.where(), "t.added_at DESC, t.album_id, coalesce(t.disc_no, 1), coalesce(t.track_no, 9999)", limit = 300)
         AutoList.MostPlayed -> tracks("${c.where()} AND coalesce(s.play_count, 0) > 0", "s.play_count DESC, s.last_played DESC", limit = 100)
         AutoList.RecentlyPlayed -> tracks("${c.where()} AND s.last_played IS NOT NULL", "s.last_played DESC", limit = 100)

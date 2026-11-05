@@ -1,7 +1,8 @@
+import { useState, type ReactNode } from 'react'
 import { LIB, type SearchResult } from '@shared/ipc/library'
-import type { AlbumRow, ArtistRow, TrackRow } from '@shared/types'
+import type { AlbumRow, ArtistRow, RipGameRow, TrackRow } from '@shared/types'
 import { errorMessage, invoke, revealLabel } from '../../lib/ipc'
-import { cx, duration, quality } from '../../lib/format'
+import { cx, duration, plural, quality } from '../../lib/format'
 import { cmd, playQuery, playTracks, usePlayer } from '../../state/player'
 import { useCurrentLyrics, useCurrentTrack } from '../../state/current'
 import { albumRoute, navigate, toast, useUi } from '../../state/ui'
@@ -13,11 +14,12 @@ import { AlbumTile, albumMenu } from '../../components/AlbumGrid'
 import { PlayButton, Shelf, useSourcePlaying } from '../../components/Hero'
 import { TrackTable } from '../../components/TrackTable'
 import { HeartButton } from '../../components/Heart'
-import { Artwork, Button, Empty, IconButton, Spinner, showMenu } from '../../components/ui'
+import { Artwork, Button, Empty, IconButton, Segmented, Spinner, showMenu } from '../../components/ui'
 import { QueueList } from '../../components/QueueList'
 import { Seek, sleepMenuItems } from '../../shell/PlayerBar'
-import { Icon } from '../../components/Icon'
+import { Icon, type IconName } from '../../components/Icon'
 import { ArtistTile, artistMenu } from './Artists'
+import { GameTile, gameSource } from '../rips/RipsView'
 
 /**
  * The phone's Now playing screen: big cover, the title with artist and album under it, heart / info
@@ -165,34 +167,76 @@ export function NowPlayingBackdrop() {
   )
 }
 
-type Top = { kind: 'artist'; a: ArtistRow } | { kind: 'album'; a: AlbumRow } | { kind: 'track'; t: TrackRow }
+type Top =
+  | { kind: 'artist'; a: ArtistRow }
+  | { kind: 'album'; a: AlbumRow }
+  | { kind: 'track'; t: TrackRow }
+  | { kind: 'game'; g: RipGameRow }
 
-function topResult(q: string, d: SearchResult): Top | null {
+/** The search box looks in both halves of the library unless you narrow it (remembered here). */
+type Scope = 'all' | 'main' | 'rips'
+const SCOPE_KEY = 'valence.search.scope'
+const SCOPES: Array<{ value: Scope; label: string; icon: IconName; title: string }> = [
+  { value: 'all', label: 'Everything', icon: 'library', title: 'Your music and your SiivaGunner rips' },
+  { value: 'main', label: 'Music', icon: 'songs', title: 'Only your music library' },
+  { value: 'rips', label: 'SiivaGunner', icon: 'rips', title: 'Only SiivaGunner rips' },
+]
+const loadScope = (): Scope => {
+  const v = localStorage.getItem(SCOPE_KEY)
+  return v === 'main' || v === 'rips' ? v : 'all'
+}
+const NONE: SearchResult = { tracks: [], trackTotal: 0, albums: [], artists: [], games: [] }
+const resultCount = (d: SearchResult | undefined) => (d ? d.trackTotal + d.albums.length + d.artists.length + d.games.length : 0)
+
+/** An exact name wins, then the best artist, album or game; music comes before rips. */
+function topResult(q: string, m: SearchResult, r: SearchResult): Top | null {
   const n = q.trim().toLowerCase()
-  const artist = d.artists.find((a) => a.name.toLowerCase() === n)
+  const is = (s: string) => s.toLowerCase() === n
+  const artist = m.artists.find((a) => is(a.name))
   if (artist) return { kind: 'artist', a: artist }
-  const album = d.albums.find((a) => a.title.toLowerCase() === n)
+  const album = m.albums.find((a) => is(a.title)) ?? r.albums.find((a) => is(a.title))
   if (album) return { kind: 'album', a: album }
-  const track = d.tracks.find((t) => t.title.toLowerCase() === n)
+  const game = r.games.find((g) => is(g.name))
+  if (game) return { kind: 'game', g: game }
+  const track = m.tracks.find((t) => is(t.title)) ?? r.tracks.find((t) => is(t.title))
   if (track) return { kind: 'track', t: track }
-  if (d.artists[0]?.name.toLowerCase().startsWith(n)) return { kind: 'artist', a: d.artists[0] }
-  if (d.albums[0]) return { kind: 'album', a: d.albums[0] }
-  if (d.artists[0]) return { kind: 'artist', a: d.artists[0] }
-  return d.tracks[0] ? { kind: 'track', t: d.tracks[0] } : null
+  if (m.artists[0]?.name.toLowerCase().startsWith(n)) return { kind: 'artist', a: m.artists[0] }
+  if (r.games[0]?.name.toLowerCase().startsWith(n)) return { kind: 'game', g: r.games[0] }
+  if (m.albums[0]) return { kind: 'album', a: m.albums[0] }
+  if (m.artists[0]) return { kind: 'artist', a: m.artists[0] }
+  if (m.tracks[0]) return { kind: 'track', t: m.tracks[0] }
+  if (r.games[0]) return { kind: 'game', g: r.games[0] }
+  if (r.albums[0]) return { kind: 'album', a: r.albums[0] }
+  return r.tracks[0] ? { kind: 'track', t: r.tracks[0] } : null
 }
 
 function TopResult({ top, q }: { top: Top; q: string }) {
   const match = (s: { kind: string; id?: string } | null | undefined) =>
-    top.kind === 'artist' ? s?.kind === 'artist' && s.id === top.a.name : top.kind === 'album' ? s?.kind === 'album' && s.id === String(top.a.id) : s?.kind === 'search' && s.id === q
+    top.kind === 'artist'
+      ? s?.kind === 'artist' && s.id === top.a.name
+      : top.kind === 'album'
+        ? s?.kind === 'album' && s.id === String(top.a.id)
+        : top.kind === 'game'
+          ? s?.kind === 'other' && s.id === gameSource(top.g.name).id
+          : s?.kind === 'search' && s.id === q
   const now = useSourcePlaying(match)
-  const art = top.kind === 'track' ? top.t.artHash : top.a.artHash
-  const title = top.kind === 'artist' ? top.a.name : top.kind === 'album' ? top.a.title : top.t.title
-  const open = () => (top.kind === 'artist' ? navigate({ view: 'artist', artist: top.a.name }) : top.kind === 'album' ? navigate(albumRoute(top.a.id, top.a.hqRip)) : top.t.albumId != null && navigate(albumRoute(top.t.albumId, top.t.hqRip)))
+  const art = top.kind === 'track' ? top.t.artHash : top.kind === 'game' ? top.g.artHash : top.a.artHash
+  const title = top.kind === 'artist' ? top.a.name : top.kind === 'album' ? top.a.title : top.kind === 'game' ? top.g.name : top.t.title
+  const open = () =>
+    top.kind === 'artist'
+      ? navigate({ view: 'artist', artist: top.a.name })
+      : top.kind === 'album'
+        ? navigate(albumRoute(top.a.id, top.a.hqRip))
+        : top.kind === 'game'
+          ? navigate({ view: 'game', game: top.g.name })
+          : top.t.albumId != null && navigate(albumRoute(top.t.albumId, top.t.hqRip))
   const play = () => {
     if (top.kind === 'artist') void playQuery({ albumArtist: top.a.name }, undefined, { kind: 'artist', id: top.a.name, title: top.a.name })
     else if (top.kind === 'album') void invoke<number[]>(LIB.trackIds, { albumId: top.a.id }).then((ids) => playTracks(ids, 0, { kind: 'album', id: String(top.a.id), title: top.a.title }))
+    else if (top.kind === 'game') void playQuery({ ripGame: top.g.name }, undefined, gameSource(top.g.name))
     else void playTracks([top.t.id], 0, { kind: 'search', id: q, title: `“${q}”` })
   }
+  const chip = top.kind === 'artist' ? 'Artist' : top.kind === 'album' ? 'Album' : top.kind === 'game' ? 'Game' : top.t.hqRip ? 'Rip' : 'Song'
   return (
     <div
       className="top-result"
@@ -202,9 +246,10 @@ function TopResult({ top, q }: { top: Top; q: string }) {
       <Artwork hash={art} px={300} className={cx('top-art', top.kind === 'artist' && 'round')} title={title} />
       <div className="top-title ellipsis">{title}</div>
       <div className="top-sub">
-        <span className="chip">{top.kind === 'artist' ? 'Artist' : top.kind === 'album' ? 'Album' : 'Song'}</span>
+        <span className="chip">{chip}</span>
         {top.kind === 'album' && <span className="ellipsis">{top.a.albumArtist}</span>}
-        {top.kind === 'track' && <span className="ellipsis">{top.t.artist}</span>}
+        {top.kind === 'game' && <span className="ellipsis">{plural(top.g.trackCount, 'rip')}</span>}
+        {top.kind === 'track' && <span className="ellipsis">{top.t.hqRip ? (top.t.ripGame ?? top.t.album) : top.t.artist}</span>}
       </div>
       <span className="top-play">
         <PlayButton onPlay={play} current={now.current} playing={now.playing} title={`Play ${title}`} />
@@ -213,60 +258,122 @@ function TopResult({ top, q }: { top: Top; q: string }) {
   )
 }
 
+/** A song list section; "Show all" narrows the search to that half when only the first 50 fit. */
+function ResultSongs(props: { title: string; sub: string; onMore?: () => void; children: ReactNode }) {
+  return (
+    <section className="section">
+      <div className="section-head">
+        <div>
+          <h2 className="section-title">{props.title}</h2>
+          <div className="section-sub">{props.sub}</div>
+        </div>
+        {props.onMore && (
+          <button className="section-more" onClick={props.onMore}>
+            Show all
+          </button>
+        )}
+      </div>
+      {props.children}
+    </section>
+  )
+}
+
 export function SearchView({ q }: { q: string }) {
-  const { data, loading } = useLibData(() => invoke<SearchResult>(LIB.search, q), [q])
+  const [scope, setScopeState] = useState<Scope>(loadScope)
+  const setScope = (s: Scope) => {
+    setScopeState(s)
+    localStorage.setItem(SCOPE_KEY, s)
+  }
+  // Both halves are searched either way, so the switch can show what each one found.
+  const music = useLibData(() => invoke<SearchResult>(LIB.search, q, 'main'), [q])
+  const rips = useLibData(() => invoke<SearchResult>(LIB.search, q, 'rips'), [q])
   useViewHeader({ color: null, title: `“${q}”` })
   const src = { kind: 'search' as const, id: q, title: `“${q}”` }
-  const none = data && !data.tracks.length && !data.albums.length && !data.artists.length
-  const top = data ? topResult(q, data) : null
+  const loaded = !!music.data && !!rips.data
+  const loading = music.loading || rips.loading
+  const m = scope !== 'rips' ? (music.data ?? NONE) : NONE
+  const r = scope !== 'main' ? (rips.data ?? NONE) : NONE
+  const counts: Record<Scope, number> = { all: resultCount(music.data) + resultCount(rips.data), main: resultCount(music.data), rips: resultCount(rips.data) }
+  const none = loaded && counts[scope] === 0
+  const top = loaded ? topResult(q, m, r) : null
+  // The short list beside the top result: songs, or rips when no song matched.
+  const mini = m.tracks.length ? m.tracks : r.tracks
+  const miniRips = !m.tracks.length
+  const single = scope !== 'all'
+  const sub = [
+    m.artists.length && plural(m.artists.length, 'artist'),
+    m.albums.length + r.albums.length && plural(m.albums.length + r.albums.length, 'album'),
+    m.trackTotal && plural(m.trackTotal, 'song'),
+    r.games.length && plural(r.games.length, 'game'),
+    r.trackTotal && plural(r.trackTotal, 'rip'),
+  ]
+    .filter(Boolean)
+    .join(' · ')
+  const other: Scope | null = scope === 'main' && counts.rips ? 'rips' : scope === 'rips' && counts.main ? 'main' : null
+
   return (
-    <div className={cx('view search-view', loading && data && 'refetching')}>
+    <div className={cx('view search-view', loading && loaded && 'refetching')}>
       <div className="view-head">
         <div>
           <h1 className="view-title">Results for “{q}”</h1>
-          {data && !none && (
-            <div className="view-sub">
-              {[data.artists.length && `${data.artists.length} artists`, data.albums.length && `${data.albums.length} albums`, data.tracks.length && `${data.tracks.length} songs`].filter(Boolean).join(' · ')}
-            </div>
-          )}
+          <div className="view-sub">{loaded && !none ? sub : ' '}</div>
         </div>
+        <Segmented<Scope>
+          className="scope-switch"
+          label="Search in"
+          value={scope}
+          onChange={setScope}
+          options={SCOPES.map((s) => ({
+            value: s.value,
+            title: s.title,
+            label: (
+              <>
+                <Icon name={s.icon} size={16} />
+                {s.label}
+                {loaded && <span className="pill-count">{counts[s.value].toLocaleString()}</span>}
+              </>
+            ),
+          }))}
+        />
         <div className="view-actions">
           <Button icon="wave" onClick={() => navigate({ view: 'tidal', tab: 'search', id: q })}>
             Search TIDAL
           </Button>
         </div>
       </div>
-      {!data && loading && (
+      {!loaded && loading && (
         <div className="center-spin">
           <Spinner />
         </div>
       )}
       {none && (
-        <Empty icon="search" title={`No matches for “${q}” in your library`}>
+        <Empty icon="search" title={scope === 'rips' ? `No SiivaGunner rips match “${q}”` : scope === 'main' ? `No music matches “${q}”` : `No matches for “${q}” in your library`}>
           Check the spelling, try fewer words, or search TIDAL.
+          {other && (
+            <div>
+              <Button icon={other === 'rips' ? 'rips' : 'songs'} onClick={() => setScope(other)}>
+                {other === 'rips' ? `Show ${plural(counts.rips, 'SiivaGunner result')}` : `Show ${plural(counts.main, 'music result')}`}
+              </Button>
+            </div>
+          )}
         </Empty>
       )}
-      {data && top && (
+      {loaded && top && (
         <div className="search-top">
           <section>
             <h2 className="section-title">Top result</h2>
             <TopResult top={top} q={q} />
           </section>
-          {data.tracks.length > 0 && (
+          {mini.length > 0 && (
             <section className="search-top-songs">
-              <h2 className="section-title">Songs</h2>
+              <h2 className="section-title">{miniRips ? 'Rips' : 'Songs'}</h2>
               <div className="mini-tracks">
-                {data.tracks.slice(0, 4).map((t, i) => (
-                  <div
-                    key={t.id}
-                    className="mini-track"
-                    onDoubleClick={() => void playTracks(data.tracks.map((x) => x.id), i, src)}
-                    onClick={() => void playTracks(data.tracks.map((x) => x.id), i, src)}
-                  >
+                {mini.slice(0, 4).map((t, i) => (
+                  <div key={t.id} className="mini-track" onClick={() => void playTracks(mini.map((x) => x.id), i, src)}>
                     <Artwork hash={t.artHash} px={96} size={40} radius={4} title={t.album} />
                     <span className="mini-track-text">
                       <span className="ellipsis">{t.title}</span>
-                      <span className="faint ellipsis">{t.artist}</span>
+                      <span className="faint ellipsis">{t.hqRip ? (t.ripGame ?? t.album) : t.artist}</span>
                     </span>
                     <HeartButton target={{ kind: 'track', id: t.id }} liked={t.liked} className="tt-heart" />
                     <span className="faint tnum mini-track-time">{duration(t.durationMs)}</span>
@@ -277,25 +384,51 @@ export function SearchView({ q }: { q: string }) {
           )}
         </div>
       )}
-      {data && data.artists.length > 0 && (
+      {m.artists.length > 0 && (
         <Shelf title="Artists">
-          {data.artists.map((a) => (
+          {m.artists.map((a) => (
             <ArtistTile key={a.name} a={a} />
           ))}
         </Shelf>
       )}
-      {data && data.albums.length > 0 && (
+      {m.albums.length > 0 && (
         <Shelf title="Albums">
-          {data.albums.map((a) => (
+          {m.albums.map((a) => (
             <AlbumTile key={a.id} a={a} sub={[a.year, a.albumArtist].filter(Boolean).join(' · ')} />
           ))}
         </Shelf>
       )}
-      {data && data.tracks.length > 4 && (
-        <section className="section">
-          <h2 className="section-title">All songs</h2>
-          <TrackTable rows={data.tracks} source={src} showArt columns={['index', 'title', 'album', 'heart', 'time', 'rating']} />
-        </section>
+      {r.games.length > 0 && (
+        <Shelf title="Games" sub="SiivaGunner rips by game">
+          {r.games.map((g) => (
+            <GameTile key={g.name} g={g} />
+          ))}
+        </Shelf>
+      )}
+      {r.albums.length > 0 && (
+        <Shelf title="SiivaGunner albums">
+          {r.albums.map((a) => (
+            <AlbumTile key={a.id} a={a} sub={plural(a.trackCount, 'rip')} />
+          ))}
+        </Shelf>
+      )}
+      {m.trackTotal > 4 && (
+        <ResultSongs title="All songs" sub={plural(m.trackTotal, 'song')} onMore={!single && m.trackTotal > m.tracks.length ? () => setScope('main') : undefined}>
+          {single ? (
+            <TrackTable query={{ search: q, collection: 'main' }} source={src} showArt columns={['index', 'title', 'album', 'heart', 'time', 'rating']} />
+          ) : (
+            <TrackTable rows={m.tracks} source={src} showArt columns={['index', 'title', 'album', 'heart', 'time', 'rating']} />
+          )}
+        </ResultSongs>
+      )}
+      {r.trackTotal > (miniRips ? 4 : 0) && (
+        <ResultSongs title="SiivaGunner rips" sub={plural(r.trackTotal, 'rip')} onMore={!single && r.trackTotal > r.tracks.length ? () => setScope('rips') : undefined}>
+          {single ? (
+            <TrackTable query={{ search: q, collection: 'rips' }} source={src} showArt columns={['index', 'title', 'game', 'album', 'heart', 'time']} />
+          ) : (
+            <TrackTable rows={r.tracks} source={src} showArt columns={['index', 'title', 'game', 'album', 'heart', 'time']} />
+          )}
+        </ResultSongs>
       )}
     </div>
   )

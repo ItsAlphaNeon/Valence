@@ -184,6 +184,19 @@ describe('liked rows and queries', () => {
     expect(queryArtists(db, { liked: true }).map((a) => a.name).sort()).toEqual(['Beyoncé', 'Daft Punk'])
 
     expect(favoriteCounts(db)).toEqual({ tracks: 3, albums: 2, artists: 2 })
+    // The Favorites switch counts normal music and SiivaGunner rips apart.
+    expect(favoriteCounts(db, 'main')).toEqual({ tracks: 2, albums: 2, artists: 2 })
+    expect(favoriteCounts(db, 'rips')).toEqual({ tracks: 1, albums: 0, artists: 0 })
+    const ripKey = (db.prepare('SELECT album_key FROM albums WHERE id = ?').get(albums.rip) as { album_key: string }).album_key
+    favs.set('a', [ripKey], true)
+    favs.set('r', [artistFavoriteKey('SiIvaGunner')], true)
+    expect(favoriteCounts(db, 'rips')).toEqual({ tracks: 1, albums: 1, artists: 1 })
+    expect(favoriteCounts(db, 'main')).toEqual({ tracks: 2, albums: 2, artists: 2 })
+    expect(favoriteCounts(db)).toEqual({ tracks: 3, albums: 3, artists: 3 })
+    expect(queryAlbums(db, { liked: true, collection: 'rips' }).map((a) => a.id)).toEqual([albums.rip])
+    expect(queryArtists(db, { liked: true, collection: 'rips' }).map((a) => a.name)).toEqual(['SiIvaGunner'])
+    favs.set('a', [ripKey], false)
+    favs.set('r', [artistFavoriteKey('SiIvaGunner')], false)
   })
 
   it('evaluates the liked smart rule', () => {

@@ -17,7 +17,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -192,6 +197,45 @@ fun Chip(text: String, selected: Boolean, onClick: () -> Unit, modifier: Modifie
         contentAlignment = Alignment.Center,
     ) {
         Text(text, style = TextStyle(fontSize = 15.sp), color = if (selected) pal.accent else pal.text2, maxLines = 1)
+    }
+}
+
+/** One side of a [SegmentedSwitch]; [count] shows dimmed after the label once known. */
+data class SwitchOption(val icon: ImageVector, val label: String, val count: Int? = null)
+
+/**
+ * A full-width switch with a sliding accent thumb (Favorites: Music | SiivaGunner). Filled rather
+ * than outlined like [Chip], so it reads as "which collection" instead of another filter.
+ */
+@Composable
+fun SegmentedSwitch(options: List<SwitchOption>, selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
+    val pal = LocalPalette.current
+    val shape = RoundedCornerShape(50)
+    BoxWithConstraints(
+        modifier.fillMaxWidth().height(46.dp).clip(shape).background(pal.bar).border(1.dp, pal.outline, shape).padding(3.dp),
+    ) {
+        val w = maxWidth / options.size
+        val x by animateDpAsState(w * selected, label = "switchThumb")
+        Box(Modifier.offset(x = x).width(w).fillMaxHeight().clip(shape).background(pal.accent))
+        Row(Modifier.fillMaxSize()) {
+            options.forEachIndexed { i, o ->
+                val on = i == selected
+                val color = if (on) pal.onAccent else pal.text2
+                Row(
+                    Modifier.weight(1f).fillMaxHeight().clip(shape).selectable(selected = on, role = Role.Tab, onClick = { onSelect(i) }),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(o.icon, null, Modifier.size(18.dp), tint = color)
+                    Spacer(Modifier.width(8.dp))
+                    Text(o.label, style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.SemiBold), color = color, maxLines = 1)
+                    if (o.count != null) {
+                        Spacer(Modifier.width(6.dp))
+                        Text(o.count.toString(), style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Medium), color = color.copy(alpha = 0.7f), maxLines = 1)
+                    }
+                }
+            }
+        }
     }
 }
 

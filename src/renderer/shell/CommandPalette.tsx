@@ -131,7 +131,8 @@ function Palette() {
   const close = () => useUi.getState().setPalette(false)
   const [q, setQ] = useState('')
   const [sel, setSel] = useState(0)
-  const [found, setFound] = useState<SearchResult | null>(null)
+  // Music and rips are searched apart, so a run of rips never pushes your songs off the list.
+  const [found, setFound] = useState<{ m: SearchResult; r: SearchResult } | null>(null)
   const list = useRef<HTMLDivElement>(null)
   const base = useMemo(baseCommands, [])
 
@@ -139,7 +140,11 @@ function Palette() {
     const t = q.trim()
     if (t.length < 2) return setFound(null)
     let live = true
-    const timer = setTimeout(() => void invoke<SearchResult>(LIB.search, t).then((r) => live && setFound(r)), 120)
+    const timer = setTimeout(
+      () =>
+        void Promise.all([invoke<SearchResult>(LIB.search, t, 'main'), invoke<SearchResult>(LIB.search, t, 'rips')]).then(([m, r]) => live && setFound({ m, r })),
+      120,
+    )
     return () => {
       live = false
       clearTimeout(timer)
@@ -157,11 +162,12 @@ function Palette() {
       .map(([c]) => c)
     const lib: Cmd[] = []
     if (found) {
-      for (const a of found.artists.slice(0, 3))
+      const { m, r } = found
+      for (const a of m.artists.slice(0, 3))
         lib.push({ id: `ar:${a.name}`, group: 'Artists', label: a.name, sub: 'Artist', art: <Artwork hash={a.artHash} px={96} title={a.name} className="round" />, run: go({ view: 'artist', artist: a.name }) })
-      for (const a of found.albums.slice(0, 4))
+      for (const a of m.albums.slice(0, 4))
         lib.push({ id: `al:${a.id}`, group: 'Albums', label: a.title, sub: `Album · ${a.albumArtist}`, art: <Artwork hash={a.artHash} px={96} title={a.title} />, run: go(albumRoute(a.id, a.hqRip)) })
-      for (const tr of found.tracks.slice(0, 6))
+      for (const tr of m.tracks.slice(0, 6))
         lib.push({
           id: `tr:${tr.id}`,
           group: 'Songs',
@@ -172,9 +178,22 @@ function Palette() {
           run: () => void playTracks([tr.id], 0, { kind: 'search', id: t, title: `“${t}”` }),
           alt: () => void playNext([tr.id]),
         })
+      for (const g of r.games.slice(0, 2))
+        lib.push({ id: `gm:${g.name}`, group: 'Games', label: g.name, sub: `Game · ${g.trackCount === 1 ? '1 rip' : `${g.trackCount} rips`}`, art: <Artwork hash={g.artHash} px={96} title={g.name} />, run: go({ view: 'game', game: g.name }) })
+      for (const tr of r.tracks.slice(0, 4))
+        lib.push({
+          id: `rp:${tr.id}`,
+          group: 'SiivaGunner rips',
+          label: tr.title,
+          sub: `Rip · ${tr.ripGame ?? tr.album}`,
+          art: <Artwork hash={tr.artHash} px={96} title={tr.album} />,
+          hint: 'Enter plays · Shift+Enter plays next',
+          run: () => void playTracks([tr.id], 0, { kind: 'search', id: t, title: `“${t}”` }),
+          alt: () => void playNext([tr.id]),
+        })
     }
     const searchAll: Cmd = { id: 'search', group: 'Search', label: `Search for “${t}”`, icon: 'search', run: () => navigate({ view: 'search', q: t }) }
-    return [...lib.filter((c) => c.group === 'Songs' || c.group === 'Artists' || c.group === 'Albums'), ...cmds, searchAll]
+    return [...lib, ...cmds, searchAll]
   }, [q, base, found])
 
   useEffect(() => setSel(0), [q, found])
@@ -196,7 +215,7 @@ function Palette() {
           <Icon name="search" size={20} />
           <input
             autoFocus
-            placeholder="Search songs, albums, artists, or type a command…"
+            placeholder="Search songs, albums, artists, rips, or type a command…"
             value={q}
             spellCheck={false}
             onChange={(e) => setQ(e.target.value)}

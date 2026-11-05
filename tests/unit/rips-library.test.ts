@@ -9,7 +9,7 @@ import Database from 'better-sqlite3'
 import { kvGet, migrate, openDb } from '@main/db/db'
 import { MIGRATIONS } from '@main/db/schema'
 import { Indexer } from '@main/library/indexer'
-import { libraryStats, queryAlbums, queryArtists, queryGenres, queryTracks, ripGames } from '@main/library/queries'
+import { libraryStats, queryAlbums, queryArtists, queryGenres, queryTracks, ripGames, searchLibrary } from '@main/library/queries'
 import { smartSql } from '@main/library/playlists'
 import { createLibraryLookup } from '@main/library/lookup'
 import { chooseRelPath } from '@main/library/organizer'
@@ -60,6 +60,18 @@ describe('rips stay out of the main library', () => {
     expect(queryTracks(db, { ripGame: 'undertale' }).rows.map((r) => r.relPath)).toEqual(['High Quality Rips/SiIvaGunner: Season 2/MEGALOVANIA.opus'])
   })
 
+  it('search looks in one half at a time; rips are found with their game', () => {
+    const main = searchLibrary(db, 'megalovania')
+    expect(main.tracks.map((t) => t.relPath)).toEqual(['Toby Fox/Undertale (2015)/MEGALOVANIA.mp3'])
+    expect(main).toMatchObject({ trackTotal: 1, games: [] })
+    const rips = searchLibrary(db, 'megalovania', 'rips')
+    expect(rips.tracks.map((t) => t.relPath)).toEqual(['High Quality Rips/SiIvaGunner: Season 2/MEGALOVANIA.opus'])
+    expect(rips).toMatchObject({ trackTotal: 1, artists: [], albums: [] })
+    expect(searchLibrary(db, 'megalovania', 'all').trackTotal).toBe(2)
+    // The game isn't in the rip's title here, but the game itself still turns up.
+    expect(searchLibrary(db, 'under', 'rips').games).toEqual([{ name: 'UNDERTALE', trackCount: 1, artHash: null }])
+  })
+
   it('album pages still open for rip albums', () => {
     const season = queryAlbums(db, { collection: 'rips', ripKinds: ['YouTube'] })
     expect(season).toMatchObject([{ title: 'SiIvaGunner: Season 2', hqRip: 'YouTube' }])
@@ -98,6 +110,35 @@ describe('rips stay out of the main library', () => {
     const lookup = createLibraryLookup(db)
     expect(lookup.resolve({ title: 'Snow halation', artist: 'ripper', durationMs: 180000 })).toBeNull()
     expect(lookup.resolve({ title: 'MEGALOVANIA', artist: 'Toby Fox', durationMs: 180000 })).toBe('Toby Fox/Undertale (2015)/MEGALOVANIA.mp3')
+  })
+})
+
+describe('searching rips', () => {
+  const db = libraryWith()
+  const ix = new Indexer(db)
+  ix.upsert('High Quality Rips/SiIvaGunner: Season 3/Route 1.opus', { size: 1, mtimeMs: 1 }, probe({
+    title: 'Route 1 (Beta Mix) - Pokémon Red and Blue', artist: 'SiIvaGunner', albumartist: 'SiIvaGunner', album: 'SiIvaGunner: Season 3', genre: RIP_GENRE,
+    hq_rip: 'YouTube', youtube_video_id: 'def456', rip_game: 'Pokémon Red and Blue', composer: 'Junichi Masuda',
+  }))
+  ix.flushAlbums()
+  afterAll(() => db.close())
+
+  it('finds games by the start of their words, with or without accents', () => {
+    expect(searchLibrary(db, 'pokemon red', 'rips').games).toMatchObject([{ name: 'Pokémon Red and Blue', trackCount: 1 }])
+    expect(searchLibrary(db, 'pokemon', 'rips').tracks.map((t) => t.ripGame)).toEqual(['Pokémon Red and Blue'])
+    expect(searchLibrary(db, 'BLU', 'rips').games).toHaveLength(1)
+    expect(searchLibrary(db, 'ed', 'rips').games).toEqual([])
+    expect(searchLibrary(db, 'pokemon').games).toEqual([])
+    expect(searchLibrary(db, 'pokemon').trackTotal).toBe(0)
+  })
+
+  it('rip albums match on their own title, not on every rip inside them', () => {
+    expect(searchLibrary(db, 'route', 'rips').albums).toEqual([])
+    expect(searchLibrary(db, 'season 3', 'rips').albums.map((a) => a.title)).toEqual(['SiIvaGunner: Season 3'])
+    expect(searchLibrary(db, 'season', 'rips').albums.map((a) => a.title)).toEqual(['SiIvaGunner: Season 2', 'SiIvaGunner: Season 3'])
+    expect(searchLibrary(db, 'season', 'rips').trackTotal).toBe(2)
+    // A normal album still turns up for one of its songs.
+    expect(searchLibrary(db, 'megalovania').albums.map((a) => a.title)).toEqual(['Undertale'])
   })
 })
 
