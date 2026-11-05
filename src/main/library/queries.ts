@@ -365,16 +365,20 @@ export function queryArtists(
   return q.liked ? out.filter((a) => a.liked) : out
 }
 
-/** Liked items that exist in the library (any collection). */
-export function favoriteCounts(db: DB): FavoriteCounts {
-  const tracks = (db.prepare(`SELECT count(*) AS n FROM tracks t WHERE ${TRACK_LIKED_SQL}`).get() as { n: number }).n
+/** Liked items that exist in the library: in every collection, or only normal music or only rips. */
+export function favoriteCounts(db: DB, collection: LibraryCollection = 'all'): FavoriteCounts {
+  const tc = collectionWhere('t', collection)
+  const ac = collectionWhere('a', collection)
+  const tracks = (db.prepare(`SELECT count(*) AS n FROM tracks t WHERE ${TRACK_LIKED_SQL}${tc ? ` AND ${tc}` : ''}`).get() as { n: number }).n
   const albums = (
-    db.prepare(`SELECT count(*) AS n FROM albums a WHERE ${ALBUM_LIKED_SQL} AND EXISTS (SELECT 1 FROM tracks t WHERE t.album_id = a.id)`).get() as { n: number }
+    db
+      .prepare(`SELECT count(*) AS n FROM albums a WHERE ${ALBUM_LIKED_SQL}${ac ? ` AND ${ac}` : ''} AND EXISTS (SELECT 1 FROM tracks t WHERE t.album_id = a.id)`)
+      .get() as { n: number }
   ).n
   const liked = likedArtistKeys(db)
   const seen = new Set<string>()
   if (liked.size) {
-    for (const { name } of db.prepare('SELECT DISTINCT album_artist AS name FROM tracks').all() as Array<{ name: string }>) {
+    for (const { name } of db.prepare(`SELECT DISTINCT album_artist AS name FROM tracks t${tc ? ` WHERE ${tc}` : ''}`).all() as Array<{ name: string }>) {
       const k = artistFavoriteKey(name)
       if (liked.has(k)) seen.add(k)
     }

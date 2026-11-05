@@ -163,13 +163,26 @@ export function Slider({
   )
 }
 
-export function Segmented<T extends string>({ value, options, onChange, className }: { value: T; options: Array<{ value: T; label: ReactNode }>; onChange: (v: T) => void; className?: string }) {
+export function Segmented<T extends string>({
+  value,
+  options,
+  onChange,
+  className,
+  label,
+}: {
+  value: T
+  options: Array<{ value: T; label: ReactNode; title?: string }>
+  onChange: (v: T) => void
+  className?: string
+  /** Accessible name for the group. */
+  label?: string
+}) {
   const idx = Math.max(0, options.findIndex((o) => o.value === value))
   return (
-    <div className={cx('segmented', className)} style={{ ['--n' as string]: options.length, ['--i' as string]: idx }}>
+    <div className={cx('segmented', className)} role="group" aria-label={label} style={{ ['--n' as string]: options.length, ['--i' as string]: idx }}>
       <div className="segmented-thumb" />
       {options.map((o) => (
-        <button key={o.value} className={cx('segmented-opt', o.value === value && 'on')} onClick={() => onChange(o.value)}>
+        <button key={o.value} className={cx('segmented-opt', o.value === value && 'on')} aria-pressed={o.value === value} title={o.title} onClick={() => onChange(o.value)}>
           {o.label}
         </button>
       ))}

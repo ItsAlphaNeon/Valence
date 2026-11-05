@@ -30,6 +30,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Icon
@@ -63,6 +65,9 @@ import app.valence.ui.components.FastScroller
 import app.valence.ui.components.HDivider
 import app.valence.ui.components.IconAction
 import app.valence.ui.components.ListActions
+import app.valence.ui.components.OutlinedAction
+import app.valence.ui.components.SegmentedSwitch
+import app.valence.ui.components.SwitchOption
 import app.valence.ui.components.ScrollStrip
 import app.valence.ui.components.SongRow
 import app.valence.ui.components.SortDialog
@@ -220,12 +225,15 @@ fun SongListPage(
     countNoun: (Int) -> String = { songs(it) },
     onReorder: ((List<Track>) -> Unit)? = null,
     empty: @Composable () -> Unit = { EmptyState(Icons.AutoMirrored.Rounded.QueueMusic, "No songs") },
+    /** Shown under the top bar even while the list is empty or loading (the Favorites switch). */
+    top: (@Composable () -> Unit)? = null,
 ) {
     val ui = LocalUi.current
     var filter by rememberSaveable { mutableStateOf("") }
     var sorting by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize()) {
         TopBar(title, onBack)
+        top?.invoke()
         if (tracks == null) return@Column
         val shown = remember(tracks, filter) {
             if (filter.isBlank()) tracks else tracks.filter { matches(it.title + " " + it.artist + " " + it.album + " " + (it.ripGame ?: ""), filter) }
@@ -366,6 +374,7 @@ fun AutoPage(name: String, onBack: () -> Unit) {
     when (name) {
         "History" -> return HistoryPage(onBack)
         "All" -> return AllSongsPage(onBack)
+        AutoList.Liked.name -> return FavoritesPage(onBack)
     }
     val list = runCatching { AutoList.valueOf(name) }.getOrNull() ?: return
     val tracks by rememberFlow("auto:$name", null) { ui.library.autoList(list, Collection.All.takeIf { list == AutoList.Liked } ?: Collection.Main) }
@@ -381,6 +390,54 @@ fun AutoPage(name: String, onBack: () -> Unit) {
                 AutoList.MostPlayed, AutoList.RecentlyPlayed -> EmptyState(Icons.Rounded.History, "Nothing played yet", "Plays from all your devices count.")
                 else -> EmptyState(Icons.AutoMirrored.Rounded.QueueMusic, "No songs")
             }
+        },
+    )
+}
+
+/**
+ * Favorites, with a Music | SiivaGunner switch under the top bar so rips and normal music are kept
+ * apart (as on the desktop). The phone remembers which side was open.
+ */
+@Composable
+private fun FavoritesPage(onBack: () -> Unit) {
+    val ui = LocalUi.current
+    val prefs = ui.app.prefs
+    val side by prefs.favSide.flow.collectAsState()
+    val rips = side == "rips"
+    val music by rememberFlow("auto:Liked:main", null) { ui.library.autoList(AutoList.Liked, Collection.Main) }
+    val ripList by rememberFlow("auto:Liked:rips", null) { ui.library.autoList(AutoList.Liked, Collection.Rips) }
+    val tracks = if (rips) ripList else music
+    var sort by rememberSaveable { mutableStateOf("default") }
+    val shown = remember(tracks, sort) { tracks?.let { sortTracks(it, sort) } }
+    val other = if (rips) music else ripList
+    SongListPage(
+        "Favorites", onBack, shown, if (rips) "SiivaGunner favorites" else "Favorites", "auto:Liked:$side",
+        sort = sort, onSort = { sort = it },
+        countNoun = if (rips) ({ if (it == 1) "1 rip" else "$it rips" }) else ({ songs(it) }),
+        top = {
+            SegmentedSwitch(
+                listOf(
+                    SwitchOption(Icons.Rounded.MusicNote, "Music", music?.size),
+                    SwitchOption(Icons.Rounded.SportsEsports, "SiivaGunner", ripList?.size),
+                ),
+                selected = if (rips) 1 else 0,
+                onSelect = { prefs.favSide.value = if (it == 1) "rips" else "main" },
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 8.dp),
+            )
+        },
+        empty = {
+            EmptyState(
+                if (rips) Icons.Rounded.SportsEsports else Icons.Rounded.FavoriteBorder,
+                if (rips) "No favorite rips yet" else "No favorites yet",
+                if (rips) "Tap the heart on any rip in SiivaGunner. Favorites sync with your computers." else "Tap the heart on any song. Favorites sync with your computers.",
+                action = if (other.isNullOrEmpty()) null else ({
+                    OutlinedAction(
+                        if (rips) "Show Music favorites" else "Show SiivaGunner favorites",
+                        { prefs.favSide.value = if (rips) "main" else "rips" },
+                        icon = if (rips) Icons.Rounded.MusicNote else Icons.Rounded.SportsEsports,
+                    )
+                }),
+            )
         },
     )
 }

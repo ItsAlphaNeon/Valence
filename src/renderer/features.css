@@ -83,6 +83,57 @@
 .pill-row.inline {
   margin: 0 0 0 auto;
 }
+/* Favorites: the Music | SiivaGunner switch beside the title. A filled track with a sliding accent
+   thumb, so it reads as a mode switch rather than another filter pill. */
+.segmented.fav-switch {
+  position: relative;
+  display: inline-grid;
+  grid-template-columns: repeat(var(--n), 1fr);
+  flex-wrap: nowrap;
+  gap: 0;
+  padding: 3px;
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.fav-switch .segmented-thumb {
+  display: block;
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: calc((100% - 6px) / var(--n));
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  transform: translateX(calc(var(--i) * 100%));
+  transition: transform var(--dur) var(--ease);
+}
+.fav-switch .segmented-opt {
+  position: relative;
+  z-index: 1;
+  justify-content: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 18px;
+  box-shadow: none;
+  font-weight: 600;
+}
+.fav-switch .segmented-opt:hover {
+  background: transparent;
+  color: var(--fg);
+}
+.fav-switch .segmented-opt.on {
+  color: var(--accent-fg);
+  box-shadow: none;
+}
+.fav-switch .pill-count {
+  opacity: 0.75;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fav-switch .segmented-thumb {
+    transition: none;
+  }
+}
 .pill-count {
   font-size: 12px;
   font-weight: 600;

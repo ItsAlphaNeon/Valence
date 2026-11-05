@@ -209,7 +209,7 @@ class PlaybackService : MediaLibraryService() {
             "album" -> lib.albumTracks(arg.toLong()).first()
             "artist" -> lib.artistTracks(arg).first()
             "playlist" -> lib.playlistTracksNow(arg)
-            "auto" -> lib.autoListNow(AutoList.valueOf(arg), Collection.Main)
+            "auto" -> AutoList.valueOf(arg).let { lib.autoListNow(it, if (it == AutoList.Liked) Collection.All else Collection.Main) }
             "songs" -> lib.songs(Collection.Main, "title").first()
             "rips" -> lib.songs(Collection.Rips, "uploaded").first()
             "search" -> lib.search(arg, Collection.All).tracks

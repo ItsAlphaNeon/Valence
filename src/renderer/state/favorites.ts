@@ -8,8 +8,25 @@ import { errorMessage, invoke } from '../lib/ipc'
 import { onFavoritesChanged } from './library'
 import { toast } from './ui'
 
+/** Which favorites the Favorites page shows: normal music or SiivaGunner rips. */
+export type FavSide = 'main' | 'rips'
+const SIDE_KEY = 'valence.favorites.side'
+const NONE: FavoriteCounts = { tracks: 0, albums: 0, artists: 0 }
+
+function loadSide(): FavSide {
+  try {
+    return localStorage.getItem(SIDE_KEY) === 'rips' ? 'rips' : 'main'
+  } catch {
+    return 'main'
+  }
+}
+
 interface FavState {
+  /** Every collection (sidebar count). */
   counts: FavoriteCounts
+  /** Each side of the Favorites switch. */
+  sides: Record<FavSide, FavoriteCounts>
+  side: FavSide
   albums: AlbumRow[]
   artists: ArtistRow[]
   /** Optimistic values by `t:<id>`, `a:<id>`, `r:<name>` until the library catches up. */
@@ -17,7 +34,9 @@ interface FavState {
 }
 
 export const useFavorites = create<FavState>(() => ({
-  counts: { tracks: 0, albums: 0, artists: 0 },
+  counts: NONE,
+  sides: { main: NONE, rips: NONE },
+  side: loadSide(),
   albums: [],
   artists: [],
   pending: {},
@@ -31,11 +50,28 @@ export function refreshFavorites(): Promise<void> {
     invoke<FavoriteCounts>(LIB.favoriteCounts).catch(() => null),
     invoke<AlbumRow[]>(LIB.albums, { liked: true, limit: 200 }).catch(() => null),
     invoke<ArtistRow[]>(LIB.artists, { liked: true }).catch(() => null),
-  ]).then(([counts, albums, artists]) => {
+    invoke<FavoriteCounts>(LIB.favoriteCounts, 'main').catch(() => null),
+    invoke<FavoriteCounts>(LIB.favoriteCounts, 'rips').catch(() => null),
+  ]).then(([counts, albums, artists, main, rips]) => {
     refreshing = null
-    useFavorites.setState((s) => ({ counts: counts ?? s.counts, albums: albums ?? s.albums, artists: artists ?? s.artists }))
+    useFavorites.setState((s) => ({
+      counts: counts ?? s.counts,
+      albums: albums ?? s.albums,
+      artists: artists ?? s.artists,
+      sides: { main: main ?? s.sides.main, rips: rips ?? s.sides.rips },
+    }))
   })
   return refreshing
+}
+
+/** Flip the Favorites page between normal music and SiivaGunner rips (remembered on this computer). */
+export function setFavSide(side: FavSide): void {
+  useFavorites.setState({ side })
+  try {
+    localStorage.setItem(SIDE_KEY, side)
+  } catch {
+    /* private storage */
+  }
 }
 
 export function initFavorites(): void {

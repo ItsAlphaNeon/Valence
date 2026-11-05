@@ -464,7 +464,9 @@ export class LibraryService {
     })
     handle(LIB.playItems, (ids: number[]) => tracksByIds(db, ids).map((t) => this.playItem(t)))
     handle(LIB.setLiked, (req: SetLikedRequest, liked: boolean) => this.setLiked(req, liked))
-    handle(LIB.favoriteCounts, () => favoriteCounts(db))
+    handle(LIB.favoriteCounts, (collection?: LibraryCollection) =>
+      favoriteCounts(db, collection === 'main' || collection === 'rips' ? collection : 'all'),
+    )
     handle(LIB.ripGames, () => ripGames(db))
     handle(LIB.history, (limit?: number) => listeningHistory(db, typeof limit === 'number' ? Math.min(Math.max(1, limit), 2000) : 300))
     handle(LIB.listeningStats, (range: StatsRange) => listeningStats(db, range ?? '30d', libraryStats(db, this.root, this.scanning)))

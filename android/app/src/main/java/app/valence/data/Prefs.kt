@@ -58,6 +58,8 @@ class Prefs(context: Context) {
     val albumSort = string("albumSort", "artist")
     val artistSort = string("artistSort", "name")
     val ripSort = string("ripSort", "uploaded")
+    /** Which favorites the Favorites page shows: main (your music) | rips (SiivaGunner). */
+    val favSide = string("favSide", "main")
     val minDurationSec = int("minDurationSec", 0)
 
     // Playback (read by the playback service)

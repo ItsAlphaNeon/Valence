@@ -34,7 +34,7 @@ export const LIB = {
   playItems: 'library:playItems',
   /** (SetLikedRequest, liked: boolean) → void; then broadcasts `changed` with { favorites: true, tracks?, albums? }. */
   setLiked: 'library:setLiked',
-  /** () → FavoriteCounts */
+  /** (collection?: LibraryCollection, default 'all') → FavoriteCounts */
   favoriteCounts: 'library:favoriteCounts',
   /** (AlbumQuery with offset/limit) → AlbumsPage */
   albumsPage: 'library:albumsPage',
