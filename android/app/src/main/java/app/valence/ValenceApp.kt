@@ -5,6 +5,7 @@ import android.util.Log
 import app.valence.art.ArtStore
 import app.valence.art.TrackArtFetcher
 import app.valence.art.TrackArtKeyer
+import app.valence.cast.CastManager
 import app.valence.data.Db
 import app.valence.data.Library
 import app.valence.data.Prefs
@@ -37,6 +38,8 @@ class ValenceApp : Application(), SingletonImageLoader.Factory {
         private set
     lateinit var playback: Playback
         private set
+    lateinit var cast: CastManager
+        private set
 
     /** Work that should outlive a screen (scans, log ingest). */
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -50,6 +53,7 @@ class ValenceApp : Application(), SingletonImageLoader.Factory {
         scanner = Scanner(db)
         sync = Sync(this)
         playback = Playback(this)
+        cast = CastManager(this)
     }
 
     override fun newImageLoader(context: PlatformContext): ImageLoader = ImageLoader.Builder(context)

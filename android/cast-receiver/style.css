@@ -1,0 +1,127 @@
+/* The TV screen. Sized in vh and vw so it fits whatever size the TV gives the page. Everything
+   sits 5% in from the edges, the part of the picture any TV is sure to show. */
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #0b0b0d;
+  color: #fff;
+  font-family: "Google Sans", Roboto, "Noto Sans", "Noto Sans CJK JP", "Noto Sans CJK KR", "Noto Sans CJK SC", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+audio { display: none; }
+
+/* A tiny picture stretched over the whole screen: it looks blurred and costs almost nothing. */
+#backdrop { position: fixed; inset: 0; width: 100%; height: 100%; }
+#shade { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.58); }
+
+#now {
+  position: fixed;
+  inset: 5vh 5vw;
+  display: flex;
+  gap: 5vw;
+  transition: opacity 0.4s;
+}
+
+/* Nothing playing: a dark screen. */
+body.idle #now, body.idle #backdrop { opacity: 0; }
+
+/* ---- Without lyrics: the art, and the song beside it ---- */
+
+#left { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 5vw; }
+
+#cover {
+  flex: none;
+  width: 72vh;
+  height: 72vh;
+  background: rgba(255, 255, 255, 0.07) url("note.svg") center / 34% no-repeat;
+  border-radius: 0.6vh;
+  overflow: hidden;
+}
+#art { display: block; width: 100%; height: 100%; object-fit: cover; }
+#art:not([src]) { visibility: hidden; }
+
+#info { flex: 1; min-width: 0; max-width: 56vw; }
+
+#title {
+  font-size: 6vh;
+  font-weight: 700;
+  line-height: 1.16;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+#artist, #album {
+  font-size: 3.4vh;
+  line-height: 1.3;
+  margin-top: 1.1vh;
+  color: rgba(255, 255, 255, 0.78);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#artist { margin-top: 2vh; }
+
+#bar {
+  height: 0.7vh;
+  margin-top: 5vh;
+  border-radius: 0.35vh;
+  background: rgba(255, 255, 255, 0.26);
+  overflow: hidden;
+}
+#fill {
+  width: 100%;
+  height: 100%;
+  background: #fff;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: opacity 0.3s;
+}
+/* Paused: the bar dims. Nothing else on the screen changes. */
+body.paused #fill { opacity: 0.45; }
+
+#times {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 1.4vh;
+  font-size: 2.6vh;
+  color: rgba(255, 255, 255, 0.78);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- With lyrics: art, song and bar on the left, the words on the right ---- */
+
+#lyrics { display: none; }
+
+body.lyrics #left { flex: none; width: 46vh; flex-direction: column; align-items: stretch; justify-content: center; gap: 3.4vh; }
+body.lyrics #cover { width: 46vh; height: 46vh; }
+body.lyrics #info { flex: none; max-width: none; }
+body.lyrics #title { font-size: 3.6vh; -webkit-line-clamp: 2; }
+body.lyrics #artist { font-size: 2.5vh; margin-top: 1.2vh; }
+body.lyrics #album { font-size: 2.5vh; margin-top: 0.5vh; }
+body.lyrics #bar { margin-top: 2.6vh; }
+body.lyrics #times { font-size: 2.2vh; margin-top: 1vh; }
+
+body.lyrics #lyrics { display: block; flex: 1; min-width: 0; height: 100%; overflow: hidden; position: relative; }
+
+#lines { will-change: transform; transition: transform 0.45s ease-out; }
+#lines.plain { transition: transform 1s linear; }
+
+#lines p {
+  font-size: 4vh;
+  line-height: 1.32;
+  padding: 1.1vh 0;
+  text-align: center;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.3);
+  overflow-wrap: anywhere;
+}
+#lines p.near { color: rgba(255, 255, 255, 0.56); }
+#lines p.on { color: #fff; font-weight: 700; }
+#lines.plain p { white-space: pre-line; font-size: 3.4vh; color: rgba(255, 255, 255, 0.88); padding: 0; }

@@ -11,6 +11,11 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Casting: the TV is reached over the Wi-Fi and fetches songs from this phone. Nothing else uses the network. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
+
     <application
         android:name=".ValenceApp"
         android:label="Valence"
@@ -46,6 +51,10 @@
             android:authorities="app.valence.art"
             android:exported="true"
             tools:ignore="ExportedContentProvider" />
+
+        <meta-data
+            android:name="com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME"
+            android:value="app.valence.cast.CastOptionsProvider" />
 
         <meta-data
             android:name="com.google.android.gms.car.application"

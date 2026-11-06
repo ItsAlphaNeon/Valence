@@ -64,6 +64,8 @@ dependencies {
     implementation(libs.kotlinx.coroutines.guava)
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.session)
+    implementation(libs.cast.framework)
+    implementation(libs.androidx.mediarouter)
     implementation(libs.coil.compose)
     testImplementation(libs.junit)
 }

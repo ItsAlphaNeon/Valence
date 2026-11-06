@@ -66,6 +66,7 @@ import app.valence.ui.screens.MenuHost
 import app.valence.ui.screens.PlaylistDialogs
 import app.valence.ui.screens.SearchScreen
 import app.valence.ui.screens.SettingsScreen
+import app.valence.ui.screens.CastDialog
 import app.valence.ui.screens.SleepDialog
 import app.valence.ui.screens.SongInfoDialog
 import app.valence.ui.screens.SpeedDialog
@@ -155,6 +156,7 @@ private fun Shell(ui: UiActions, tabs: List<Tab>, pager: PagerState) {
         SongInfoDialog()
         PlaylistDialogs()
         if (ui.sleepDialog) SleepDialog { ui.sleepDialog = false }
+        if (ui.castDialog) CastDialog { ui.castDialog = false }
         if (ui.speedDialog) SpeedDialog { ui.speedDialog = false }
     }
 }

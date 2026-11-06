@@ -26,6 +26,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import okio.Buffer
 import okio.Path.Companion.toOkioPath
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.util.concurrent.atomic.AtomicInteger
@@ -47,6 +48,7 @@ object ArtStore {
     private val generation = AtomicInteger(0)
 
     private const val THUMB_PX = 320
+    private const val TV_PX = 1000
 
     private fun ref(trackId: Long): Ref? {
         refs.get(trackId)?.let { return it }
@@ -75,6 +77,18 @@ object ArtStore {
             ?: runCatching { TagReader.readPicture(File(r.path)) }.getOrNull()
             ?: return null
         return bytes to r.mime
+    }
+
+    /** The track's art as a JPEG small enough for a TV page to handle quickly, or null if it has none. */
+    fun tvJpeg(trackId: Long): ByteArray? {
+        val (bytes, _) = bytes(trackId) ?: return null
+        val bmp = decodeSampled(bytes, TV_PX) ?: return null
+        val scaled = scaleDown(bmp, TV_PX)
+        val out = ByteArrayOutputStream()
+        scaled.compress(Bitmap.CompressFormat.JPEG, 90, out)
+        if (scaled !== bmp) scaled.recycle()
+        bmp.recycle()
+        return out.toByteArray()
     }
 
     private fun thumbDir(): File = File(ValenceApp.instance.cacheDir, "thumbs").apply { mkdirs() }

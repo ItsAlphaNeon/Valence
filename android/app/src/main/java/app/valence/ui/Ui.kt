@@ -93,6 +93,7 @@ class UiActions(val app: ValenceApp, val scope: CoroutineScope) {
     var renaming by mutableStateOf<Playlist?>(null)
     var deleting by mutableStateOf<Playlist?>(null)
     var sleepDialog by mutableStateOf(false)
+    var castDialog by mutableStateOf(false)
     var speedDialog by mutableStateOf(false)
     var mainMenu by mutableStateOf(false)
 

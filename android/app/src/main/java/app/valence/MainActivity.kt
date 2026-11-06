@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -31,6 +32,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val app = application as ValenceApp
         if (intent?.getBooleanExtra(EXTRA_OPEN_PLAYER, false) == true) openPlayer++
+        app.cast.startUp()
         setContent {
             val theme by app.prefs.theme.flow.collectAsStateWithLifecycle()
             val accent by app.prefs.accent.flow.collectAsStateWithLifecycle()
@@ -67,6 +69,9 @@ class MainActivity : ComponentActivity() {
         sp.edit().putBoolean("askedNotifications", true).apply()
         requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1)
     }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean =
+        (application as ValenceApp).cast.handleVolumeKey(event) || super.dispatchKeyEvent(event)
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)

@@ -39,9 +39,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.BarChart
+import androidx.compose.material.icons.rounded.Cast
+import androidx.compose.material.icons.rounded.CastConnected
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Lyrics
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -88,6 +91,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.media3.common.Player
 import app.valence.art.TrackArt
+import app.valence.core.parseLrc
 import app.valence.data.Track
 import app.valence.tags.TagReader
 import app.valence.ui.LocalUi
@@ -247,12 +251,20 @@ private fun QuickRow(t: Track) {
     val liked = fresh?.liked ?: t.liked
     val repeat by pb.repeat.collectAsState()
     val shuffle by pb.shuffle.collectAsState()
+    val canCast by ui.app.cast.available.collectAsState()
+    val tv by ui.app.cast.tvName.collectAsState()
     Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         IconAction(if (liked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder, if (liked) "Remove from favorites" else "Add to favorites", { ui.app.sync.setTrackLiked(t, !liked) }, tint = if (liked) Color.White else Dim)
         IconAction(Icons.Rounded.Info, "Song info", { ui.info = t }, tint = Dim)
         IconAction(Icons.AutoMirrored.Rounded.PlaylistAdd, "Add to playlists", { ui.addToPlaylist = listOf(t) }, tint = Dim)
         OptionsButton({ ui.menu = MenuTarget.Song(t, queueIndex = pb.index.value) }, color = Dim)
         Spacer(Modifier.weight(1f))
+        if (canCast) IconAction(
+            if (tv != null) Icons.Rounded.CastConnected else Icons.Rounded.Cast,
+            if (tv != null) "Casting to $tv" else "Cast to a TV",
+            { ui.castDialog = true },
+            tint = if (tv != null) Color.White else Dim,
+        )
         IconAction(
             if (repeat == Player.REPEAT_MODE_ONE) Icons.Rounded.RepeatOne else Icons.Rounded.Repeat,
             when (repeat) { Player.REPEAT_MODE_ONE -> "Repeat song"; Player.REPEAT_MODE_ALL -> "Repeat queue"; else -> "No repeat" },
@@ -318,9 +330,13 @@ private fun Controls() {
     val pb = ui.playback
     val ctx = LocalContext.current
     val playing by pb.isPlaying.collectAsState()
+    val tv by ui.app.cast.tvName.collectAsState()
+    val casting = tv != null
+    val tvLyrics by ui.app.prefs.castLyrics.flow.collectAsState()
     Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp).height(84.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-        IconAction(Icons.AutoMirrored.Rounded.VolumeUp, "Volume", {
-            (ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager).adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_SAME, AudioManager.FLAG_SHOW_UI)
+        IconAction(Icons.AutoMirrored.Rounded.VolumeUp, if (casting) "TV volume" else "Volume", {
+            if (casting) ui.castDialog = true
+            else (ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager).adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_SAME, AudioManager.FLAG_SHOW_UI)
         }, tint = Dim, size = 22.dp)
         HoldButton(Icons.Rounded.SkipPrevious, "Previous song (hold to rewind)", 46.dp, onTap = pb::previous, onHold = { pb.seekTo((pb.positionMs - 5000).coerceAtLeast(0)) })
         HoldButton(if (playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, if (playing) "Pause (hold to stop)" else "Play", 72.dp, onTap = pb::toggle, onHoldStart = {
@@ -328,7 +344,12 @@ private fun Controls() {
             pb.seekTo(0)
         })
         HoldButton(Icons.Rounded.SkipNext, "Next song (hold to fast-forward)", 46.dp, onTap = pb::next, onHold = { pb.seekTo(pb.positionMs + 5000) })
-        IconAction(Icons.Rounded.BarChart, "Equalizer", { ui.show(Overlay.Equalizer) }, tint = Dim, size = 22.dp)
+        // The equalizer can't reach the TV. Its place goes to the one thing to change there.
+        if (casting) IconAction(Icons.Rounded.Lyrics, if (tvLyrics) "Hide lyrics on the TV" else "Show lyrics on the TV", {
+            // Google's stock screen can't show them, and the dialog says how to get Valence's.
+            if (ui.app.cast.usesStockScreen) ui.castDialog = true else ui.app.prefs.castLyrics.value = !tvLyrics
+        }, tint = if (tvLyrics && !ui.app.cast.usesStockScreen) Color.White else Faint, size = 22.dp)
+        else IconAction(Icons.Rounded.BarChart, "Equalizer", { ui.show(Overlay.Equalizer) }, tint = Dim, size = 22.dp)
     }
 }
 
@@ -367,32 +388,6 @@ private fun HoldButton(icon: ImageVector, description: String, size: Dp, onTap: 
 }
 
 // ---- Lyrics ------------------------------------------------------------------------------------
-
-data class LyricLine(val timeMs: Long, val text: String)
-
-private val LRC_TIME = Regex("\\[(\\d{1,3}):(\\d{2})(?:[.:](\\d{1,3}))?]")
-private val WORD_TIME = Regex("<\\d{1,3}:\\d{2}(?:[.:]\\d{1,3})?>")
-
-/** Parses LRC (synced) lyrics; null when the text isn't LRC. */
-fun parseLrc(text: String): List<LyricLine>? {
-    val out = ArrayList<LyricLine>()
-    var offset = 0L
-    for (raw in text.lineSequence()) {
-        val line = raw.trim()
-        Regex("^\\[offset:\\s*([+-]?\\d+)]", RegexOption.IGNORE_CASE).find(line)?.let { offset = it.groupValues[1].toLongOrNull() ?: 0L }
-        val stamps = LRC_TIME.findAll(line).toList()
-        if (stamps.isEmpty() || stamps.first().range.first != 0) continue
-        val words = line.substring(stamps.last().range.last + 1).replace(WORD_TIME, "").trim()
-        for (m in stamps) {
-            val min = m.groupValues[1].toLong()
-            val sec = m.groupValues[2].toLong()
-            val frac = m.groupValues[3]
-            val ms = when (frac.length) { 0 -> 0L; 1 -> frac.toLong() * 100; 2 -> frac.toLong() * 10; else -> frac.take(3).toLong() }
-            out.add(LyricLine(min * 60_000 + sec * 1000 + ms - offset, words))
-        }
-    }
-    return if (out.isEmpty()) null else out.sortedBy { it.timeMs }
-}
 
 @Composable
 fun LyricsView(t: Track, position: State<Long>, modifier: Modifier = Modifier, onClose: () -> Unit) {

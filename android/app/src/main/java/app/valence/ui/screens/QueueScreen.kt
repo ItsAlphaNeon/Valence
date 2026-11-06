@@ -224,7 +224,7 @@ private fun QueuePicker(queues: List<QueueSummary>, selected: Long?, onPick: (Lo
 
 /** A one-field dialog (rename a queue or playlist, name a new playlist). */
 @Composable
-fun TextDialog(title: String, initial: String, action: String, note: String? = null, onDismiss: () -> Unit, onDone: (String) -> Unit) {
+fun TextDialog(title: String, initial: String, action: String, note: String? = null, allowEmpty: Boolean = false, onDismiss: () -> Unit, onDone: (String) -> Unit) {
     val pal = LocalPalette.current
     var text by rememberSaveable { mutableStateOf(initial) }
     MDialog(onDismiss) {
@@ -245,7 +245,7 @@ fun TextDialog(title: String, initial: String, action: String, note: String? = n
                     }
                 },
             )
-            DialogButtons("Cancel" to onDismiss, action to { if (text.isNotBlank()) onDone(text.trim()) })
+            DialogButtons("Cancel" to onDismiss, action to { if (allowEmpty || text.isNotBlank()) onDone(text.trim()) })
         }
     }
 }

@@ -268,7 +268,7 @@ fun SongInfoDialog() {
 
 @Composable
 fun NewPlaylistDialog(onDismiss: () -> Unit, onCreate: (String) -> Unit) =
-    TextDialog("New playlist", "", "Create", "Saved as an .m3u8 in your Playlists folder, so it syncs to your other devices.", onDismiss, onCreate)
+    TextDialog("New playlist", "", "Create", "Saved as an .m3u8 in your Playlists folder, so it syncs to your other devices.", onDismiss = onDismiss, onDone = onCreate)
 
 /** Rename and delete, for the playlist in [app.valence.ui.UiActions.renaming] / [app.valence.ui.UiActions.deleting]. */
 @Composable

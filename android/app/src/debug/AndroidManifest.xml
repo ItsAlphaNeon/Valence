@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <!-- FakeTv reads the phone's own server the way a TV would, over plain http. -->
+    <application android:usesCleartextTraffic="true">
+        <!-- Debug builds only: lets adb pretend a TV is connected. See FakeTv. -->
+        <receiver
+            android:name=".cast.FakeTvReceiver"
+            android:exported="true"
+            tools:ignore="ExportedReceiver" />
+    </application>
+</manifest>
