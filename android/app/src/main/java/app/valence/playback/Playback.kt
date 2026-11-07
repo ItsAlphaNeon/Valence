@@ -114,6 +114,8 @@ class Playback(private val app: ValenceApp) {
     /** Inactive queues (the active one lives in the player). */
     private val saved = mutableListOf<SavedQueue>()
     private var activeId = -1L
+    /** The playing queue's id (-1 when there's none). */
+    val activeQueueId: Long get() = activeId
     private var activeName = ""
     private val known = HashMap<Long, Track>()
     private var restored = false
@@ -402,6 +404,28 @@ class Playback(private val app: ValenceApp) {
         }
     }
 
+    /**
+     * After the tag editor rewrote these songs' files: fresh details everywhere, and the phone's
+     * player reopens them (its seek positions point into the old file). The playing song carries on
+     * from where it was. (A TV fetches songs anew by id; the phone's player is redone even while
+     * casting, so it's right when playback comes back.)
+     */
+    fun reloadEdited(ids: Set<Long>) {
+        scope.launch {
+            val fresh = withContext(Dispatchers.IO) { app.library.tracksByIds(ids.toList()) }.associateBy { it.id }
+            fresh.values.forEach { known[it.id] = it }
+            val version = System.currentTimeMillis()
+            val cur = exo.currentMediaItemIndex
+            for (i in 0 until exo.mediaItemCount) {
+                val t = exo.getMediaItemAt(i).mediaId.toLongOrNull()?.let { fresh[it] } ?: continue
+                val pos = if (i == cur) exo.currentPosition else 0L
+                exo.replaceMediaItem(i, mediaItemFor(t, app.library.fileOf(t), version))
+                if (i == cur) exo.seekTo(i, pos)
+            }
+            refreshTracks()
+        }
+    }
+
     private fun summary(): List<QueueSummary> {
         val active = if (activeId >= 0) listOf(
             QueueSummary(activeId, activeName, player.mediaItemCount, player.currentMediaItemIndex, _current.value?.id, true),
@@ -550,6 +574,41 @@ class Playback(private val app: ValenceApp) {
 
     fun removeAt(index: Int) {
         if (index in 0 until player.mediaItemCount) player.removeMediaItem(index)
+    }
+
+    /**
+     * Takes song [index] of [shown] (queue [id] as the Queues page lists it) out of that queue, the
+     * playing song included (the next one starts). Returns what undoes it, or null if nothing changed.
+     */
+    fun removeFromQueue(id: Long, index: Int, shown: List<Track>): (() -> Unit)? {
+        val t = shown.getOrNull(index) ?: return null
+        if (id == activeId) {
+            if (index !in 0 until player.mediaItemCount || player.getMediaItemAt(index).mediaId != t.id.toString()) return null
+            player.removeMediaItem(index)
+            return {
+                known[t.id] = t
+                if (id == activeId) player.addMediaItem(index.coerceAtMost(player.mediaItemCount), t.toMediaItem())
+            }
+        }
+        val i = saved.indexOfFirst { it.id == id }
+        if (i < 0) return null
+        val q = saved[i]
+        // The list skips files that are gone, so find the same copy of this song in the saved paths.
+        val nth = shown.subList(0, index).count { it.relPath == t.relPath }
+        var seen = 0
+        val at = q.paths.indexOfFirst { it == t.relPath && seen++ == nth }
+        if (at < 0) return null
+        saved[i] = q.copy(
+            paths = q.paths.toMutableList().apply { removeAt(at) },
+            index = if (at < q.index) q.index - 1 else q.index,
+            positionMs = if (at == q.index) 0L else q.positionMs,
+        )
+        publishQueues()
+        persist()
+        return {
+            val j = saved.indexOfFirst { it.id == id }
+            if (j >= 0) { saved[j] = q; publishQueues(); persist() }
+        }
     }
 
     fun toggleShuffle() = setShuffle(!_shuffle.value)
@@ -851,9 +910,10 @@ class Playback(private val app: ValenceApp) {
         private const val TAG = "ValencePlayback"
         private const val MAX_CAST_FAILURES = 3
 
-        fun mediaItemFor(t: Track, file: File): MediaItem = MediaItem.Builder()
+        /** [version] > 0 makes the item differ from one made before the file was rewritten, so the player reopens it. */
+        fun mediaItemFor(t: Track, file: File, version: Long = 0): MediaItem = MediaItem.Builder()
             .setMediaId(t.id.toString())
-            .setUri(Uri.fromFile(file))
+            .setUri(Uri.fromFile(file).let { if (version > 0) it.buildUpon().appendQueryParameter("v", version.toString()).build() else it })
             .setMediaMetadata(
                 MediaMetadata.Builder()
                     .setTitle(t.title)

@@ -7,6 +7,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -70,6 +71,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
@@ -398,7 +401,10 @@ fun LyricsView(t: Track, position: State<Long>, modifier: Modifier = Modifier, o
         value = withContext(Dispatchers.IO) { runCatching { TagReader.read(ui.library.fileOf(t)).tags.lyrics }.getOrNull() } ?: ""
     }
     val lyrics = text ?: return
-    val close = Modifier.pointerInput(Unit) { detectTapGestures(onDoubleTap = { onClose() }, onLongPress = { onClose() }) }
+    // A tap anywhere goes back to the art (as a tap on the art opened the lyrics); holding a synced
+    // line jumps there instead.
+    val close = Modifier.pointerInput(Unit) { detectTapGestures(onTap = { onClose() }) }
+    val haptics = LocalHapticFeedback.current
     if (lyrics.isBlank()) {
         Box(modifier.clickable(onClick = onClose), contentAlignment = Alignment.Center) {
             Text("No lyrics in this song's tags", color = Dim, textAlign = TextAlign.Center, style = TextStyle(fontSize = 16.sp))
@@ -425,7 +431,15 @@ fun LyricsView(t: Track, position: State<Long>, modifier: Modifier = Modifier, o
                 line.text.ifBlank { "♪" },
                 style = TextStyle(fontSize = size.sp, lineHeight = (size + 8).sp, fontWeight = if (on) FontWeight.Bold else FontWeight.Medium, textAlign = TextAlign.Center),
                 color = if (on) Color.White else Color.White.copy(alpha = if (abs(i - current) <= 3) 0.6f else 0.38f),
-                modifier = Modifier.fillMaxWidth().clickable { pb.seekTo(line.timeMs) }.padding(vertical = 8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .combinedClickable(
+                        onClickLabel = "Show the album art",
+                        onLongClickLabel = "Jump to this line",
+                        onLongClick = { haptics.performHapticFeedback(HapticFeedbackType.LongPress); pb.seekTo(line.timeMs) },
+                        onClick = onClose,
+                    )
+                    .padding(vertical = 8.dp),
             )
         }
     }

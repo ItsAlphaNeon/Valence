@@ -105,19 +105,30 @@ private fun SongMenu(m: MenuTarget.Song, close: () -> Unit) {
         )
     }
     DialogItem(Icons.Rounded.Info, "Song info", { ui.info = t; close() })
+    EditTagsItem(listOf(t), close)
     DialogSeparator()
-    if (m.queueIndex != null) {
+    // A song in the playing queue (Queues page or Now playing) can move up or go; one in another
+    // queue can go too, and otherwise gets the usual play options.
+    val queueId = if (m.queueIndex == null) null else m.queueId ?: pb.activeQueueId
+    val inPlayingQueue = queueId != null && queueId == pb.activeQueueId
+    if (inPlayingQueue && m.queueIndex != null) {
         DialogItem(Icons.Rounded.SkipNext, "Play after current song", {
             val from = m.queueIndex
             val to = (pb.index.value + if (from > pb.index.value) 1 else 0).coerceAtMost(pb.queue.value.lastIndex)
             pb.move(from, to); close()
         }, enabled = m.queueIndex != pb.index.value)
-        if (m.queueIndex != pb.index.value) DialogItem(Icons.Rounded.RemoveCircleOutline, "Remove from queue", { pb.removeAt(m.queueIndex); close() })
     } else {
         DialogItem(Icons.Rounded.SkipNext, "Play after current song", { pb.playNext(listOf(t)); close() })
         DialogItem(Icons.AutoMirrored.Rounded.QueueMusic, "Add to currently playing queue", { pb.addToQueue(listOf(t)); close() })
         DialogItem(Icons.AutoMirrored.Rounded.PlaylistPlay, "Play in a new queue", {
             pb.play(m.context.ifEmpty { listOf(t) }, m.context.indexOf(t).coerceAtLeast(0), m.label.ifEmpty { t.title }, mode = TapMode.NewQueue); close()
+        })
+    }
+    if (queueId != null && m.queueIndex != null) {
+        DialogItem(Icons.Rounded.RemoveCircleOutline, if (inPlayingQueue) "Remove from queue" else "Remove from this queue", {
+            val shown = if (inPlayingQueue) pb.queue.value else m.context
+            ui.undoable("Removed “${t.title}” from the queue", pb.removeFromQueue(queueId, m.queueIndex, shown))
+            close()
         })
     }
     DialogItem(Icons.AutoMirrored.Rounded.PlaylistAdd, "Add to playlists", { ui.addToPlaylist = listOf(t); close() })
@@ -172,6 +183,7 @@ private fun SongsMenu(
         DialogItem(Icons.AutoMirrored.Rounded.QueueMusic, "Add to currently playing queue", { pb.addToQueue(l); close() })
         DialogItem(Icons.AutoMirrored.Rounded.PlaylistPlay, "Play in a new queue", { pb.play(l, 0, title, mode = TapMode.NewQueue); close() })
         DialogItem(Icons.AutoMirrored.Rounded.PlaylistAdd, "Add to playlists", { ui.addToPlaylist = l; close() })
+        EditTagsItem(l, close)
     }
     if (playlist != null) {
         DialogSeparator()
@@ -261,7 +273,7 @@ fun SongInfoDialog() {
                     Text(v, style = TextStyle(fontSize = 15.sp, fontFamily = if (k == "File") FontFamily.Monospace else null), color = pal.text)
                 }
             }
-            DialogButtons("Close" to { ui.info = null })
+            DialogButtons("Edit tags" to { ui.editTags(listOf(t)) }, "Close" to { ui.info = null })
         }
     }
 }

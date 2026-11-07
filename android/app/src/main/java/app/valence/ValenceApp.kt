@@ -10,6 +10,7 @@ import app.valence.data.Db
 import app.valence.data.Library
 import app.valence.data.Prefs
 import app.valence.data.Scanner
+import app.valence.data.TagSaver
 import app.valence.playback.Playback
 import app.valence.sync.Sync
 import coil3.ImageLoader
@@ -38,6 +39,8 @@ class ValenceApp : Application(), SingletonImageLoader.Factory {
         private set
     lateinit var playback: Playback
         private set
+    lateinit var tagSaver: TagSaver
+        private set
     lateinit var cast: CastManager
         private set
 
@@ -53,6 +56,7 @@ class ValenceApp : Application(), SingletonImageLoader.Factory {
         scanner = Scanner(db)
         sync = Sync(this)
         playback = Playback(this)
+        tagSaver = TagSaver(this)
         cast = CastManager(this)
     }
 
