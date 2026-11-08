@@ -52,6 +52,8 @@ class PlaybackService : MediaLibraryService() {
             .setSessionActivity(open)
             .build()
         setMediaNotificationProvider(DefaultMediaNotificationProvider.Builder(this).build().apply { setSmallIcon(R.drawable.ic_notification) })
+        // Casting swaps the player: the notification and lock screen follow it to the TV and back.
+        scope.launch { pb.active.collect { session?.player = it } }
         scope.launch { pb.current.collect { updateLikeButton() } }
         scope.launch { app.db.version(Db.Topic.Favorites).collect { updateLikeButton() } }
     }

@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Valence</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
+</head>
+<body class="idle">
+  <!-- The Cast framework plays through this element (it looks for the class). -->
+  <audio class="castMediaElement"></audio>
+  <canvas id="backdrop" width="32" height="18"></canvas>
+  <div id="shade"></div>
+  <main id="now">
+    <div id="left">
+      <div id="cover"><img id="art" alt=""></div>
+      <div id="info">
+        <div id="title"></div>
+        <div id="artist"></div>
+        <div id="album"></div>
+        <div id="bar"><div id="fill"></div></div>
+        <div id="times"><span id="pos">0:00</span><span id="dur">0:00</span></div>
+      </div>
+    </div>
+    <div id="lyrics"><div id="lines"></div></div>
+  </main>
+  <script src="receiver.js"></script>
+</body>
+</html>

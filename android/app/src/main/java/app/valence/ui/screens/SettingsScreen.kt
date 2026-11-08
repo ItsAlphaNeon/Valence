@@ -153,6 +153,7 @@ fun SettingsScreen() {
     val maxQueues by p.maxQueues.flow.collectAsState()
     val lyricsSize by p.lyricsSize.flow.collectAsState()
     val eqOn by p.eqEnabled.flow.collectAsState()
+    val receiverId by p.castReceiverId.flow.collectAsState()
     val scan by app.scanner.state.collectAsState()
     val sync by app.sync.state.collectAsState()
     val lastScan by p.lastScanAt.flow.collectAsState()
@@ -160,6 +161,7 @@ fun SettingsScreen() {
     var folderError by remember { mutableStateOf<String?>(null) }
     var pickingAccent by remember { mutableStateOf(false) }
     var arranging by remember { mutableStateOf(false) }
+    var editingReceiver by remember { mutableStateOf(false) }
     val pickFolder = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         val path = treeUriToPath(uri)
@@ -224,6 +226,15 @@ fun SettingsScreen() {
                 item { SwitchRow("Pause when headphones disconnect", p.pauseOnDisconnect) }
                 item { SwitchRow("Resume when headphones reconnect", p.resumeOnConnect, "Only if they disconnected during playback") }
 
+                item { SectionLabel("Casting") }
+                item {
+                    SettingRow(
+                        "TV app ID",
+                        receiverId.ifEmpty { "Not set: the TV shows Google's stock screen" },
+                        onClick = { editingReceiver = true },
+                    )
+                }
+
                 item { SectionLabel("Sync") }
                 item {
                     SettingRow(
@@ -260,6 +271,15 @@ fun SettingsScreen() {
     }
     if (pickingAccent) AccentDialog(accent, { p.accent.value = it }) { pickingAccent = false }
     if (arranging) TabsDialog(tabs, { p.tabs.value = it }) { arranging = false }
+    if (editingReceiver) TextDialog(
+        "TV app ID", receiverId, "Save",
+        note = "The app ID of Valence's TV screen, from Google's Cast console. Leave it empty for Google's stock screen.",
+        allowEmpty = true,
+        onDismiss = { editingReceiver = false },
+    ) {
+        app.cast.setReceiverId(it)
+        editingReceiver = false
+    }
     folderError?.let { msg ->
         MDialog({ folderError = null }) {
             Column {

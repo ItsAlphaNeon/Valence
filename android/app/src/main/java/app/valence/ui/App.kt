@@ -30,7 +30,9 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -66,10 +68,12 @@ import app.valence.ui.screens.MenuHost
 import app.valence.ui.screens.PlaylistDialogs
 import app.valence.ui.screens.SearchScreen
 import app.valence.ui.screens.SettingsScreen
+import app.valence.ui.screens.CastDialog
 import app.valence.ui.screens.SleepDialog
 import app.valence.ui.screens.SongInfoDialog
 import app.valence.ui.screens.SpeedDialog
 import app.valence.ui.screens.TabPage
+import app.valence.ui.screens.TagEditorScreen
 import app.valence.ui.theme.LocalPalette
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -130,6 +134,16 @@ private fun Shell(ui: UiActions, tabs: List<Tab>, pager: PagerState) {
             app.playback.clearError()
         }
     }
+    // A newer notice replaces the one showing (relaunching cancels the old snackbar).
+    val notice = ui.notice
+    LaunchedEffect(notice) {
+        if (notice == null) return@LaunchedEffect
+        // Long enough to reach Undo; plain notices go quickly.
+        val duration = if (notice.action != null) SnackbarDuration.Long else SnackbarDuration.Short
+        val result = snackbar.showSnackbar(notice.message, notice.action, duration = duration)
+        if (result == SnackbarResult.ActionPerformed) notice.onAction?.invoke()
+        if (ui.notice === notice) ui.notice = null
+    }
 
     Box(Modifier.fillMaxSize().background(LocalPalette.current.bg)) {
         PlayerBackdrop(nearPlayer)
@@ -148,6 +162,7 @@ private fun Shell(ui: UiActions, tabs: List<Tab>, pager: PagerState) {
                 Overlay.Search -> SearchScreen()
                 Overlay.Settings -> SettingsScreen()
                 Overlay.Equalizer -> EqualizerScreen()
+                Overlay.TagEditor -> TagEditorScreen()
             }
         }
         MenuHost()
@@ -155,6 +170,7 @@ private fun Shell(ui: UiActions, tabs: List<Tab>, pager: PagerState) {
         SongInfoDialog()
         PlaylistDialogs()
         if (ui.sleepDialog) SleepDialog { ui.sleepDialog = false }
+        if (ui.castDialog) CastDialog { ui.castDialog = false }
         if (ui.speedDialog) SpeedDialog { ui.speedDialog = false }
     }
 }

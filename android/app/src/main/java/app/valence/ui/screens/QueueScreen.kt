@@ -71,6 +71,7 @@ import app.valence.ui.components.OptionsButton
 import app.valence.ui.components.ScrollStrip
 import app.valence.ui.components.SongRow
 import app.valence.ui.components.SortDialog
+import app.valence.ui.components.SwipeToRemove
 import app.valence.ui.components.formatDuration
 import app.valence.ui.components.reorderHandle
 import app.valence.ui.components.rememberReorderState
@@ -179,18 +180,22 @@ private fun QueueList(q: QueueSummary, list: List<Track>, isActive: Boolean, cur
         LazyColumn(state = state, contentPadding = PaddingValues(top = 4.dp, bottom = 8.dp)) {
             itemsIndexed(list, key = { i, _ -> keys.getOrElse(i) { "x$i" } }, contentType = { _, _ -> "song" }) { i, t ->
                 val dragging = reorder.dragging == i
-                SongRow(
-                    t,
-                    onClick = { if (isActive) pb.playAt(i) else { pb.switchQueue(q.id, i); onSwitched() } },
-                    onMenu = { ui.menu = MenuTarget.Song(t, list, q.name, queueIndex = if (isActive) i else null) },
+                SwipeToRemove(
+                    onRemove = { ui.undoable("Removed “${t.title}” from the queue", pb.removeFromQueue(q.id, i, list)) },
                     modifier = Modifier
                         .zIndex(if (dragging) 1f else 0f)
-                        .graphicsLayer { translationY = if (dragging) reorder.offset else 0f }
-                        .then(if (dragging) Modifier.shadow(8.dp).background(LocalPalette.current.bar) else Modifier),
-                    playing = i == current,
-                    highlight = i == current,
-                    leading = { DragHandle(if (isActive) Modifier.reorderHandle(reorder) { i } else Modifier, tint = if (i == current) LocalPalette.current.accent else LocalPalette.current.text) },
-                )
+                        .graphicsLayer { translationY = if (dragging) reorder.offset else 0f },
+                ) {
+                    SongRow(
+                        t,
+                        onClick = { if (isActive) pb.playAt(i) else { pb.switchQueue(q.id, i); onSwitched() } },
+                        onMenu = { ui.menu = MenuTarget.Song(t, list, q.name, queueIndex = i, queueId = q.id) },
+                        modifier = if (dragging) Modifier.shadow(8.dp).background(LocalPalette.current.bar) else Modifier,
+                        playing = i == current,
+                        highlight = i == current,
+                        leading = { DragHandle(if (isActive) Modifier.reorderHandle(reorder) { i } else Modifier, tint = if (i == current) LocalPalette.current.accent else LocalPalette.current.text) },
+                    )
+                }
             }
         }
         FastScroller(state)
@@ -224,7 +229,7 @@ private fun QueuePicker(queues: List<QueueSummary>, selected: Long?, onPick: (Lo
 
 /** A one-field dialog (rename a queue or playlist, name a new playlist). */
 @Composable
-fun TextDialog(title: String, initial: String, action: String, note: String? = null, onDismiss: () -> Unit, onDone: (String) -> Unit) {
+fun TextDialog(title: String, initial: String, action: String, note: String? = null, allowEmpty: Boolean = false, onDismiss: () -> Unit, onDone: (String) -> Unit) {
     val pal = LocalPalette.current
     var text by rememberSaveable { mutableStateOf(initial) }
     MDialog(onDismiss) {
@@ -245,7 +250,7 @@ fun TextDialog(title: String, initial: String, action: String, note: String? = n
                     }
                 },
             )
-            DialogButtons("Cancel" to onDismiss, action to { if (text.isNotBlank()) onDone(text.trim()) })
+            DialogButtons("Cancel" to onDismiss, action to { if (allowEmpty || text.isNotBlank()) onDone(text.trim()) })
         }
     }
 }

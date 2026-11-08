@@ -76,6 +76,31 @@ class Scanner(private val db: Db) {
         }
     }
 
+    /**
+     * Re-reads just [rels] (after the tag editor rewrote them) and regroups albums. Waits for a
+     * running scan, so it always has the last word on those files.
+     */
+    suspend fun rescanFiles(root: File, rels: List<String>) = lock.withLock {
+        withContext(Dispatchers.IO) {
+            if (rels.isEmpty()) return@withContext
+            val ids = HashMap<String, Long>()
+            for (chunk in rels.chunked(500)) {
+                val marks = chunk.joinToString(",") { "?" }
+                db.readableDatabase.rawQuery("SELECT id, rel_path FROM tracks WHERE rel_path IN ($marks)", chunk.toTypedArray()).use { c ->
+                    while (c.moveToNext()) ids[c.getString(1)] = c.getLong(0)
+                }
+            }
+            val read = rels.mapNotNull { rel ->
+                val file = File(root, rel)
+                val r = runCatching { TagReader.read(file) }.onFailure { Log.w(TAG, "Can't read $rel: ${it.message}") }.getOrNull()
+                r?.let { Found(rel, file, file.length(), file.lastModified()) to it }
+            }
+            db.tx { for ((f, r) in read) upsert(this, f, r, ids[f.rel]) }
+            rebuildAlbums()
+            db.changed(Db.Topic.Tracks)
+        }
+    }
+
     private fun walk(dir: File, rel: String, depth: Int, out: MutableList<Found>) {
         val entries = dir.listFiles() ?: return
         for (e in entries) {

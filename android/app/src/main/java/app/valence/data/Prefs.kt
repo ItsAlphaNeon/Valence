@@ -79,6 +79,10 @@ class Prefs(context: Context) {
     val eqBands = string("eqBands", "[]") // millibels per band, JSON array
     val bassBoost = int("bassBoost", 0) // 0..1000
     val lyricsSize = int("lyricsSize", 22)
+    /** Casting: the TV shows lyrics beside the art. */
+    val castLyrics = bool("castLyrics", false)
+    /** The Cast app id of Valence's TV page, from Google's Cast console. Empty: Google's stock screen. */
+    val castReceiverId = string("castReceiverId", "")
     val keepScreenOn = bool("keepScreenOn", false) // while Now Playing is open
     val lastScanAt = Pref("lastScanAt", 0L, { k, d -> getLong(k, d) }, { k, v -> putLong(k, v) })
     val scanVersion = int("scanVersion", 0)

@@ -73,16 +73,22 @@ sealed interface Route {
 }
 
 /** Full-screen pages over the tabs. */
-enum class Overlay { Search, Settings, Equalizer }
+enum class Overlay { Search, Settings, Equalizer, TagEditor }
 
 /** What a menu dialog is about. [context] is the list the item was in (for "play from here"). */
 sealed interface MenuTarget {
-    data class Song(val track: Track, val context: List<Track> = emptyList(), val label: String = "", val playlistId: String? = null, val queueIndex: Int? = null) : MenuTarget
+    /** [queueIndex]/[queueId]: the song's place in a queue on the Queues page (or the playing one, from Now playing). */
+    data class Song(
+        val track: Track, val context: List<Track> = emptyList(), val label: String = "", val playlistId: String? = null,
+        val queueIndex: Int? = null, val queueId: Long? = null,
+    ) : MenuTarget
     data class AlbumMenu(val album: Album) : MenuTarget
     data class Songs(val title: String, val tracks: List<Track>) : MenuTarget
     /** [tracks] is null when the songs aren't loaded yet (a long-press in the Playlists tab). */
     data class PlaylistMenu(val playlist: Playlist, val tracks: List<Track>? = null) : MenuTarget
 }
+
+class Notice(val message: String, val action: String? = null, val onAction: (() -> Unit)? = null)
 
 /** App-wide UI state and actions, provided once at the root. */
 @Stable
@@ -93,12 +99,31 @@ class UiActions(val app: ValenceApp, val scope: CoroutineScope) {
     var renaming by mutableStateOf<Playlist?>(null)
     var deleting by mutableStateOf<Playlist?>(null)
     var sleepDialog by mutableStateOf(false)
+    var castDialog by mutableStateOf(false)
     var speedDialog by mutableStateOf(false)
     var mainMenu by mutableStateOf(false)
+
+    /** A short message at the bottom of the screen, with an action button (Undo) when [Notice.onAction] is set. */
+    var notice by mutableStateOf<Notice?>(null)
+    fun undoable(message: String, undo: (() -> Unit)?) { if (undo != null) notice = Notice(message, "Undo", undo) }
 
     /** Full-screen pages open over the tabs, topmost last (Settings → Equalizer). */
     val overlays = mutableStateListOf<Overlay>()
     fun show(o: Overlay) { overlays.remove(o); overlays.add(o); menu = null; mainMenu = false }
+
+    /** The songs open in the tag editor. */
+    var tagEditing by mutableStateOf<List<Track>>(emptyList())
+        private set
+    fun editTags(tracks: List<Track>) {
+        if (tracks.isEmpty()) return
+        tagEditing = tracks
+        info = null
+        show(Overlay.TagEditor)
+    }
+    fun closeTagEditor() {
+        overlays.remove(Overlay.TagEditor)
+        tagEditing = emptyList()
+    }
 
     /** Set by the root once the tab list is known. */
     var tabs by mutableStateOf<List<Tab>>(emptyList())
@@ -202,6 +227,17 @@ class UiActions(val app: ValenceApp, val scope: CoroutineScope) {
         if (s.isEmpty()) return false
         s.removeAt(s.lastIndex)
         return true
+    }
+
+    /** After a tag edit emptied album [old]: its pages show [replacement] instead (or close, when there's none). */
+    fun albumMoved(old: Long, replacement: Long?) {
+        for (s in stacks.values) {
+            for (i in s.indices.reversed()) {
+                if (s[i] != Route.AlbumR(old)) continue
+                if (replacement != null && s.getOrNull(i - 1) != Route.AlbumR(replacement)) s[i] = Route.AlbumR(replacement)
+                else while (s.size > i) s.removeAt(s.lastIndex)
+            }
+        }
     }
 
     /** Leaves playlist [id]'s page wherever it's open (after a delete), or swaps in [replacement] (after a rename). */

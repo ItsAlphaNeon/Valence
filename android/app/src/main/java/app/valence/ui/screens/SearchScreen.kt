@@ -49,6 +49,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.valence.data.Collection
+import app.valence.data.Db
 import app.valence.data.Library
 import app.valence.ui.LocalUi
 import app.valence.ui.MenuTarget
@@ -77,11 +78,16 @@ fun SearchScreen() {
     val current by ui.playback.current.collectAsState()
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { if (query.isEmpty()) focus.requestFocus() }
-    LaunchedEffect(query, scope) {
-        if (query.isBlank()) { result = null; return@LaunchedEffect }
-        delay(150)
+    // Re-run when the library changes too (a tag edit made from these results, a scan).
+    val tracksVersion by ui.app.db.version(Db.Topic.Tracks).collectAsState()
+    var lastQuery by remember { mutableStateOf<Pair<String, Collection>?>(null) }
+    LaunchedEffect(query, scope, tracksVersion) {
+        if (query.isBlank()) { result = null; lastQuery = null; return@LaunchedEffect }
+        val fresh = lastQuery != query to scope
+        if (fresh) delay(150)
         result = withContext(Dispatchers.IO) { ui.library.search(query, scope) }
-        showing = "songs"
+        if (fresh) showing = "songs"
+        lastQuery = query to scope
     }
     Screen {
         Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()) {

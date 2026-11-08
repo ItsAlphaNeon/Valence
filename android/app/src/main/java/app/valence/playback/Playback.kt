@@ -51,20 +51,28 @@ data class QueueSummary(val id: Long, val name: String, val count: Int, val inde
 
 /**
  * The one player in the app. The UI calls it directly (same process); [PlaybackService] wraps the
- * same ExoPlayer in a media session for the notification, lock screen, headset buttons and Auto.
+ * same player in a media session for the notification, lock screen, headset buttons and Auto.
+ * While casting, [player] is the TV's (see [startRemote]) and all of this drives that instead.
  */
 class Playback(private val app: ValenceApp) {
     private val prefs = app.prefs
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val store = QueueStore(app.filesDir)
 
-    val player: ExoPlayer = ExoPlayer.Builder(app)
+    /** The phone's own player. Everything else goes through [player], which is this unless casting. */
+    private val exo: ExoPlayer = ExoPlayer.Builder(app)
         .setAudioAttributes(AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MUSIC).build(), true)
         .setHandleAudioBecomingNoisy(prefs.pauseOnDisconnect.value)
         .setWakeMode(C.WAKE_MODE_LOCAL)
         .setSeekBackIncrementMs(10_000)
         .setSeekForwardIncrementMs(10_000)
         .build()
+
+    private val _active = MutableStateFlow<Player>(exo)
+    /** The player in use: the phone's, or the TV's while casting. */
+    val active: StateFlow<Player> = _active.asStateFlow()
+    val player: Player get() = _active.value
+    private val casting: Boolean get() = _active.value !== exo
 
     // ---- Observable state ----------------------------------------------------------------------
 
@@ -106,6 +114,8 @@ class Playback(private val app: ValenceApp) {
     /** Inactive queues (the active one lives in the player). */
     private val saved = mutableListOf<SavedQueue>()
     private var activeId = -1L
+    /** The playing queue's id (-1 when there's none). */
+    val activeQueueId: Long get() = activeId
     private var activeName = ""
     private val known = HashMap<Long, Track>()
     private var restored = false
@@ -114,12 +124,20 @@ class Playback(private val app: ValenceApp) {
 
     private val listens = Listens(app)
 
-    init {
-        player.addListener(object : Player.Listener {
+    /** Songs in a row the TV couldn't play. */
+    private var castFailures = 0
+
+    /** Moved along with the playing: it listens to whichever player is in use. */
+    private val listener = object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
-                _isPlaying.value = isPlaying
+                publishPlaying()
+                if (isPlaying) castFailures = 0
                 listens.onPlaying(isPlaying, player.currentPosition)
                 if (!isPlaying) persist()
+            }
+
+            override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                publishPlaying()
             }
 
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
@@ -155,6 +173,7 @@ class Playback(private val app: ValenceApp) {
             }
 
             override fun onPlaybackStateChanged(state: Int) {
+                publishPlaying()
                 if (state == Player.STATE_ENDED) {
                     listens.end(Listens.End.Completed)
                     persist()
@@ -187,6 +206,11 @@ class Playback(private val app: ValenceApp) {
                 val t = _current.value
                 Log.w(TAG, "Playback error on ${t?.relPath}: ${error.errorCodeName}", error)
                 _error.value = "Can't play ${t?.title ?: "this song"} (${error.errorCodeName.removePrefix("ERROR_CODE_").lowercase().replace('_', ' ')})"
+                if (casting && ++castFailures >= MAX_CAST_FAILURES) {
+                    // Every song failing means the TV can't reach the phone: going on would only run through the queue.
+                    _error.value = "The TV can't play these songs. It may not be able to reach this phone on the network."
+                    return
+                }
                 // Skip what can't be played (unsupported codec, missing file) instead of stopping the queue.
                 if (player.hasNextMediaItem()) {
                     player.seekToNextMediaItem()
@@ -194,24 +218,92 @@ class Playback(private val app: ValenceApp) {
                     player.play()
                 }
             }
+    }
 
+    init {
+        exo.addListener(listener)
+        exo.addListener(object : Player.Listener {
             override fun onAudioSessionIdChanged(audioSessionId: Int) {
                 attachEffects(audioSessionId)
             }
         })
         // Shuffle reorders the queue itself, so the queue always shows play order. The player's own
         // shuffle flag only mirrors the mode for the notification and Auto; its order stays the list's.
-        player.setShuffleOrder(ShuffleOrder.UnshuffledShuffleOrder(0))
-        player.shuffleModeEnabled = _shuffle.value
-        player.skipSilenceEnabled = prefs.skipSilence.value
-        scope.launch { prefs.pauseOnDisconnect.flow.collect { player.setHandleAudioBecomingNoisy(it) } }
-        scope.launch { prefs.skipSilence.flow.collect { player.skipSilenceEnabled = it } }
+        exo.setShuffleOrder(ShuffleOrder.UnshuffledShuffleOrder(0))
+        exo.shuffleModeEnabled = _shuffle.value
+        exo.skipSilenceEnabled = prefs.skipSilence.value
+        scope.launch { prefs.pauseOnDisconnect.flow.collect { exo.setHandleAudioBecomingNoisy(it) } }
+        scope.launch { prefs.skipSilence.flow.collect { exo.skipSilenceEnabled = it } }
         scope.launch { prefs.replayGain.flow.collect { applyGain() } }
         scope.launch { prefs.preampDb.flow.collect { applyGain() } }
         scope.launch { ticker() }
-        attachEffects(player.audioSessionId) // the first id is generated up front, without a callback
+        attachEffects(exo.audioSessionId) // the first id is generated up front, without a callback
         registerReconnect()
     }
+
+    /**
+     * The play button's state. On a TV it stays on through the moment between songs, when the
+     * player is loading and isn't strictly playing, so the button doesn't flicker.
+     */
+    private fun publishPlaying() {
+        val p = player
+        _isPlaying.value = if (casting) p.playWhenReady && (p.playbackState == Player.STATE_READY || p.playbackState == Player.STATE_BUFFERING) else p.isPlaying
+    }
+
+    // ---- Casting -------------------------------------------------------------------------------
+
+    /** Moves playback onto [tv]: same queue, same song, same place, playing if it was playing. */
+    fun startRemote(tv: Player) {
+        if (player === tv) return
+        ensureService()
+        pausedByDisconnect = false
+        val wasPlaying = player.playWhenReady && (player.playbackState == Player.STATE_READY || player.playbackState == Player.STATE_BUFFERING)
+        handOver(tv, wasPlaying)
+    }
+
+    /** Back to the phone: the same song in the same place, paused, so it doesn't start playing out loud. */
+    fun stopRemote() {
+        if (casting) handOver(exo, false)
+    }
+
+    private fun handOver(to: Player, play: Boolean) {
+        val from = player
+        val items = List(from.mediaItemCount) { from.getMediaItemAt(it) }
+        val index = from.currentMediaItemIndex.coerceAtLeast(0)
+        val at = from.currentPosition
+        val repeat = from.repeatMode
+        val parameters = from.playbackParameters
+        fadeJob?.cancel()
+        fadeVolume = 1f
+        castFailures = 0
+        listens.onPlaying(false, at)
+        from.removeListener(listener)
+        if (from === exo) {
+            exo.pause()
+            exo.stop()
+            exo.clearMediaItems()
+        }
+        _active.value = to
+        _isPlaying.value = false
+        to.addListener(listener)
+        to.repeatMode = repeat
+        to.shuffleModeEnabled = _shuffle.value
+        to.playbackParameters = parameters
+        if (items.isNotEmpty()) {
+            to.setMediaItems(items, index, at)
+            if (to === exo) exo.setShuffleOrder(ShuffleOrder.UnshuffledShuffleOrder(items.size))
+            to.playWhenReady = play
+            to.prepare()
+        }
+        applyGain()
+        persist()
+    }
+
+    /** A song from the queue, for what the TV needs to know about it. */
+    fun trackFor(id: Long): Track? = known[id] ?: app.library.track(id)?.also { known[it.id] = it }
+
+    /** The ReplayGain for song [id] if it's the current one (a TV is only ever told about the current one). */
+    fun gainFor(id: Long): Float = if (_current.value?.id == id) rgVolume.coerceIn(0f, 1f) else 1f
 
     private suspend fun ticker() {
         var n = 0
@@ -269,7 +361,7 @@ class Playback(private val app: ValenceApp) {
     private fun setItems(tracks: List<Track>, index: Int, positionMs: Long) {
         tracks.forEach { known[it.id] = it }
         player.setMediaItems(tracks.map { it.toMediaItem() }, index.coerceIn(0, max(tracks.size - 1, 0)), positionMs)
-        player.setShuffleOrder(ShuffleOrder.UnshuffledShuffleOrder(tracks.size))
+        if (!casting) exo.setShuffleOrder(ShuffleOrder.UnshuffledShuffleOrder(tracks.size))
         player.prepare()
     }
 
@@ -309,6 +401,28 @@ class Playback(private val app: ValenceApp) {
             fresh.forEach { known[it.id] = it }
             _queue.value = ids.mapNotNull { known[it] }
             _current.value = _current.value?.let { known[it.id] }
+        }
+    }
+
+    /**
+     * After the tag editor rewrote these songs' files: fresh details everywhere, and the phone's
+     * player reopens them (its seek positions point into the old file). The playing song carries on
+     * from where it was. (A TV fetches songs anew by id; the phone's player is redone even while
+     * casting, so it's right when playback comes back.)
+     */
+    fun reloadEdited(ids: Set<Long>) {
+        scope.launch {
+            val fresh = withContext(Dispatchers.IO) { app.library.tracksByIds(ids.toList()) }.associateBy { it.id }
+            fresh.values.forEach { known[it.id] = it }
+            val version = System.currentTimeMillis()
+            val cur = exo.currentMediaItemIndex
+            for (i in 0 until exo.mediaItemCount) {
+                val t = exo.getMediaItemAt(i).mediaId.toLongOrNull()?.let { fresh[it] } ?: continue
+                val pos = if (i == cur) exo.currentPosition else 0L
+                exo.replaceMediaItem(i, mediaItemFor(t, app.library.fileOf(t), version))
+                if (i == cur) exo.seekTo(i, pos)
+            }
+            refreshTracks()
         }
     }
 
@@ -427,9 +541,16 @@ class Playback(private val app: ValenceApp) {
 
     fun toggle() {
         ensureService()
-        if (player.playbackState == Player.STATE_ENDED) player.seekTo(0, 0)
-        if (player.playbackState == Player.STATE_IDLE) player.prepare()
-        if (player.isPlaying) fadeThen(0f) { player.pause() } else { player.play(); fadeIn() }
+        val state = player.playbackState
+        val onTheWay = player.playWhenReady && (state == Player.STATE_READY || state == Player.STATE_BUFFERING)
+        if (state == Player.STATE_ENDED) player.seekTo(0, 0)
+        if (state == Player.STATE_IDLE) player.prepare()
+        when {
+            // Fades are the phone's: on a TV they'd lag behind and could be heard in steps.
+            casting -> if (onTheWay) player.pause() else player.play()
+            player.isPlaying -> fadeThen(0f) { player.pause() }
+            else -> { player.play(); fadeIn() }
+        }
     }
 
     fun next() = player.seekToNextMediaItem()
@@ -453,6 +574,41 @@ class Playback(private val app: ValenceApp) {
 
     fun removeAt(index: Int) {
         if (index in 0 until player.mediaItemCount) player.removeMediaItem(index)
+    }
+
+    /**
+     * Takes song [index] of [shown] (queue [id] as the Queues page lists it) out of that queue, the
+     * playing song included (the next one starts). Returns what undoes it, or null if nothing changed.
+     */
+    fun removeFromQueue(id: Long, index: Int, shown: List<Track>): (() -> Unit)? {
+        val t = shown.getOrNull(index) ?: return null
+        if (id == activeId) {
+            if (index !in 0 until player.mediaItemCount || player.getMediaItemAt(index).mediaId != t.id.toString()) return null
+            player.removeMediaItem(index)
+            return {
+                known[t.id] = t
+                if (id == activeId) player.addMediaItem(index.coerceAtMost(player.mediaItemCount), t.toMediaItem())
+            }
+        }
+        val i = saved.indexOfFirst { it.id == id }
+        if (i < 0) return null
+        val q = saved[i]
+        // The list skips files that are gone, so find the same copy of this song in the saved paths.
+        val nth = shown.subList(0, index).count { it.relPath == t.relPath }
+        var seen = 0
+        val at = q.paths.indexOfFirst { it == t.relPath && seen++ == nth }
+        if (at < 0) return null
+        saved[i] = q.copy(
+            paths = q.paths.toMutableList().apply { removeAt(at) },
+            index = if (at < q.index) q.index - 1 else q.index,
+            positionMs = if (at == q.index) 0L else q.positionMs,
+        )
+        publishQueues()
+        persist()
+        return {
+            val j = saved.indexOfFirst { it.id == id }
+            if (j >= 0) { saved[j] = q; publishQueues(); persist() }
+        }
     }
 
     fun toggleShuffle() = setShuffle(!_shuffle.value)
@@ -582,6 +738,8 @@ class Playback(private val app: ValenceApp) {
 
     fun clearError() { _error.value = null }
 
+    fun castProblem(message: String) { _error.value = message }
+
     // ---- Sleep timer ---------------------------------------------------------------------------
 
     fun sleepIn(minutes: Int, finishSong: Boolean = false) {
@@ -617,7 +775,7 @@ class Playback(private val app: ValenceApp) {
             _sleepSongs.value = 1
             return
         }
-        if (player.isPlaying) fadeThen(0f, 3000) { player.pause() }
+        if (casting) player.pause() else if (player.isPlaying) fadeThen(0f, 3000) { player.pause() }
     }
 
     // ---- Volume: ReplayGain x fade -------------------------------------------------------------
@@ -627,7 +785,7 @@ class Playback(private val app: ValenceApp) {
     private var fadeJob: Job? = null
 
     private fun applyVolume() {
-        player.volume = (rgVolume * fadeVolume).coerceIn(0f, 1f)
+        if (casting) app.cast.setGain(rgVolume) else exo.volume = (rgVolume * fadeVolume).coerceIn(0f, 1f)
     }
 
     private fun applyGain() {
@@ -723,7 +881,7 @@ class Playback(private val app: ValenceApp) {
 
     private fun registerReconnect() {
         val am = app.getSystemService(AudioManager::class.java) ?: return
-        player.addListener(object : Player.Listener {
+        exo.addListener(object : Player.Listener {
             override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
                 pausedByDisconnect = !playWhenReady && reason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_BECOMING_NOISY
             }
@@ -736,9 +894,9 @@ class Playback(private val app: ValenceApp) {
                         AudioDeviceInfo.TYPE_USB_HEADSET, AudioDeviceInfo.TYPE_BLE_HEADSET,
                     )
                 }
-                if (headset && pausedByDisconnect && prefs.resumeOnConnect.value && player.mediaItemCount > 0) {
+                if (headset && pausedByDisconnect && prefs.resumeOnConnect.value && !casting && exo.mediaItemCount > 0) {
                     pausedByDisconnect = false
-                    player.play()
+                    exo.play()
                 }
             }
         }, null)
@@ -750,10 +908,12 @@ class Playback(private val app: ValenceApp) {
 
     companion object {
         private const val TAG = "ValencePlayback"
+        private const val MAX_CAST_FAILURES = 3
 
-        fun mediaItemFor(t: Track, file: File): MediaItem = MediaItem.Builder()
+        /** [version] > 0 makes the item differ from one made before the file was rewritten, so the player reopens it. */
+        fun mediaItemFor(t: Track, file: File, version: Long = 0): MediaItem = MediaItem.Builder()
             .setMediaId(t.id.toString())
-            .setUri(Uri.fromFile(file))
+            .setUri(Uri.fromFile(file).let { if (version > 0) it.buildUpon().appendQueryParameter("v", version.toString()).build() else it })
             .setMediaMetadata(
                 MediaMetadata.Builder()
                     .setTitle(t.title)
