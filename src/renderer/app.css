@@ -2091,8 +2091,12 @@ input[type='range'] {
   height: 40px;
   color: var(--fg);
 }
-.pb-transport .icon-btn.active {
-  color: var(--accent);
+/* Shuffle and repeat: grey when off, white when on. */
+.pb-transport .icon-btn.pb-toggle {
+  color: var(--fg-3);
+}
+.pb-transport .icon-btn.pb-toggle.active {
+  color: var(--fg);
 }
 .pb-play {
   width: 48px !important;

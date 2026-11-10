@@ -169,11 +169,12 @@ export function PlayerBar() {
       </div>
       <div className="pb-center">
         <div className="pb-transport">
-          <IconButton icon="shuffle" size={22} active={state?.shuffle} title={state?.shuffle ? 'Shuffle: on' : 'Shuffle: off'} onClick={() => cmd({ type: 'setShuffle', shuffle: !state?.shuffle })} />
+          <IconButton className="pb-toggle" icon="shuffle" size={22} active={state?.shuffle} title={state?.shuffle ? 'Shuffle: on' : 'Shuffle: off'} onClick={() => cmd({ type: 'setShuffle', shuffle: !state?.shuffle })} />
           <IconButton icon="prev" size={30} title={`Previous (${MOD}+←)`} onClick={() => cmd({ type: 'prev' })} disabled={!cur} />
           <IconButton className="pb-play" icon={playing ? 'pause' : 'play'} size={40} title={playing ? 'Pause (Space)' : 'Play (Space)'} onClick={() => cmd({ type: 'toggle' })} disabled={!cur} />
           <IconButton icon="next" size={30} title={`Next (${MOD}+→)`} onClick={() => cmd({ type: 'next' })} disabled={!cur} />
           <IconButton
+            className="pb-toggle"
             icon={repeat === 'one' ? 'repeatOne' : 'repeat'}
             size={22}
             active={repeat !== 'off'}
