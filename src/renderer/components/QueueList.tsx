@@ -1,5 +1,5 @@
-// The queue as a list: what's playing, your "next" songs (drag to reorder), the rest of the source
-// you're playing from, autoplay and recently played. Used by the right panel's Queue tab and by the
+// The queue as a list: what's playing, your "next" songs, the rest of the source you're playing from
+// (both can be dragged to reorder and removed), autoplay and recently played. Used by the right panel's Queue tab and by the
 // Queue page, which shows the phone's bigger rows (handle, cover, three lines, options button).
 
 import { useState } from 'react'
@@ -26,6 +26,22 @@ export function saveQueueAsPlaylist(): void {
   if (ids.length) window.dispatchEvent(new CustomEvent('valence:new-playlist', { detail: ids }))
 }
 
+/** Drag-to-reorder within one section; `move` gets the target index after the dragged row is taken out. */
+interface Drag {
+  index: number
+  over: number | null
+  setOver: (i: number | null) => void
+  from: number | null
+  setFrom: (i: number | null) => void
+  move: (from: number, to: number) => void
+}
+
+function useDrag(move: (from: number, to: number) => void) {
+  const [from, setFrom] = useState<number | null>(null)
+  const [over, setOver] = useState<number | null>(null)
+  return (index: number): Drag => ({ index, over, setOver, from, setFrom, move })
+}
+
 function QueueItem({
   item,
   current,
@@ -39,7 +55,7 @@ function QueueItem({
   page?: boolean
   onPlay?: () => void
   onRemove?: () => void
-  drag?: { index: number; over: number | null; setOver: (i: number | null) => void; from: number | null; setFrom: (i: number | null) => void }
+  drag?: Drag
 }) {
   const menu = (e: { clientX: number; clientY: number }) =>
     showMenu(e, [
@@ -66,7 +82,7 @@ function QueueItem({
       onDrop={(e) => {
         if (!drag || drag.from == null) return
         e.preventDefault()
-        if (drag.from !== drag.index) cmd({ type: 'moveUpNext', from: drag.from, to: drag.index > drag.from ? drag.index - 1 : drag.index })
+        if (drag.from !== drag.index) drag.move(drag.from, drag.index > drag.from ? drag.index - 1 : drag.index)
         drag.setFrom(null)
         drag.setOver(null)
       }}
@@ -106,8 +122,8 @@ function QueueItem({
 
 export function QueueList({ page }: { page?: boolean }) {
   const state = usePlayer((s) => s.state)
-  const [from, setFrom] = useState<number | null>(null)
-  const [over, setOver] = useState<number | null>(null)
+  const upDrag = useDrag((from, to) => cmd({ type: 'moveUpNext', from, to }))
+  const ctxDrag = useDrag((from, to) => cmd({ type: 'moveUpcoming', from, to }))
   const [showHistory, setShowHistory] = useState(false)
   if (!state) return null
   const q = state.queue
@@ -137,7 +153,7 @@ export function QueueList({ page }: { page?: boolean }) {
               page={page}
               onPlay={() => cmd({ type: 'playUpNextAt', index: i })}
               onRemove={() => cmd({ type: 'removeUpNext', index: i })}
-              drag={{ index: i, over, setOver, from, setFrom }}
+              drag={upDrag(i)}
             />
           ))}
         </>
@@ -149,7 +165,14 @@ export function QueueList({ page }: { page?: boolean }) {
             <span className="tnum faint">{q.context.length - q.context.position - 1}</span>
           </div>
           {q.context.upcoming.map((it, i) => (
-            <QueueItem key={`${it.id}-c${i}`} item={it} page={page} onPlay={() => cmd({ type: 'jumpTo', position: q.context.position + 1 + i })} />
+            <QueueItem
+              key={`${it.id}-c${i}`}
+              item={it}
+              page={page}
+              onPlay={() => cmd({ type: 'jumpTo', position: q.context.position + 1 + i })}
+              onRemove={() => cmd({ type: 'removeUpcoming', index: i })}
+              drag={ctxDrag(i)}
+            />
           ))}
         </>
       )}

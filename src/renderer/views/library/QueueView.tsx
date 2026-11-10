@@ -1,5 +1,5 @@
 // The phone's Queues page: the song playing and everything after it, with a counter ("12 / 40",
-// time left), save as playlist, clear and options. Drag the songs you queued to reorder them.
+// time left), save as playlist, clear and options. Every song still to come can be dragged or removed.
 
 import { cx, duration } from '../../lib/format'
 import { cmd, usePlayer } from '../../state/player'

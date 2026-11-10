@@ -337,6 +337,37 @@ export class PlayQueue {
     this.bump()
   }
 
+  /** Rebuilds the context from `keep` (old item indices, in their new item order), remapping play order, current and history. */
+  private remapContext(keep: number[]): void {
+    const map = new Map(keep.map((old, i) => [old, i]))
+    const re = (e: Entry): Entry => (e.idx === null ? e : { item: e.item, idx: map.get(e.idx) ?? null })
+    this.items = keep.map((i) => this.items[i])
+    this.order = this.order.filter((i) => map.has(i)).map((i) => map.get(i)!)
+    if (this.cur) this.cur = re(this.cur)
+    this.hist = this.hist.map(re)
+  }
+
+  /** Removes a song still to come from the context; `offset` indexes `upcoming()` (0 = the next one). */
+  removeUpcoming(offset: number): void {
+    const p = this.ptr + 1 + offset
+    if (offset < 0 || p >= this.order.length) return
+    const gone = this.order[p]
+    this.remapContext(this.items.map((_, i) => i).filter((i) => i !== gone))
+    this.bump()
+  }
+
+  /** Moves a song within the rest of the context (offsets index `upcoming()`). Unshuffled, the
+   *  context's own order changes too, so turning shuffle on and off again keeps the move. */
+  moveUpcoming(from: number, to: number): void {
+    const base = this.ptr + 1
+    const n = this.order.length - base
+    if (from < 0 || from >= n) return
+    const [it] = this.order.splice(base + from, 1)
+    this.order.splice(base + Math.max(0, Math.min(to, n - 1)), 0, it)
+    if (!this._shuffle) this.remapContext([...this.order])
+    this.bump()
+  }
+
   clearUpNext(): void {
     if (!this.up.length) return
     this.up = []

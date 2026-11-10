@@ -116,6 +116,9 @@ export type PlayerCommand =
   | { type: 'removeUpNext'; index: number }
   | { type: 'moveUpNext'; from: number; to: number }
   | { type: 'clearUpNext' }
+  /** Edit the rest of the album/playlist; indexes are into QueueSnapshot.context.upcoming. */
+  | { type: 'removeUpcoming'; index: number }
+  | { type: 'moveUpcoming'; from: number; to: number }
   | { type: 'playUpNextAt'; index: number }
   /** Jump within the context; `position` is in play order (see QueueSnapshot.context.position). */
   | { type: 'jumpTo'; position: number }

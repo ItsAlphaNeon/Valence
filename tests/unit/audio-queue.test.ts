@@ -208,6 +208,49 @@ describe('Up Next', () => {
   })
 })
 
+describe('editing the rest of the context', () => {
+  it('removes and moves upcoming songs; history and going back still work', () => {
+    const q = new PlayQueue()
+    q.setContext(album(6), 0)
+    q.next()
+    q.removeUpcoming(1) // t4
+    expect(ids(q.upcoming())).toEqual(['t3', 't5', 't6'])
+    q.moveUpcoming(2, 0) // t6 to the front
+    expect(ids(q.upcoming())).toEqual(['t6', 't3', 't5'])
+    expect(q.current!.id).toBe('t2')
+    expect(q.next()!.id).toBe('t6')
+    expect(q.prev(0).item!.id).toBe('t2')
+    expect(q.prev(0).item!.id).toBe('t1')
+    expect(ids(q.upcoming())).toEqual(['t2', 't6', 't3', 't5'])
+  })
+
+  it('unshuffled moves survive a shuffle toggle; removals survive reshuffling', () => {
+    const q = new PlayQueue(rng(3))
+    q.setContext(album(5), 0)
+    q.moveUpcoming(3, 0) // t5 next
+    q.removeUpcoming(1) // t2
+    q.setShuffle(true)
+    expect(ids(q.playOrder).sort()).toEqual(['t1', 't3', 't4', 't5'])
+    q.setShuffle(false)
+    expect(ids(q.playOrder)).toEqual(['t1', 't5', 't3', 't4'])
+  })
+
+  it('edits the shuffled order while shuffled; ignores out-of-range indexes', () => {
+    const q = new PlayQueue(rng(7))
+    q.setShuffle(true)
+    q.setContext(album(8), 0)
+    const before = ids(q.upcoming())
+    q.moveUpcoming(0, 6)
+    expect(ids(q.upcoming())).toEqual([...before.slice(1), before[0]])
+    q.removeUpcoming(0)
+    expect(ids(q.upcoming())).toEqual([...before.slice(2), before[0]])
+    q.removeUpcoming(99)
+    q.moveUpcoming(-1, 0)
+    expect(q.upcoming()).toHaveLength(6)
+    expect(q.current!.id).toBe('t1')
+  })
+})
+
 describe('PlayQueue continuation (autoplay)', () => {
   const picks = (n: number) => Array.from({ length: n }, (_, i) => item(`p${i + 1}`, `artist${i % 3}`))
   const AUTO = { kind: 'autoplay' as const, title: 'Autoplay' }

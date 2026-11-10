@@ -654,6 +654,14 @@ export class Player extends Emitter<PlayerEvents> {
         this.queue.clearUpNext()
         this.updateNext()
         return this.scheduleState()
+      case 'removeUpcoming':
+        this.queue.removeUpcoming(c.index)
+        this.updateNext()
+        return this.scheduleState()
+      case 'moveUpcoming':
+        this.queue.moveUpcoming(c.from, c.to)
+        this.updateNext()
+        return this.scheduleState()
       case 'playUpNextAt':
         if (c.index < 0 || c.index >= this.queue.upNext.length) return
         this.endListen('skipped')

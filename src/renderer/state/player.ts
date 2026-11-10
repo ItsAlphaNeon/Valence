@@ -174,12 +174,13 @@ export async function initPlayer(): Promise<void> {
     const prev = usePlayer.getState()
     if (state.sleep !== prev.sleep) patch.sleep = state.sleep
     if (state.stopAfterCurrent !== prev.stopAfterCurrent) patch.stopAfterCurrent = state.stopAfterCurrent
-    // autoplay builds its context inside the Player; keep the resume point in step with it
+    // autoplay builds its context inside the Player and the queue can be edited there; keep the
+    // resume point in step with it
     const ctx = p.queue.contextItems
     if (ctx !== lastCtx) {
       lastCtx = ctx
-      const source = state.queue.context.source
-      if (source?.kind === 'autoplay') lastContext = { ids: idsOf(ctx), source }
+      const ids = idsOf(ctx)
+      if (ids.length) lastContext = { ids, source: state.queue.context.source ?? undefined }
     }
     usePlayer.setState(patch)
     saveResume()
