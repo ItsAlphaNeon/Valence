@@ -64,9 +64,9 @@ export function AlbumDetailView({ id }: { id: number }) {
         icon: 'playlist',
         submenu: [
           { label: 'New playlist…', icon: 'plus', onClick: () => window.dispatchEvent(new CustomEvent('valence:new-playlist', { detail: ids })) },
-          ...(playlists.some((p) => p.kind === 'static') ? [{ separator: true } as MenuItem] : []),
+          ...(playlists.some((p) => p.kind !== 'smart') ? [{ separator: true } as MenuItem] : []),
           ...playlists
-            .filter((p) => p.kind === 'static')
+            .filter((p) => p.kind !== 'smart')
             .map((p) => ({ label: p.name, onClick: () => void invoke(LIB.addToPlaylist, p.id, ids).then(() => toast(`Added to “${p.name}”`, 'ok')) })),
         ],
       },

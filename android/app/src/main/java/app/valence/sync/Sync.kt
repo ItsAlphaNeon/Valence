@@ -386,7 +386,7 @@ class Sync(private val app: ValenceApp) {
         }
     }
 
-    fun addToPlaylist(id: String, tracks: List<Track>) = editPlaylist(id) { entries ->
+    fun addToPlaylist(id: String, tracks: List<Track>, moved: (String) -> Unit = {}) = editPlaylist(id, moved) { entries ->
         val have = entries.mapTo(HashSet()) { it.relPath.lowercase() }
         val add = tracks.filter { have.add(it.relPath.lowercase()) }.map(::entryFor)
         if (add.isEmpty()) toast("Already in the playlist")
@@ -394,7 +394,7 @@ class Sync(private val app: ValenceApp) {
         entries + add
     }
 
-    fun removeFromPlaylist(id: String, track: Track) = editPlaylist(id) { entries ->
+    fun removeFromPlaylist(id: String, track: Track, moved: (String) -> Unit = {}) = editPlaylist(id, moved) { entries ->
         entries.filterNot { it.relPath.equals(track.relPath, ignoreCase = true) }
     }
 
@@ -402,7 +402,7 @@ class Sync(private val app: ValenceApp) {
      * Puts the songs the phone lists in [order] (their rel paths, top to bottom). Entries the phone
      * can't play stay where they are; if the file changed underneath, nothing moves.
      */
-    fun setPlaylistOrder(id: String, order: List<String>) = editPlaylist(id) { entries ->
+    fun setPlaylistOrder(id: String, order: List<String>, moved: (String) -> Unit = {}) = editPlaylist(id, moved) { entries ->
         val wanted = order.map { it.lowercase() }
         val set = wanted.toHashSet()
         val slots = entries.indices.filter { entries[it].relPath.lowercase() in set }
@@ -532,8 +532,12 @@ class Sync(private val app: ValenceApp) {
      * Edits a playlist's file: re-read right before writing (never a stale copy), entries the
      * phone can't resolve kept. A playlist with Syncthing conflict copies starts from their
      * union, as shown, and the edit settles the conflict. Smart playlists have rules, not songs.
+     *
+     * Editing a mirrored TIDAL playlist breaks it away from its source, as on the desktop: its doc
+     * goes, so the desktop stops rewriting it, and it's a regular playlist with a new id from its
+     * file. [moved] gets that id (on the main thread).
      */
-    private fun editPlaylist(id: String, change: (List<M3u8.Entry>) -> List<M3u8.Entry>) {
+    private fun editPlaylist(id: String, moved: (String) -> Unit, change: (List<M3u8.Entry>) -> List<M3u8.Entry>) {
         app.scope.launch(io) {
             val root = root() ?: return@launch
             val row = playlistRow(id) ?: return@launch
@@ -548,7 +552,12 @@ class Sync(private val app: ValenceApp) {
                 val before = M3u8.read(file, root)
                 val after = change(before)
                 if (after != before) M3u8.write(file, root, after)
+                val detached = row.kind == "mirror" && after != before
+                if (detached) {
+                    for ((f, doc) in docFiles(File(root, ".valence/playlists"), "mirror-")) if (doc.optString("id") == id) f.delete()
+                }
                 indexPlaylistsNow()
+                if (detached) withContext(Dispatchers.Main) { moved(staticId(rel)) }
             } catch (x: Exception) {
                 fail("Couldn't change the playlist", x)
             }

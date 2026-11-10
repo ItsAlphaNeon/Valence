@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { TrackRow } from '@shared/types'
 import { LIB } from '@shared/ipc/library'
 import type { SmartField, SmartOp, SmartRule, SmartRules } from '@main/library/playlists'
@@ -34,6 +34,14 @@ function Mosaic({ rows, onOpen }: { rows: TrackRow[]; onOpen: (hash: string) => 
 export function PlaylistView({ id }: { id: string }) {
   const info = useLib((s) => s.playlists.find((p) => p.id === id))
   const playlists = useLib((s) => s.playlists)
+  // Editing a mirrored playlist (here, from the sidebar or on the phone) makes it a regular one with
+  // a new id; follow it by its file.
+  const file = useRef<string | null>(null)
+  if (info?.relPath) file.current = info.relPath
+  const movedTo = !info && file.current ? playlists.find((p) => p.relPath === file.current)?.id : undefined
+  useEffect(() => {
+    if (movedTo) useUi.getState().navigate({ view: 'playlist', id: movedTo }, { replace: true })
+  }, [movedTo])
   const { data: rows, loading } = useLibData(() => invoke<TrackRow[]>(LIB.playlistTracks, id), [id], { playlists: true })
   const [promptNode, prompt] = usePrompt()
   const src = { kind: 'playlist' as const, id, title: info?.name }
@@ -85,7 +93,7 @@ export function PlaylistView({ id }: { id: string }) {
       { label: 'Get Info', icon: 'info', disabled: !ids.length, onClick: () => useUi.getState().openGetInfo(ids) },
       { separator: true },
       ...(info.kind === 'smart' ? [{ label: 'Edit rules', icon: 'smart' as const, onClick: () => navigate({ view: 'smart', id }) }] : []),
-      { label: 'Rename…', icon: 'edit', disabled: info.kind === 'mirror', onClick: () => void rename() },
+      { label: 'Rename…', icon: 'edit', onClick: () => void rename() },
       { label: 'Delete playlist', icon: 'trash', danger: true, onClick: remove },
     ])
 
@@ -129,7 +137,7 @@ export function PlaylistView({ id }: { id: string }) {
         source={src}
         showArt
         columns={['index', 'title', 'album', 'heart', 'time', 'rating']}
-        emptyText={info.kind === 'static' ? 'Drag songs onto this playlist in the sidebar, or use “Add to playlist” from a song’s menu.' : 'No songs match these rules.'}
+        emptyText={info.kind !== 'smart' ?'Drag songs onto this playlist in the sidebar, or use “Add to playlist” from a song’s menu.' : 'No songs match these rules.'}
       />
       {promptNode}
     </div>

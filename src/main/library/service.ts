@@ -489,13 +489,16 @@ export class LibraryService {
       this.ctx.broadcast(LIB.changed, { playlists: true })
       return id
     })
+    // Both return the playlist's id afterwards: editing a mirrored playlist makes it a regular one.
     handle(LIB.addToPlaylist, (id: string, trackIds: number[]) => {
-      this.playlists.addItems(id, this.relPaths(trackIds))
+      const newId = this.playlists.addItems(id, this.relPaths(trackIds))
       this.ctx.broadcast(LIB.changed, { playlists: true })
+      return newId
     })
     handle(LIB.setPlaylistItems, (id: string, trackIds: number[]) => {
-      this.playlists.setItems(id, this.relPaths(trackIds))
+      const newId = this.playlists.setItems(id, this.relPaths(trackIds))
       this.ctx.broadcast(LIB.changed, { playlists: true })
+      return newId
     })
     handle(LIB.renamePlaylist, async (id: string, name: string) => {
       const newId = await this.playlists.rename(id, name)

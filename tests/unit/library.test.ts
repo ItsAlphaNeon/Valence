@@ -300,6 +300,37 @@ describe('scanner + indexer + queries + lookup', () => {
     await store.remove(id)
     expect(trashed.some((t) => t.endsWith('Road Trip.m3u8'))).toBe(true)
   })
+
+  it('mirrored playlists: rename keeps the link, an edit breaks it away, delete takes the doc', async () => {
+    const trashed: string[] = []
+    const store = new PlaylistStore(db, root, createLibraryLookup(db), async (p) => void trashed.push(p))
+    store.indexAll()
+    const docs = () => readdirSync(join(root, '.valence', 'playlists')).filter((f) => f.startsWith('mirror-'))
+    store.mirror({ name: 'Edit Me', sourceKey: 'tidal:playlist:edit', tracks: [{ tidalTrackId: '111' }, { tidalTrackId: '999' }] })
+    const m = store.list().find((p) => p.name === 'Edit Me')!
+    const docsBefore = docs().length
+
+    const renamed = await store.rename(m.id, 'Edited')
+    expect(renamed).toBe(m.id)
+    expect(store.list().find((p) => p.id === m.id)).toMatchObject({ kind: 'mirror', name: 'Edited', relPath: 'Playlists/Edited.m3u8' })
+    store.indexAll()
+    expect(store.list().find((p) => p.id === m.id)?.kind).toBe('mirror')
+
+    const items = store.items(m.id)
+    const newId = store.addItems(m.id, ['Loose/whatever.flac'])
+    expect(newId).not.toBe(m.id)
+    expect(docs()).toHaveLength(docsBefore - 1)
+    const after = store.list().find((p) => p.id === newId)!
+    expect(after).toMatchObject({ kind: 'static', name: 'Edited', relPath: 'Playlists/Edited.m3u8', sourceKey: null })
+    store.refreshMirrors() // the source still has a missing track; a mirror would be rewritten here
+    store.indexAll()
+    expect(store.list().find((p) => p.relPath === 'Playlists/Edited.m3u8')).toMatchObject({ id: newId, kind: 'static' })
+    expect(store.items(newId)).toEqual([...items, 'Loose/whatever.flac'])
+
+    const tidal = store.list().find((p) => p.name === 'TIDAL Mix')!
+    await store.remove(tidal.id)
+    expect(trashed.some((t) => t.endsWith(`${tidal.id}.json`))).toBe(true)
+  })
 })
 
 describe('sync primitives', () => {

@@ -40,10 +40,10 @@ export function albumMenu(e: React.MouseEvent, a: AlbumRow): void {
       icon: 'playlist',
       submenu: [
         { label: 'New playlist…', icon: 'plus', onClick: () => void ids().then((x) => window.dispatchEvent(new CustomEvent('valence:new-playlist', { detail: x }))) },
-        ...(useLib.getState().playlists.some((p) => p.kind === 'static') ? [{ separator: true }] : []),
+        ...(useLib.getState().playlists.some((p) => p.kind !== 'smart') ? [{ separator: true }] : []),
         ...useLib
           .getState()
-          .playlists.filter((p) => p.kind === 'static')
+          .playlists.filter((p) => p.kind !== 'smart')
           .map((p) => ({
             label: p.name,
             onClick: () =>

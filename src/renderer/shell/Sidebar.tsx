@@ -181,7 +181,6 @@ export function Sidebar() {
       {
         label: 'Rename…',
         icon: 'edit',
-        disabled: p.kind === 'mirror',
         onClick: async () => {
           const name = await prompt({ title: 'Rename Playlist', label: 'Name', initial: p.name, ok: 'Rename' })
           if (name && name !== p.name) {

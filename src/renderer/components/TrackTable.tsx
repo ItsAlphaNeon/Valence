@@ -251,9 +251,9 @@ export function TrackTable(props: TrackTableProps) {
             icon: 'plus',
             onClick: () => window.dispatchEvent(new CustomEvent('valence:new-playlist', { detail: chosen })),
           },
-          ...(playlists.some((p) => p.kind === 'static') ? [{ separator: true } as MenuItem] : []),
+          ...(playlists.some((p) => p.kind !== 'smart') ? [{ separator: true } as MenuItem] : []),
           ...playlists
-            .filter((p) => p.kind === 'static')
+            .filter((p) => p.kind !== 'smart')
             .map((p) => ({
               label: p.name,
               onClick: () => void invoke(LIB.addToPlaylist, p.id, chosen).then(() => toast(`Added to “${p.name}”`, 'ok')),
@@ -278,7 +278,8 @@ export function TrackTable(props: TrackTableProps) {
       items.push({ label: 'View artwork', icon: 'zoomIn', onClick: () => useUi.getState().openArt({ hash: r.artHash, albumId: r.albumId, title: r.album || r.title, sub: r.albumArtist || r.artist }) })
       items.push({ label: revealLabel, icon: 'folder', onClick: () => void invoke(LIB.reveal, r.id) })
     }
-    if (props.playlistId && playlists.find((p) => p.id === props.playlistId)?.kind === 'static' && rows) {
+    const shownPlaylist = props.playlistId ? playlists.find((p) => p.id === props.playlistId) : undefined
+    if (shownPlaylist && shownPlaylist.kind !== 'smart' && rows) {
       items.push({ separator: true })
       items.push({
         label: n > 1 ? `Remove ${n} from this playlist` : 'Remove from this playlist',

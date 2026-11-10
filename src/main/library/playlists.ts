@@ -3,8 +3,8 @@
 // ~/Music/.valence/playlists/. The DB only indexes them.
 
 import { createHash, randomUUID } from 'node:crypto'
-import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs'
+import { basename, join } from 'node:path'
 import type { DB } from '@main/db/db'
 import type { BadgeQueryTrack, PlaylistMirror } from '@main/context'
 import { foldKey, sanitizeComponent } from '@shared/sanitize'
@@ -147,6 +147,9 @@ export function smartSql(rules: SmartRules, now = Date.now()): { sql: string; pa
 function staticId(relPath: string): string {
   return 'm3u-' + createHash('sha1').update(foldKey(relPath)).digest('hex').slice(0, 16)
 }
+
+/** A regular playlist's name: its file name. */
+const nameOf = (relPath: string): string => relPath.slice(relPath.lastIndexOf('/') + 1).replace(/\.m3u8?$/i, '')
 
 interface SmartDoc {
   id: string
@@ -306,23 +309,72 @@ export class PlaylistStore implements PlaylistMirror {
     return id
   }
 
-  setItems(id: string, items: string[]): void {
+  /** Replaces a playlist's songs. Editing a mirrored playlist makes it a regular one (see detach);
+   *  returns the playlist's id afterwards. */
+  setItems(id: string, items: string[]): string {
+    return this.writeItems(id, items, true)
+  }
+
+  addItems(id: string, items: string[]): string {
+    return this.setItems(id, [...this.items(id), ...items])
+  }
+
+  private writeItems(id: string, items: string[], userEdit: boolean): string {
     const p = this.db.prepare('SELECT * FROM playlists WHERE id = ?').get(id) as Record<string, any> | undefined
     if (!p || p.kind === 'smart' || !p.m3u_rel_path) throw new Error('Not an editable playlist')
     this.writePlaylistFile(p.m3u_rel_path, items)
+    if (userEdit && p.kind === 'mirror') {
+      const newId = this.detach(id, p.m3u_rel_path)
+      this.upsertRow({ id: newId, name: nameOf(p.m3u_rel_path), kind: 'static', relPath: p.m3u_rel_path, items })
+      return newId
+    }
     this.upsertRow({ id, name: p.name, kind: p.kind, relPath: p.m3u_rel_path, sourceKey: p.source_key, items })
+    return id
   }
 
-  addItems(id: string, items: string[]): void {
-    this.setItems(id, [...this.items(id), ...items])
+  /** The docs in .valence/playlists that belong to playlist `id`, found by the id inside (as on the
+   *  phone), Syncthing conflict copies included. */
+  private docFilesFor(prefix: string, id: string): string[] {
+    const dir = this.docsDir()
+    if (!existsSync(dir)) return []
+    return readdirSync(dir)
+      .filter((f) => f.startsWith(prefix) && f.endsWith('.json'))
+      .map((f) => join(dir, f))
+      .filter((file) => {
+        try {
+          return (JSON.parse(readFileSync(file, 'utf8')) as { id?: unknown }).id === id
+        } catch {
+          return false
+        }
+      })
+  }
+
+  /** Merges `patch` into playlist `id`'s docs where they are (not into conflict copies). */
+  private updateDocs(prefix: string, id: string, patch: Record<string, unknown>): void {
+    for (const f of this.docFilesFor(prefix, id)) {
+      if (f.includes('.sync-conflict-')) continue
+      const doc = JSON.parse(readFileSync(f, 'utf8')) as Record<string, unknown>
+      this.writeDoc(basename(f), { ...doc, ...patch, updatedAt: Date.now() })
+    }
+  }
+
+  /**
+   * Cuts a mirrored playlist loose from its source: its doc goes, so downloading the source again
+   * and refreshMirrors() no longer rewrite it, and from then on it's a regular playlist with the
+   * id every device derives from its file. Drops the old row and returns the new id.
+   */
+  private detach(id: string, relPath: string): string {
+    for (const f of this.docFilesFor('mirror-', id)) rmSync(f, { force: true })
+    this.db.prepare('DELETE FROM playlist_items WHERE playlist_id = ?').run(id)
+    this.db.prepare('DELETE FROM playlists WHERE id = ?').run(id)
+    return staticId(relPath)
   }
 
   async rename(id: string, name: string): Promise<string> {
     const p = this.db.prepare('SELECT * FROM playlists WHERE id = ?').get(id) as Record<string, any> | undefined
     if (!p) throw new Error('No such playlist')
     if (p.kind === 'smart') {
-      const doc = this.readDocs<SmartDoc>('smart-').find((d) => d.id === id)
-      if (doc) this.writeDoc(`smart-${id}.json`, { ...doc, name, updatedAt: Date.now() })
+      this.updateDocs('smart-', id, { name })
       this.db.prepare('UPDATE playlists SET name = ? WHERE id = ?').run(name, id)
       return id
     }
@@ -331,8 +383,14 @@ export class PlaylistStore implements PlaylistMirror {
     this.writePlaylistFile(rel, items)
     await this.trash(toAbs(this.root, p.m3u_rel_path))
     this.db.prepare('DELETE FROM playlists WHERE id = ?').run(id)
+    if (p.kind === 'mirror') {
+      // Renaming isn't editing: the mirror keeps its source (as on the phone) and its id.
+      this.updateDocs('mirror-', id, { name: nameOf(rel), relPath: rel })
+      this.upsertRow({ id, name: nameOf(rel), kind: 'mirror', relPath: rel, sourceKey: p.source_key, items })
+      return id
+    }
     const newId = staticId(rel)
-    this.upsertRow({ id: newId, name: rel.slice(PLAYLISTS_DIR.length + 1).replace(/\.m3u8$/i, ''), kind: 'static', relPath: rel, items })
+    this.upsertRow({ id: newId, name: nameOf(rel), kind: 'static', relPath: rel, items })
     return newId
   }
 
@@ -340,8 +398,7 @@ export class PlaylistStore implements PlaylistMirror {
     const p = this.db.prepare('SELECT * FROM playlists WHERE id = ?').get(id) as Record<string, any> | undefined
     if (!p) return
     if (p.m3u_rel_path) await this.trash(toAbs(this.root, p.m3u_rel_path))
-    const docFile = join(this.docsDir(), p.kind === 'smart' ? `smart-${id}.json` : `mirror-${id}.json`)
-    if (existsSync(docFile)) await this.trash(docFile)
+    if (p.kind === 'smart' || p.kind === 'mirror') for (const f of this.docFilesFor(`${p.kind}-`, id)) await this.trash(f)
     this.db.prepare('DELETE FROM playlists WHERE id = ?').run(id)
   }
 
@@ -383,7 +440,7 @@ export class PlaylistStore implements PlaylistMirror {
     for (const { playlist_id } of ids) {
       const items = this.items(playlist_id).map((r) => (r === fromRel ? toRel : r))
       try {
-        this.setItems(playlist_id, items)
+        this.writeItems(playlist_id, items, false) // not an edit: a mirror stays a mirror
       } catch {
         /* smart playlists need no rewrite */
       }

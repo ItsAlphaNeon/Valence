@@ -363,7 +363,7 @@ fun PlaylistPage(id: String, onBack: () -> Unit) {
         sort = sort, onSort = { sort = it },
         playlistId = if (p?.editable == true) id else null,
         // Hold a handle to reorder, as in Musicolet (in the playlist's own order only).
-        onReorder = if (p?.editable == true && sort == "default") ({ l -> ui.app.sync.setPlaylistOrder(id, l.map { it.relPath }) }) else null,
+        onReorder = if (p?.editable == true && sort == "default") ({ l -> ui.app.sync.setPlaylistOrder(id, l.map { it.relPath }) { ui.leavePlaylist(id, it) } }) else null,
         empty = { EmptyState(Icons.AutoMirrored.Rounded.QueueMusic, "Empty playlist", if (p?.editable == true) "Add songs with “Add to playlists” in any song's options." else null) },
     )
 }

@@ -132,7 +132,7 @@ private fun SongMenu(m: MenuTarget.Song, close: () -> Unit) {
         })
     }
     DialogItem(Icons.AutoMirrored.Rounded.PlaylistAdd, "Add to playlists", { ui.addToPlaylist = listOf(t); close() })
-    if (m.playlistId != null) DialogItem(Icons.Rounded.Delete, "Remove from this playlist", { ui.app.sync.removeFromPlaylist(m.playlistId, t); close() })
+    if (m.playlistId != null) DialogItem(Icons.Rounded.Delete, "Remove from this playlist", { ui.app.sync.removeFromPlaylist(m.playlistId, t) { ui.leavePlaylist(m.playlistId, it) }; close() })
     DialogSeparator()
     if (t.albumId != null && t.album.isNotBlank()) DialogItem(Icons.Rounded.Album, "Go to album", { close(); ui.album(t.albumId) })
     if (t.isRip && !t.ripGame.isNullOrBlank()) DialogItem(Icons.Rounded.SportsEsports, "Go to game", { close(); ui.game(t.ripGame) })
@@ -218,7 +218,7 @@ fun AddToPlaylistDialog() {
             DialogItem(Icons.Rounded.Add, "New playlist", { creating = true })
             DialogSeparator()
             for (p in playlists.orEmpty().filter { it.editable }) {
-                DialogItem(Icons.AutoMirrored.Rounded.QueueMusic, p.name, { ui.app.sync.addToPlaylist(p.id, tracks); close() }, trailing = {
+                DialogItem(Icons.AutoMirrored.Rounded.QueueMusic, p.name, { ui.app.sync.addToPlaylist(p.id, tracks) { ui.leavePlaylist(p.id, it) }; close() }, trailing = {
                     Text("${p.itemCount}", style = TextStyle(fontSize = 14.sp), color = LocalPalette.current.text2)
                 })
             }
