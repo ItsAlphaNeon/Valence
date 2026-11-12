@@ -133,6 +133,15 @@ describe('YouTube season albums (integration)', () => {
     expect(reset.find((s) => s.key === 's8')).toMatchObject({ customCover: false, cover: expect.stringMatching(/^data:image\/jpeg;base64,/) })
   })
 
+  it('uses the built-in art for the default seasons, and the placeholder for a season without any', async () => {
+    const builtin = readFileSync(join(process.cwd(), 'resources', 'seasons', 's8.jpg')).toString('base64')
+    const info = await yt.seasonInfo()
+    expect(info.find((s) => s.key === 's8')?.cover).toBe(`data:image/jpeg;base64,${builtin}`)
+    const custom = await yt.setSeasons([...yt.seasons.list(), { key: 's10', name: 'Season 10', start: '2027-01-07' }])
+    expect(custom.find((s) => s.key === 's10')?.cover).not.toBe(`data:image/jpeg;base64,${builtin}`)
+    await yt.setSeasons(yt.seasons.list().filter((s) => s.key !== 's10'))
+  })
+
   it('breaks upload-time ties by video id, so every device numbers a season the same way', async () => {
     // Added in the opposite order: the device-local row id would put "Zed" first.
     await addRip('zz9', 'Zed', '2025-03-01T10:00:00.000Z', s9, 1)

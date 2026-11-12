@@ -23,6 +23,7 @@ import { HQRIP_IPC, type RipDuplicateGroup, type SeasonDef, type SeasonInfo, typ
 import { planDuplicates, type RipCopy } from './duplicates'
 import { SIIVAGUNNER_CHANNEL_ID } from './metadata'
 import { parseFlatPlaylist, playlistUrl, type PlaylistEntry } from './playlist'
+import { BUILTIN_ART_VERSION, BUILTIN_SEASON_ART } from './seasonArt'
 import { placeholderSvg, seasonAlbum, seasonFor, SeasonStore, validateSeasons } from './seasons'
 import { ytDlpError, type YtDlp } from './ytdlp'
 
@@ -109,7 +110,38 @@ export class YoutubeService {
     // Once the startup scan has the index matching the disk, fix any season left out of order.
     void this.library.idle().then(() => {
       for (const album of this.misnumberedSeasons()) this.scheduleRenumber(album)
+      void this.embedBuiltinArt().catch((e) => this.ctx.log.warn('youtube: could not embed built-in season art', e))
     })
+  }
+
+  /**
+   * Rips filed before a season had built-in art carry the generated placeholder: embeds the art once
+   * per season (seasons with a custom cover are left alone). Done keys go in rips/builtin-art.json.
+   */
+  private async embedBuiltinArt(): Promise<void> {
+    const file = join(this.seasons.dir, 'builtin-art.json')
+    let done: Record<string, number> = {}
+    try {
+      done = JSON.parse(readFileSync(file, 'utf8'))
+    } catch {}
+    let changed = false
+    for (const s of this.seasons.list()) {
+      if (done[s.key] === BUILTIN_ART_VERSION || !BUILTIN_SEASON_ART[s.key] || this.seasons.hasCover(s.key)) continue
+      const ids = this.albumTracks(seasonAlbum(s)).map((r) => r.id)
+      if (ids.length) {
+        const res = await this.library.editTags({ ids, patch: {} }, await this.readCover(s))
+        if (res.errors.length) {
+          this.ctx.log.warn(`youtube: could not embed ${s.name} art into ${res.errors.length} rip(s)`, res.errors[0].error)
+          continue
+        }
+      }
+      done[s.key] = BUILTIN_ART_VERSION
+      changed = true
+    }
+    if (changed) {
+      mkdirSync(this.seasons.dir, { recursive: true })
+      writeFileSync(file, JSON.stringify(done, null, 1))
+    }
   }
 
   stop(): void {
@@ -364,6 +396,12 @@ export class YoutubeService {
     const key = `${season.key}|${season.name}`
     let buf = this.placeholders.get(key)
     if (!buf) {
+      const builtin = BUILTIN_SEASON_ART[season.key]
+      if (builtin && existsSync(builtin)) {
+        buf = readFileSync(builtin)
+        this.placeholders.set(key, buf)
+        return buf
+      }
       const index = Math.max(0, this.seasons.list().findIndex((s) => s.key === season.key))
       buf = await sharp(Buffer.from(placeholderSvg(season, index))).jpeg({ quality: 90 }).toBuffer()
       this.placeholders.set(key, buf)
