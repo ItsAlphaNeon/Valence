@@ -322,6 +322,8 @@ describe('YouTube imports are idempotent per video (integration)', () => {
       expect(job('sameTitleB')).toMatchObject({ status: 'done', message: '1 added' })
       expect(named('Same Title')).toEqual(['Same Title (2).opus', 'Same Title.opus'])
       expect(rows('sameTitleB')).toEqual([rel('Same Title (2)')])
+      // The season cover belongs to the season table, not the archive (the art viewer would prefer a stale copy).
+      expect(readdirSync(env.archivePendingDir, { recursive: true }).map(String).filter((n) => n.includes('cover-original'))).toEqual([])
     })
 
     it('files a video once, however many times it is asked', async () => {

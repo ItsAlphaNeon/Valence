@@ -79,7 +79,8 @@ export function createAcquirer(deps: YoutubeAcquirerDeps): Acquirer {
       releaseKeys: [`youtube:${payload.videoId}`],
       albumTags: {},
       tracks: [{ file: join(ctx.stagingDir, audio), tags, durationMs: info.duration ? info.duration * 1000 : undefined, raw: { info: { id: info.id, title: info.title, uploaded } } }],
-      artwork: { file: await deps.coverFor(season, ctx.stagingDir) },
+      // The season table owns this art (and can change it), so it's no "original" to archive.
+      artwork: { file: await deps.coverFor(season, ctx.stagingDir), archive: false },
       title: `YouTube · ${info.title}`,
       skipLookups: true,
     }

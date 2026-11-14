@@ -110,8 +110,30 @@ export class YoutubeService {
     // Once the startup scan has the index matching the disk, fix any season left out of order.
     void this.library.idle().then(() => {
       for (const album of this.misnumberedSeasons()) this.scheduleRenumber(album)
+      this.dropArchivedSeasonCovers()
       void this.embedBuiltinArt().catch((e) => this.ctx.log.warn('youtube: could not embed built-in season art', e))
     })
+  }
+
+  /**
+   * Imports used to archive the season cover as the album's cover-original, which the art viewer
+   * prefers over the embedded art, so a season kept showing the cover it had back then (the old
+   * placeholder). Those copies are removed; the season table is the one place season art lives.
+   */
+  private dropArchivedSeasonCovers(): void {
+    const albums = new Set(this.seasons.list().map((s) => seasonAlbum(s)))
+    const rows = this.library.db.prepare("SELECT DISTINCT album_id AS id, album FROM tracks WHERE hq_rip = 'YouTube' AND album_id IS NOT NULL").all() as Array<{ id: number; album: string }>
+    for (const r of rows) {
+      if (!albums.has(r.album)) continue
+      for (let f = this.library.art.archivedCover(r.id); f; f = this.library.art.archivedCover(r.id)) {
+        try {
+          rmSync(f.path)
+        } catch (e) {
+          this.ctx.log.warn(`youtube: could not remove archived season cover ${f.path}`, e)
+          break
+        }
+      }
+    }
   }
 
   /**

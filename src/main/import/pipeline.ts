@@ -412,7 +412,7 @@ export async function runPipeline(release: SourceRelease, deps: PipelineDeps, op
   if (signal?.aborted) throw new Error('cancelled')
 
   // 9. Original art + extras to the archive album folder.
-  if (albumRelDir && original) {
+  if (albumRelDir && original && release.artwork?.archive !== false) {
     const resized = !embedArt || embedArt.data !== original.data
     if (resized || settings.get('art.archiveOriginals', true)) {
       const r = await deps.archive.putBuffer(original.data, `${albumRelDir}/cover-original.${extForMime(original.mime)}`, workDir).catch(() => null)

@@ -14,6 +14,8 @@ export interface SourceArtwork {
   url?: string
   /** Fallback URLs tried in order if `url` fails. */
   fallbackUrls?: string[]
+  /** false: don't keep it in the archive as cover-original (art Valence owns, e.g. a YouTube season cover). */
+  archive?: boolean
 }
 
 export interface SourceTrack {

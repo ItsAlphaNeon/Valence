@@ -26,7 +26,7 @@ import { writeTags } from '@main/tags/write'
 import { YoutubeService } from '@main/sources/youtube/service'
 import { DEFAULT_SEASONS, seasonAlbum } from '@main/sources/youtube/seasons'
 import { RIP_GENRE, type TrackTags } from '@shared/types'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 
 describe('YouTube season albums (integration)', () => {
   const sb = sandbox('yt-seasons')
@@ -140,6 +140,16 @@ describe('YouTube season albums (integration)', () => {
     const custom = await yt.setSeasons([...yt.seasons.list(), { key: 's10', name: 'Season 10', start: '2027-01-07' }])
     expect(custom.find((s) => s.key === 's10')?.cover).not.toBe(`data:image/jpeg;base64,${builtin}`)
     await yt.setSeasons(yt.seasons.list().filter((s) => s.key !== 's10'))
+  })
+
+  it('drops a season cover an older import archived as the cover-original, so the viewer shows the current art', async () => {
+    const album = queryAlbums(library.db, { collection: 'rips' }).find((x) => x.title === s8)!
+    const relDir = (library.db.prepare('SELECT rel_dir FROM albums WHERE id = ?').get(album.id) as { rel_dir: string }).rel_dir
+    const stale = await genImage(join(env.archivePendingDir, ...relDir.split('/'), 'cover-original.jpg'), 600, 'purple')
+    expect(library.art.originalFor(album.id)?.source).toBe('archive')
+    ;(yt as unknown as { dropArchivedSeasonCovers(): void }).dropArchivedSeasonCovers()
+    expect(existsSync(stale)).toBe(false)
+    expect(library.art.originalFor(album.id)?.source).toBe('embedded')
   })
 
   it('breaks upload-time ties by video id, so every device numbers a season the same way', async () => {
